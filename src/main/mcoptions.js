@@ -6,17 +6,17 @@ const path = require('node:path');
 const PRESETS = {
   desempenho: {
     label: 'Desempenho',
-    desc: 'Mais FPS: distância 8, gráficos rápidos, sem sombras nem nuvens',
+    desc: 'Mais FPS: sombras, reflexos e efeitos mais leves',
     values: { renderDistance: '8', simulationDistance: '6', graphicsMode: '0', particles: '2', renderClouds: '"false"', entityShadows: 'false', ao: 'false', biomeBlendRadius: '0', mipmapLevels: '0', maxFps: '260', enableVsync: 'false', entityDistanceScaling: '0.75' },
   },
   equilibrado: {
     label: 'Equilibrado',
-    desc: 'Distância 12, gráficos bonitos, até 144 FPS',
+    desc: 'Bonito e fluido: o meio-termo de cada jogo',
     values: { renderDistance: '12', simulationDistance: '10', graphicsMode: '1', particles: '1', renderClouds: '"fast"', entityShadows: 'true', ao: 'true', biomeBlendRadius: '2', mipmapLevels: '2', maxFps: '144', enableVsync: 'false', entityDistanceScaling: '1.0' },
   },
   qualidade: {
     label: 'Qualidade',
-    desc: 'Distância 20, gráficos fabulosos, sombras e transições suaves de bioma',
+    desc: 'Tudo no alto, no limite do que a placa de vídeo segura',
     values: { renderDistance: '20', simulationDistance: '12', graphicsMode: '2', particles: '0', renderClouds: '"true"', entityShadows: 'true', ao: 'true', biomeBlendRadius: '4', mipmapLevels: '4', maxFps: '260', enableVsync: 'true', entityDistanceScaling: '1.25' },
   },
 };
@@ -35,13 +35,23 @@ function serialize(entries) {
   return entries.map((e) => (e.raw != null ? e.raw : `${e.key}:${e.value}`)).join('\n') + '\n';
 }
 
-// Aplica o preset em cima do options.txt existente. Linhas que não são de vídeo ficam como estavam.
-function applyPreset(text, presetId) {
+// O gráfico "Fabuloso" não funciona com Sodium, Iris, Embeddium, Rubidium nem OptiFine (eles caem no rápido ou
+// desligam os shaders). Nessas instâncias o Qualidade usa o "Bonito".
+const NO_FABULOUS = /^(sodium|iris|embeddium|rubidium|optifine)/i;
+
+function presetValues(presetId, { fabulous = true } = {}) {
   const preset = PRESETS[presetId];
   if (!preset) throw new Error(`Preset desconhecido: ${presetId}`);
+  const values = { ...preset.values };
+  if (!fabulous && values.graphicsMode === '2') values.graphicsMode = '1';
+  return values;
+}
+
+// Aplica o preset em cima do options.txt existente. Linhas que não são de vídeo ficam como estavam.
+function applyPreset(text, presetId, opts) {
+  const values = presetValues(presetId, opts);
   const entries = parse(text || '');
   const byKey = new Map(entries.filter((e) => e.key).map((e) => [e.key, e]));
-  const values = { ...preset.values };
   // Versões antigas (até 1.15) usam fancyGraphics:true/false em vez de graphicsMode.
   if (byKey.has('fancyGraphics') && !byKey.has('graphicsMode')) {
     byKey.get('fancyGraphics').value = values.graphicsMode === '0' ? 'false' : 'true';
@@ -56,12 +66,13 @@ function applyPreset(text, presetId) {
 }
 
 // Descobre qual preset está em uso, olhando só as chaves que mais pesam. null quando é personalizado.
-function detectPreset(text) {
+function detectPreset(text, opts) {
   if (!text) return null;
   const map = new Map(parse(text).filter((e) => e.key).map((e) => [e.key, e.value]));
   const keys = ['renderDistance', 'simulationDistance', 'graphicsMode', 'particles'];
-  for (const [id, preset] of Object.entries(PRESETS)) {
-    if (keys.every((k) => !map.has(k) || map.get(k) === preset.values[k]) && keys.some((k) => map.has(k))) return id;
+  for (const id of Object.keys(PRESETS)) {
+    const values = presetValues(id, opts);
+    if (keys.every((k) => !map.has(k) || map.get(k) === values[k]) && keys.some((k) => map.has(k))) return id;
   }
   return null;
 }
@@ -74,9 +85,16 @@ function optionsFile(instDir) {
   return path.join(instDir, 'minecraft', 'options.txt');
 }
 
+// Olha a pasta mods da instância para saber se o "Fabuloso" pode ser usado.
+function instanceOpts(instDir) {
+  let mods = [];
+  try { mods = fs.readdirSync(path.join(path.dirname(optionsFile(instDir)), 'mods')); } catch {}
+  return { fabulous: !mods.some((m) => NO_FABULOUS.test(m)) };
+}
+
 function readPreset(instDir) {
   try {
-    return detectPreset(fs.readFileSync(optionsFile(instDir), 'utf8'));
+    return detectPreset(fs.readFileSync(optionsFile(instDir), 'utf8'), instanceOpts(instDir));
   } catch {
     return null;
   }
@@ -92,7 +110,7 @@ function writePreset(instDir, presetId) {
     if (!fs.existsSync(backup)) fs.writeFileSync(backup, text);
   } catch {}
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, applyPreset(text, presetId));
+  fs.writeFileSync(file, applyPreset(text, presetId, instanceOpts(instDir)));
   return presetId;
 }
 

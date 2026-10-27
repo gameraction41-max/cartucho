@@ -17,11 +17,14 @@ const games = [
   { key: 'steam:413150', source: 'steam', appid: 413150, title: 'Stardew Valley', minutes: 6120, lastPlayed: now - 60 * day, ach: { unlocked: 49, total: 49 } },
   { key: 'prism:VS', source: 'prism', instanceId: 'VS', title: 'Vanilla Survival', minutes: 542, lastPlayed: now - 55 * day, mcVersion: '1.21.4', loader: 'Vanilla', mods: 0, art: null },
   { key: 'steam:504230', source: 'steam', appid: 504230, title: 'Celeste', minutes: 1320, lastPlayed: now - 120 * day, ach: { unlocked: 22, total: 32 } },
+  { key: 'steam:1174180', source: 'steam', appid: 1174180, title: 'Red Dead Redemption 2', minutes: 5210, lastPlayed: now - 2 * day, ach: { unlocked: 24, total: 51 } },
+  { key: 'steam:227300', source: 'steam', appid: 227300, title: 'Euro Truck Simulator 2', minutes: 9340, lastPlayed: now - 4 * day, ach: { unlocked: 58, total: 203 } },
+  { key: 'steam:1091500', source: 'steam', appid: 1091500, title: 'Cyberpunk 2077', minutes: 6880, lastPlayed: now - 8 * day, ach: { unlocked: 33, total: 57 } },
 ].map((g) => (g.source === 'steam' ? { ...g, art: steamArt(g.appid), installed: true, size: 18.4 * 1024 ** 3 } : g));
 // Na demo, Silksong está baixando, Celeste e Stardew não estão no PC e o Terraria tem atualização na fila.
 for (const g of games) if ([1030300, 504230, 413150].includes(g.appid)) Object.assign(g, { installed: false, size: 0 });
-// Na demo, o Hades II tem presets e começa com as opções do jogo.
-for (const g of games) if (g.appid === 1145350) g.presets = true;
+// Na demo, os jogos da lista do gamepresets.js têm presets.
+for (const g of games) if ([1174180, 227300, 1091500].includes(g.appid)) g.presets = true;
 
 // Capturas de exemplo: paisagens em SVG, cada jogo com suas cores.
 const fakeShot = (h1, h2, seed) => {
@@ -45,7 +48,13 @@ const shotGroups = [
     return { url, thumb: clip ? url : null, at: now - gi * 2 * day - i * 5 * 3600000, video: clip, source: g.source, name: `${g.title} ${i}.png` };
   }),
 }));
-const gamePresets = {};
+const gamePresets = { 1174180: 'qualidade', 227300: 'qualidade', 1091500: 'equilibrado' };
+// O que cada preset muda, como vem do gamepresets.js.
+const gameNotes = {
+  1174180: { desempenho: 'Sombras e volumétricos leves, texturas no alto', equilibrado: 'Texturas no ultra, sombras e luz no alto', qualidade: 'Quase tudo no alto, texturas no ultra, sem MSAA' },
+  227300: { desempenho: 'Sombras baixas, sem oclusão de ambiente', equilibrado: 'Sombras altas e luzes vistas de mais longe', qualidade: 'Sombras no máximo, vegetação cheia' },
+  1091500: { desempenho: 'Sombras, névoa e reflexos no baixo', equilibrado: 'Médio, com sombras distantes no alto', qualidade: 'Alto, sem ray tracing' },
+};
 let downloads = [
   { key: 'steam:1030300', appid: 1030300, title: 'Hollow Knight: Silksong', state: 'downloading', percent: 37, bytes: 0, total: 0, update: false },
   { key: 'steam:105600', appid: 105600, title: 'Terraria', state: 'queued', percent: 0, bytes: 0, total: 0, update: true },
@@ -118,7 +127,7 @@ export const mock = {
   },
   launch: async () => ({ ok: true }),
   steamDownloads: async () => downloads,
-  getGamePreset: async (appid) => ({ found: true, preset: gamePresets[appid] || null, canRestore: !!gamePresets[appid] }),
+  getGamePreset: async (appid) => ({ found: true, preset: gamePresets[appid] || null, canRestore: !!gamePresets[appid], notes: gameNotes[appid] }),
   setGamePreset: async (appid, id) => { gamePresets[appid] = id; return { ok: true }; },
   restoreGamePreset: async (appid) => { delete gamePresets[appid]; return { ok: true }; },
   installGame: async () => ({ ok: true }),
@@ -128,20 +137,21 @@ export const mock = {
   pickArt: async () => ({ canceled: true }),
   resetArt: async () => {},
   mcPresets: async () => [
-    { id: 'desempenho', label: 'Desempenho', desc: 'Mais FPS: distância 8, gráficos rápidos, sem sombras nem nuvens' },
-    { id: 'equilibrado', label: 'Equilibrado', desc: 'Distância 12, gráficos bonitos, até 144 FPS' },
-    { id: 'qualidade', label: 'Qualidade', desc: 'Distância 20, gráficos fabulosos, sombras e transições suaves de bioma' },
+    { id: 'desempenho', label: 'Desempenho', desc: 'Mais FPS: sombras, reflexos e efeitos mais leves' },
+    { id: 'equilibrado', label: 'Equilibrado', desc: 'Bonito e fluido: o meio-termo de cada jogo' },
+    { id: 'qualidade', label: 'Qualidade', desc: 'Tudo no alto, no limite do que a placa de vídeo segura' },
   ],
   getMcPreset: async (id) => mcPresets[id] ?? null,
   setMcPreset: async (id, preset) => { mcPresets[id] = preset; return { ok: true, preset }; },
   systemStats: async () => ({
-    cpu: 'AMD Ryzen 7 5800X3D', cores: 8, threads: 16, gpu: [{ model: 'NVIDIA GeForce RTX 4070', vram: 12282 }], os: 'Microsoft Windows 11 Pro 10.0.26100',
+    cpu: 'AMD Ryzen 5 7600 6-Core Processor', cores: 6, threads: 12, gpu: [{ model: 'NVIDIA GeForce RTX 4060', vram: 8188 }], os: 'Microsoft Windows 11 Pro 10.0.26100',
     cpuLoad: 8 + Math.random() * 20, cpuTemp: 46 + Math.random() * 4, memUsed: 11.2 * 1024 ** 3, memTotal: 32 * 1024 ** 3,
     disks: [{ mount: 'C:', used: 402 * 1024 ** 3, size: 931 * 1024 ** 3 }, { mount: 'D:', used: 1.71 * 1024 ** 4, size: 1.82 * 1024 ** 4 }],
   }),
-  recommendedPreset: async () => ({ id: 'qualidade', reason: 'NVIDIA GeForce RTX 4070, 32 GB de memória' }),
+  recommendedPreset: async () => ({ id: 'qualidade', reason: 'NVIDIA GeForce RTX 4060, 32 GB de memória' }),
   setMcPresetAll: async (preset) => {
     for (const g of games.filter((x) => x.source === 'prism')) mcPresets[g.instanceId] = preset;
+    for (const g of games.filter((x) => x.presets)) gamePresets[g.appid] = preset;
     return { applied: 3, skipped: 0 };
   },
   playWeek: async () => {

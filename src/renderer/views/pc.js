@@ -40,6 +40,8 @@ export default {
       h('div', { class: 'pc-block' }, h('div', { class: 'meter-head' }, h('span', {}, 'Discos')), disksBox));
 
     const presetsBox = h('div', { class: 'plans' }, h('p', { class: 'muted' }, 'Carregando…'));
+    // Jogos da Steam com preset, um por linha, com o preset em uso em cada um.
+    const gamesBox = h('div', { class: 'preset-games' });
     const intro = h('p', { class: 'muted', style: { margin: '0 0 1rem' } }, 'Vendo o seu hardware…');
     const instances = ctx.state.games.filter((g) => g.source === 'prism');
     const steamGames = ctx.state.games.filter((g) => g.source === 'steam' && g.presets);
@@ -52,19 +54,30 @@ export default {
       presetsBox,
       h('p', { class: 'muted note' }, total
         ? `Vale para ${coverage}. Dá para trocar um a um na página de cada jogo.`
-        : 'Os presets valem para as instâncias do Minecraft e os jogos da Steam em Unreal Engine, e nenhum foi encontrado ainda.'));
+        : 'Os presets valem para as instâncias do Minecraft, os jogos da Steam em Unreal Engine e os da lista do Cartucho, e nenhum foi encontrado ainda.'),
+      gamesBox);
 
-    // Preset em uso: só aparece marcado quando todas as instâncias estão com o mesmo.
-    async function currentPreset() {
-      const ids = await Promise.all([
-        ...instances.map((g) => ctx.api.getMcPreset(g.instanceId)),
-        ...steamGames.map((g) => ctx.api.getGamePreset(g.appid).then((r) => r && r.preset)),
-      ]);
+    // Preset em uso: só aparece marcado quando todas as instâncias estão com o mesmo. Jogos que ainda não
+    // criaram o arquivo de opções ficam de fora da conta.
+    async function currentPreset(list) {
+      const steam = await Promise.all(steamGames.map((g) => ctx.api.getGamePreset(g.appid).catch(() => null)));
+      const label = (id) => (list.find((p) => p.id === id) || {}).label || 'Personalizado';
+      gamesBox.replaceChildren(...steamGames.map((g, i) => {
+        const r = steam[i];
+        return h('div', { class: 'preset-game' },
+          h('span', { class: 'name' }, g.title),
+          h('span', { class: 'muted' }, r && r.found ? label(r.preset) : 'abra o jogo uma vez'));
+      }));
+      const ids = [
+        ...(await Promise.all(instances.map((g) => ctx.api.getMcPreset(g.instanceId)))),
+        ...steam.filter((r) => r && r.found).map((r) => r.preset),
+      ];
       return ids.length && ids.every((id) => id && id === ids[0]) ? ids[0] : null;
     }
 
     async function loadPresets(focusId) {
-      const [list, rec, current] = await Promise.all([ctx.api.mcPresets(), ctx.api.recommendedPreset(), currentPreset()]);
+      const [list, rec] = await Promise.all([ctx.api.mcPresets(), ctx.api.recommendedPreset()]);
+      const current = await currentPreset(list);
       if (!alive) return;
       const recLabel = rec && (list.find((p) => p.id === rec.id) || {}).label;
       intro.textContent = rec ? `Pelo seu PC (${rec.reason}), o recomendado é ${recLabel}.` : 'Não deu para ler o hardware, mas dá para escolher na mão.';

@@ -277,6 +277,11 @@ img { max-width: 100%; }
 .opt.plan small { white-space: normal; }
 .plan .rec { font-style: normal; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); margin-left: .7rem; vertical-align: .1rem; }
 .pc-plans .note { margin: 1rem 0 0; font-size: .9rem; }
+.preset-games { display: grid; gap: .15rem; margin-top: .9rem; }
+.preset-games:empty { display: none; }
+.preset-game { display: flex; justify-content: space-between; gap: 1rem; padding: .45rem .1rem; border-top: 1px solid var(--glass-line); font-size: .92rem; }
+.preset-game .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preset-note { margin: -.2rem 0 .2rem; font-size: .85rem; }
 
 /* ===== configurações ===== */
 .set-wrap { margin-top: 1rem; display: grid; grid-template-columns: minmax(0, 64rem); flex: 1; min-height: 0; }

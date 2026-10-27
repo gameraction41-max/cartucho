@@ -114,6 +114,8 @@ function presetButton(ctx, g) {
   const backend = presetBackend(ctx, g);
   const btn = h('button', { class: 'btn', 'data-focus': true, 'data-key': 'preset' }, 'Preset gráfico: …');
   const restoreBtn = h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'preset-restore', hidden: true }, 'Voltar às opções originais do jogo');
+  // O que o preset muda neste jogo, quando a receita dele explica (jogos do CATALOG).
+  const note = h('p', { class: 'muted preset-note', hidden: true });
   let presets = [];
   let state = { found: true, preset: null, canRestore: false };
   let recommendedId = null;
@@ -127,6 +129,9 @@ function presetButton(ctx, g) {
     btn.textContent = !state.found ? 'Preset gráfico: abra o jogo uma vez antes'
       : `Preset gráfico: ${p ? p.label : 'Personalizado'}${p && p.id === recommendedId ? ' · recomendado' : suggestion()}`;
     restoreBtn.hidden = !state.canRestore;
+    const text = p && state.notes && state.notes[p.id];
+    note.textContent = text || '';
+    note.hidden = !text;
   };
   Promise.all([ctx.api.mcPresets(), backend.get(), ctx.api.recommendedPreset()]).then(([list, st, rec]) => {
     presets = list;
@@ -154,7 +159,7 @@ function presetButton(ctx, g) {
     ctx.refocus('preset');
     ctx.toast('As opções gráficas voltaram a ser as do jogo antes do Cartucho mexer.');
   });
-  return [btn, restoreBtn];
+  return [btn, note, restoreBtn];
 }
 
 export default {

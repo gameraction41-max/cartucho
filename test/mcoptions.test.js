@@ -39,3 +39,13 @@ test('writePreset cria backup na primeira vez e grava o preset', () => {
   assert.strictEqual(fs.readFileSync(`${file}.cartucho-backup`, 'utf8'), SAMPLE);
   assert.strictEqual(readPreset(inst), 'desempenho');
 });
+
+test('com Sodium, Iris ou OptiFine o Qualidade usa o gráfico Bonito, porque o Fabuloso não funciona com eles', () => {
+  const inst = fs.mkdtempSync(path.join(os.tmpdir(), 'inst-'));
+  fs.mkdirSync(path.join(inst, 'minecraft', 'mods'), { recursive: true });
+  fs.writeFileSync(path.join(inst, 'minecraft', 'mods', 'sodium-fabric-0.6.0+mc1.21.1.jar'), '');
+  writePreset(inst, 'qualidade');
+  assert.match(fs.readFileSync(path.join(inst, 'minecraft', 'options.txt'), 'utf8'), /^graphicsMode:1$/m);
+  assert.strictEqual(readPreset(inst), 'qualidade');
+  assert.match(applyPreset('', 'qualidade'), /^graphicsMode:2$/m);
+});
