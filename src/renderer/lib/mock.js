@@ -26,6 +26,19 @@ let config = {
 };
 
 const mcPresets = { FO: 'desempenho' };
+const friend = (steamId, name, status, extra = {}) => ({ steamId, name, avatar: '', status, appid: null, game: '', lastOnline: now - 2 * day, ...extra });
+const friends = [
+  friend('76561198000000001', 'Rafa', 'playing', { appid: 1245620, game: 'ELDEN RING' }),
+  friend('76561198000000002', 'Duda', 'playing', { appid: 1086940, game: "Baldur's Gate 3" }),
+  friend('76561198000000003', 'Thiago_BR', 'playing', { appid: 105600, game: 'Terraria' }),
+  friend('76561198000000004', 'Lu', 'online'),
+  friend('76561198000000005', 'Gabriel', 'away'),
+  friend('76561198000000006', 'mari.exe', 'busy'),
+  friend('76561198000000007', 'Pedro', 'offline', { lastOnline: now - 3600000 * 5 }),
+  friend('76561198000000008', 'Caio', 'offline', { lastOnline: now - 4 * day }),
+  friend('76561198000000009', 'Bia', 'offline', { lastOnline: now - 21 * day }),
+];
+
 const listeners = new Map();
 // No navegador dá para simular eventos do processo principal, por exemplo: mockEmit('overlay:open', { running: {...} }).
 window.mockEmit = (event, payload) => (listeners.get(event) || []).forEach((cb) => cb(payload));
@@ -86,6 +99,10 @@ export const mock = {
     for (const g of games.filter((x) => x.source === 'prism')) mcPresets[g.instanceId] = preset;
     return { applied: 3, skipped: 0 };
   },
+  getFriends: async () => ({ configured: true, friends }),
+  openProfile: async () => {},
+  updateStatus: async () => ({ state: 'ready', version: '0.3.1' }),
+  installUpdate: async () => {},
   overlayClose: async () => {},
   overlayNavigate: async () => {},
   pickFile: async () => null,

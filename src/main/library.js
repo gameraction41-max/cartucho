@@ -234,10 +234,27 @@ async function refreshSteamGame(appid) {
   }
 }
 
+// Amigos mudam de status o tempo todo, então a lista fica guardada só por um minuto.
+const FRIENDS_TTL = 60 * 1000;
+let friendsCache = null;
+
+async function friends() {
+  const creds = steamCreds();
+  if (!creds) return { configured: false, friends: [] };
+  if (friendsCache && Date.now() - friendsCache.at < FRIENDS_TTL) return friendsCache.data;
+  try {
+    const data = { configured: true, friends: await steam.getFriends(creds.key, creds.steamId) };
+    friendsCache = { at: Date.now(), data };
+    return data;
+  } catch (err) {
+    return { configured: true, friends: friendsCache ? friendsCache.data.friends : [], error: err.message };
+  }
+}
+
 function addHytaleTime(ms) {
   const { playtime } = stores();
   const t = playtime.get('hytale');
   playtime.set('hytale', { seconds: t.seconds + Math.round(ms / 1000), lastPlayed: Date.now() });
 }
 
-module.exports = { newUnlocks, getLibrary, syncSteam, syncAchievements, achievementSummary, gameAchievements, refreshSteamGame, addHytaleTime, prismDir };
+module.exports = { friends, newUnlocks, getLibrary, syncSteam, syncAchievements, achievementSummary, gameAchievements, refreshSteamGame, addHytaleTime, prismDir };

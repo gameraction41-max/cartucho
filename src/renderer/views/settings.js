@@ -3,6 +3,22 @@ import { h, when } from '../lib/ui.js';
 
 const VOLUME_STEP = 0.1;
 
+const UPDATE_TEXT = {
+  downloading: (v) => [`Baixando a versão ${v}`, 'Ela é instalada quando você fechar o Cartucho'],
+  ready: (v) => [`Versão ${v} pronta`, 'Aperte para reiniciar e atualizar agora'],
+  current: () => ['Você está na versão mais nova', 'O Cartucho procura atualizações sozinho a cada 6 horas'],
+  idle: () => ['Atualizações automáticas', 'O Cartucho procura versões novas no GitHub sozinho'],
+};
+
+function updateRow(ctx) {
+  const u = ctx.state.update || { state: 'idle' };
+  const [label, desc] = (UPDATE_TEXT[u.state] || UPDATE_TEXT.idle)(u.version);
+  const ready = u.state === 'ready';
+  return h(ready ? 'button' : 'div', { class: 'opt', 'data-focus': ready ? true : undefined, 'data-key': 'update', onclick: ready ? () => ctx.api.installUpdate() : undefined },
+    h('span', { class: 'txt' }, label, h('small', {}, desc)),
+    ready ? h('span', { class: 'val' }, 'atualizar') : null);
+}
+
 export default {
   label: 'Configurações',
   render(ctx) {
@@ -87,7 +103,8 @@ export default {
       volume,
 
       section('', 'Sobre'),
-      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.2.1', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))));
+      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.3.0', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
+      updateRow(ctx));
 
     const el = h('div', { class: 'set-wrap' }, list);
 
