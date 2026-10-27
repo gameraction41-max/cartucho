@@ -12,7 +12,7 @@ Ele junta num lugar só:
 
 Baixe o `Cartucho-Setup-x.y.z.exe` mais novo em [Releases](https://github.com/gameraction41-max/cartucho/releases) e instale. Não precisa de Node.js nem de comandos.
 
-Para gerar uma versão nova do instalador, vá em **Actions > Release > Run workflow** aqui no GitHub (ou crie uma tag como `v0.2.0`). Em alguns minutos o `.exe` aparece em Releases.
+Para gerar uma versão nova do instalador, aumente a `version` no `package.json` e rode **Actions > Release > Run workflow** aqui no GitHub. O workflow cria a tag (`v0.2.0`, por exemplo), e em alguns minutos o `.exe` aparece em Releases.
 
 ## Rodar pelo código
 
