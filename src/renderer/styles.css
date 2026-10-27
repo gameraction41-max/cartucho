@@ -129,8 +129,9 @@ img { max-width: 100%; }
 .actions { display: flex; gap: 1rem; align-items: center; }
 .row { display: flex; gap: 1.2rem; align-items: flex-end; overflow-x: auto; overflow-y: visible; padding: var(--bleed); margin: calc(-1 * var(--bleed)); scroll-padding: var(--bleed); scrollbar-width: none; scroll-behavior: smooth; }
 .row::-webkit-scrollbar { display: none; }
-.tile { width: 10rem; height: 10rem; font-size: 1rem; transition: width .2s ease, height .2s ease; }
-.tile.focused { width: 13.5rem; height: 13.5rem; font-size: 1.2rem; }
+/* As capas da Steam são verticais (600x900), então os blocos seguem a mesma proporção 2:3 para não cortar a arte. */
+.tile { width: 8.4rem; height: 12.6rem; font-size: 1rem; transition: width .2s ease, height .2s ease; }
+.tile.focused { width: 10.8rem; height: 16.2rem; font-size: 1.15rem; }
 .tile.more { background: var(--glass); border: 1px dashed var(--glass-line); color: var(--muted); justify-content: center; align-items: center; text-align: center; text-shadow: none; font-weight: 600; }
 
 /* ===== página do jogo ===== */
