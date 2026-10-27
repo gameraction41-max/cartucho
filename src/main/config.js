@@ -6,6 +6,7 @@ const { JsonStore } = require('./store');
 const DEFAULTS = {
   steamId: '',
   steamApiKeyEnc: '',
+  sgdbApiKeyEnc: '',
   prismDir: '',
   prismExe: '',
   hytaleExe: '',
@@ -48,19 +49,25 @@ function getSteamApiKey() {
   return decrypt(getStore().get('steamApiKeyEnc'));
 }
 
-// O que a interface pode ver: a chave nunca sai do processo principal, só os 4 últimos dígitos.
+function getSgdbApiKey() {
+  return decrypt(getStore().get('sgdbApiKeyEnc'));
+}
+
+// O que a interface pode ver: as chaves nunca saem do processo principal, só os 4 últimos dígitos.
 function getPublic() {
-  const { steamApiKeyEnc, ...rest } = getStore().data;
+  const { steamApiKeyEnc, sgdbApiKeyEnc, ...rest } = getStore().data;
   const key = getSteamApiKey();
-  return { ...rest, hasSteamApiKey: !!key, steamApiKeyHint: key ? key.slice(-4) : '' };
+  const sgdb = getSgdbApiKey();
+  return { ...rest, hasSteamApiKey: !!key, steamApiKeyHint: key ? key.slice(-4) : '', hasSgdbApiKey: !!sgdb, sgdbApiKeyHint: sgdb ? sgdb.slice(-4) : '' };
 }
 
 function update(patch) {
   const s = getStore();
   const next = { ...patch };
-  if ('steamApiKey' in next) {
-    next.steamApiKeyEnc = encrypt(String(next.steamApiKey).trim());
-    delete next.steamApiKey;
+  for (const name of ['steamApiKey', 'sgdbApiKey']) {
+    if (!(name in next)) continue;
+    next[`${name}Enc`] = encrypt(String(next[name]).trim());
+    delete next[name];
   }
   for (const key of Object.keys(next)) {
     if (!(key in DEFAULTS)) delete next[key];
@@ -81,4 +88,4 @@ function get(key) {
   return getStore().get(key);
 }
 
-module.exports = { get, getPublic, update, getSteamApiKey };
+module.exports = { get, getPublic, update, getSteamApiKey, getSgdbApiKey };

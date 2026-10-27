@@ -15,10 +15,11 @@ import settings from './views/settings.js';
 import pc from './views/pc.js';
 import friends from './views/friends.js';
 import screenshots from './views/screenshots.js';
+import artsearch from './views/artsearch.js';
 import { showBoot } from './views/boot.js';
 import { createMenu } from './views/menu.js';
 
-const VIEWS = { home, game, achievements, minecraft, friends, library, screenshots, pc, settings };
+const VIEWS = { home, game, artsearch, achievements, minecraft, friends, library, screenshots, pc, settings };
 const TABS = ['home', 'minecraft', 'achievements', 'friends', 'library', 'screenshots', 'pc', 'settings'];
 const SCROLLERS = '.shots-filters, .set-list, .glist, .grid, .row, .mc-row, .ach-list';
 

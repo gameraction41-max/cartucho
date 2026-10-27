@@ -43,7 +43,8 @@ function apply(game) {
   return { ...game, art, music, musicName: music ? entry.music.name || 'Música própria' : null, customArt: KINDS.filter((k) => urlFor(entry[k])) };
 }
 
-function set(key, kind, source) {
+// name: o nome mostrado (o da faixa, numa música baixada). Sem ele, vale o nome do arquivo.
+function set(key, kind, source, name) {
   if (!EXT[kind]) throw new Error('Tipo de arquivo desconhecido.');
   const ext = path.extname(source).toLowerCase();
   if (!EXT[kind].includes(ext)) throw new Error(kind === 'music' ? 'Escolha uma música MP3, OGG, WAV, FLAC ou M4A.' : 'Escolha uma imagem JPG, PNG, WEBP ou GIF.');
@@ -53,7 +54,7 @@ function set(key, kind, source) {
   if (entry[kind]) fs.rmSync(entry[kind].file, { force: true });
   const file = path.join(artDir(), `${safeName(key)}-${kind}${ext}`);
   fs.copyFileSync(source, file);
-  entry[kind] = { file, at: Date.now(), name: path.basename(source, ext) };
+  entry[kind] = { file, at: Date.now(), name: name || path.basename(source, ext) };
   games[key] = entry;
   custom().set('games', games);
 }
