@@ -33,7 +33,19 @@ jobs:
             git tag "$TAG"
             git push origin "$TAG"
           fi
-      - name: Gerar e publicar o instalador
-        run: npx electron-builder --win --publish always
+      # O electron-builder só gera os arquivos. O envio fica com o gh, porque o envio do próprio electron-builder
+      # às vezes cria a Release duas vezes ao mesmo tempo e perde o .exe no caminho.
+      - name: Gerar o instalador
+        run: npx electron-builder --win --publish never
+      - name: Publicar na Release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          FILES=("dist/Cartucho-Setup-$VERSION.exe" "dist/Cartucho-Setup-$VERSION.exe.blockmap" "dist/latest.yml")
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            gh release upload "v$VERSION" "${FILES[@]}" --clobber
+          else
+            gh release create "v$VERSION" "${FILES[@]}" --title "$VERSION" --generate-notes
+          fi
