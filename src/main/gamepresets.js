@@ -1,7 +1,7 @@
 // Presets gráficos dos jogos da Steam. Cada jogo guarda as opções de vídeo num arquivo próprio, então cada jogo
 // suportado tem uma receita: onde fica o arquivo, o formato e os valores de cada preset. Jogos em Unreal Engine são
-// reconhecidos sozinhos pela pasta de instalação; os outros entram à mão no CATALOG (RDR2, Euro Truck 2, No Man's Sky,
-// Cyberpunk 2077 e Death Stranding Director's Cut, desde a 0.10.3).
+// reconhecidos sozinhos pela pasta de instalação; os outros entram à mão no CATALOG (RDR2, Euro Truck 2 e
+// Cyberpunk 2077, desde a 0.10.3).
 // Antes da primeira mudança, o arquivo original é copiado para a pasta do Cartucho e pode ser restaurado.
 const fs = require('node:fs');
 const os = require('node:os');
@@ -131,37 +131,6 @@ const xml = flat({
   },
 });
 
-// No Man's Sky (TKGRAPHICSSETTINGS.MXML): <Property name="ShadowQuality" value="High" /> ou, nas versões novas, a
-// qualidade dentro de um bloco: <Property name="ShadowQuality" value="TkGraphicsDetailTypes"><Property name="GraphicsDetail" value="High" /></Property>
-const mxml = flat({
-  get(text, key) {
-    const k = escape(key);
-    const nested = text.match(new RegExp(`<Property name="${k}" value="[^"]*">\\s*<Property name="GraphicsDetail" value="([^"]*)"`));
-    if (nested) return nested[1];
-    const m = text.match(new RegExp(`<Property name="${k}" value="([^"]*)"\\s*/>`));
-    return m ? m[1] : null;
-  },
-  put(text, key, value) {
-    const k = escape(key);
-    const nested = new RegExp(`(<Property name="${k}" value="[^"]*">\\s*<Property name="GraphicsDetail" value=")[^"]*(")`);
-    if (nested.test(text)) return text.replace(nested, (_m, a, b) => `${a}${value}${b}`);
-    const re = new RegExp(`(<Property name="${k}" value=")[^"]*("\\s*/>)`);
-    return re.test(text) ? text.replace(re, (_m, a, b) => `${a}${value}${b}`) : null;
-  },
-});
-
-// Death Stranding (settings.cfg na pasta do jogo): aceita "chave": valor, chave = valor e chave: valor.
-const loose = flat({
-  get(text, key) {
-    const m = text.match(new RegExp(`^\\s*"?${escape(key)}"?\\s*[:=]\\s*"?([^",\\r\\n}]*?)"?\\s*,?\\s*$`, 'm'));
-    return m ? m[1].trim() : null;
-  },
-  put(text, key, value) {
-    const re = new RegExp(`^(\\s*"?${escape(key)}"?\\s*[:=]\\s*"?)([^",\\r\\n}]*?)("?\\s*,?\\s*)$`, 'm');
-    return re.test(text) ? text.replace(re, (_m, a, _v, b) => `${a}${value}${b}`) : null;
-  },
-});
-
 // Cyberpunk 2077 (UserSettings.json): { data: [{ group_name: "/graphics/advanced", options: [{ name, type, value }] }] }.
 // A chave é "grupo/nome", e o valor só troca se for do mesmo tipo do que o jogo gravou.
 function cpOption(data, key) {
@@ -196,7 +165,7 @@ const cpjson = {
   },
 };
 
-const FORMATS = { ini, json, cfg, xml, mxml, loose, cpjson };
+const FORMATS = { ini, json, cfg, xml, cpjson };
 
 // ===== receitas =====
 
@@ -275,29 +244,6 @@ const ets2 = {
   },
 };
 
-// No Man's Sky: o arquivo fica na pasta de instalação, em Binaries/SETTINGS.
-const nms = {
-  format: 'mxml',
-  engine: 'No Man\'s Sky',
-  files: ['%INSTALL%/Binaries/SETTINGS/TKGRAPHICSSETTINGS.MXML'],
-  presets: levels({
-    TextureQuality: ['High', 'Ultra', 'Ultra'],
-    AnimationQuality: ['Medium', 'High', 'Ultra'],
-    ShadowQuality: ['Medium', 'High', 'Ultra'],
-    ReflectionsQuality: ['Low', 'High', 'Ultra'],
-    VolumetricsQuality: ['Low', 'Medium', 'High'],
-    TerrainTessellation: ['Medium', 'High', 'Ultra'],
-    PlanetQuality: ['Medium', 'High', 'Ultra'],
-    BaseQuality: ['Medium', 'High', 'Ultra'],
-    PostProcessingEffects: ['Medium', 'High', 'Ultra'],
-  }),
-  notes: {
-    desempenho: 'Médio, com texturas no alto e névoa leve',
-    equilibrado: 'Alto, com texturas no ultra',
-    qualidade: 'Ultra, com névoa volumétrica no alto',
-  },
-};
-
 // Cyberpunk 2077: avançadas do UserSettings.json, sem ray tracing (na 4060 ele só vale com DLSS no desempenho).
 const CP = '/graphics/advanced/';
 const cyberpunk = {
@@ -325,29 +271,12 @@ const cyberpunk = {
   },
 };
 
-// Death Stranding Director's Cut: settings.cfg na pasta de instalação.
-const deathStranding = {
-  format: 'loose',
-  engine: 'Decima',
-  files: ['%INSTALL%/settings.cfg'],
-  presets: levels({
-    lod_scale: ['2', '3', '4'],
-  }),
-  notes: {
-    desempenho: 'Detalhe de modelos reduzido',
-    equilibrado: 'Detalhe de modelos padrão',
-    qualidade: 'Detalhe de modelos no máximo',
-  },
-};
-
 // appid -> receita feita à mão, para jogos que a detecção automática não pega.
 // Cada lista nova que o Filipi manda entra aqui e sai num patch.
 const CATALOG = {
   1174180: rdr2, // Red Dead Redemption 2
   227300: ets2, // Euro Truck Simulator 2
-  275850: nms, // No Man's Sky
   1091500: cyberpunk, // Cyberpunk 2077
-  1850570: deathStranding, // Death Stranding Director's Cut
 };
 
 // Detecção automática: um jogo em Unreal Engine tem, dentro da pasta de instalação, uma pasta com o nome do projeto
@@ -465,4 +394,4 @@ function restore(appid, opts = {}) {
   fs.rmSync(backup);
 }
 
-module.exports = { CATALOG, supported, recipeFor, setInstallDir, detectUnreal, read, write, restore, setBackupDir, unreal, expand, ini, json, cfg, xml, mxml, loose, cpjson };
+module.exports = { CATALOG, supported, recipeFor, setInstallDir, detectUnreal, read, write, restore, setBackupDir, unreal, expand, ini, json, cfg, xml, cpjson };

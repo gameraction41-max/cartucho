@@ -111,18 +111,6 @@ test('Red Dead Redemption 2: muda texto e atributo value no system.xml', () => {
   assert.strictEqual(fs.readFileSync(file, 'utf8'), xmlText);
 });
 
-test("No Man's Sky: acha o MXML na pasta do jogo e aceita os dois jeitos de Property", () => {
-  const mx = '<Data template="TkGraphicsSettings">\n  <Property name="TextureQuality" value="TkGraphicsDetailTypes">\n    <Property name="GraphicsDetail" value="Low" />\n  </Property>\n  <Property name="ShadowQuality" value="Low" />\n</Data>\n';
-  const { file, opts } = fakeGame('Binaries/SETTINGS/TKGRAPHICSSETTINGS.MXML', mx, { install: true });
-  gp.write(275850, 'equilibrado', opts);
-  const out = fs.readFileSync(file, 'utf8');
-  assert.ok(out.includes('<Property name="GraphicsDetail" value="Ultra" />'));
-  assert.ok(out.includes('<Property name="ShadowQuality" value="High" />'));
-  assert.strictEqual(gp.read(275850, opts).preset, 'equilibrado');
-  // Sem a pasta de instalação, o arquivo não é procurado.
-  assert.strictEqual(gp.read(275850, { env: opts.env, dir: path.join(os.tmpdir(), 'nao-existe-nms') }).found, false);
-});
-
 test('Cyberpunk 2077: troca opções por grupo e nome, só quando o tipo bate', () => {
   const data = { version: 3, data: [
     { group_name: '/graphics/advanced', options: [
@@ -144,14 +132,6 @@ test('Cyberpunk 2077: troca opções por grupo e nome, só quando o tipo bate', 
   assert.strictEqual(adv[2].value, 'Low');
   assert.strictEqual(out.data[1].options[0].value, '1920x1080');
   assert.strictEqual(gp.read(1091500, opts).preset, 'desempenho');
-});
-
-test('Death Stranding: settings.cfg com chave e valor em qualquer formato', () => {
-  assert.strictEqual(gp.loose.set('{\n  "lod_scale": 3,\n  "x": 1\n}\n', { lod_scale: '4' }), '{\n  "lod_scale": 4,\n  "x": 1\n}\n');
-  assert.strictEqual(gp.loose.set('lod_scale = 3\r\nfoo = 1\r\n', { lod_scale: '2' }), 'lod_scale = 2\r\nfoo = 1\r\n');
-  const { opts } = fakeGame('settings.cfg', 'lod_scale = 3\n', { install: true });
-  gp.write(1850570, 'qualidade', opts);
-  assert.strictEqual(gp.read(1850570, opts).preset, 'qualidade');
 });
 
 test('arquivo de um formato desconhecido: nada é gravado e nem backup é feito', () => {

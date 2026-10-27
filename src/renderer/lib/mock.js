@@ -19,14 +19,12 @@ const games = [
   { key: 'steam:504230', source: 'steam', appid: 504230, title: 'Celeste', minutes: 1320, lastPlayed: now - 120 * day, ach: { unlocked: 22, total: 32 } },
   { key: 'steam:1174180', source: 'steam', appid: 1174180, title: 'Red Dead Redemption 2', minutes: 5210, lastPlayed: now - 2 * day, ach: { unlocked: 24, total: 51 } },
   { key: 'steam:227300', source: 'steam', appid: 227300, title: 'Euro Truck Simulator 2', minutes: 9340, lastPlayed: now - 4 * day, ach: { unlocked: 58, total: 203 } },
-  { key: 'steam:275850', source: 'steam', appid: 275850, title: "No Man's Sky", minutes: 3120, lastPlayed: now - 6 * day, ach: { unlocked: 19, total: 48 } },
   { key: 'steam:1091500', source: 'steam', appid: 1091500, title: 'Cyberpunk 2077', minutes: 6880, lastPlayed: now - 8 * day, ach: { unlocked: 33, total: 57 } },
-  { key: 'steam:1850570', source: 'steam', appid: 1850570, title: "DEATH STRANDING DIRECTOR'S CUT", minutes: 2470, lastPlayed: now - 11 * day, ach: { unlocked: 21, total: 61 } },
 ].map((g) => (g.source === 'steam' ? { ...g, art: steamArt(g.appid), installed: true, size: 18.4 * 1024 ** 3 } : g));
 // Na demo, Silksong está baixando, Celeste e Stardew não estão no PC e o Terraria tem atualização na fila.
 for (const g of games) if ([1030300, 504230, 413150].includes(g.appid)) Object.assign(g, { installed: false, size: 0 });
 // Na demo, os jogos da lista do gamepresets.js têm presets.
-for (const g of games) if ([1174180, 227300, 275850, 1091500, 1850570].includes(g.appid)) g.presets = true;
+for (const g of games) if ([1174180, 227300, 1091500].includes(g.appid)) g.presets = true;
 
 // Capturas de exemplo: paisagens em SVG, cada jogo com suas cores.
 const fakeShot = (h1, h2, seed) => {
@@ -55,9 +53,7 @@ const gamePresets = { 1174180: 'qualidade', 227300: 'qualidade', 1091500: 'equil
 const gameNotes = {
   1174180: { desempenho: 'Sombras e volumétricos leves, texturas no alto', equilibrado: 'Texturas no ultra, sombras e luz no alto', qualidade: 'Quase tudo no alto, texturas no ultra, sem MSAA' },
   227300: { desempenho: 'Sombras baixas, sem oclusão de ambiente', equilibrado: 'Sombras altas e luzes vistas de mais longe', qualidade: 'Sombras no máximo, vegetação cheia' },
-  275850: { desempenho: 'Médio, com texturas no alto e névoa leve', equilibrado: 'Alto, com texturas no ultra', qualidade: 'Ultra, com névoa volumétrica no alto' },
   1091500: { desempenho: 'Sombras, névoa e reflexos no baixo', equilibrado: 'Médio, com sombras distantes no alto', qualidade: 'Alto, sem ray tracing' },
-  1850570: { desempenho: 'Detalhe de modelos reduzido', equilibrado: 'Detalhe de modelos padrão', qualidade: 'Detalhe de modelos no máximo' },
 };
 let downloads = [
   { key: 'steam:1030300', appid: 1030300, title: 'Hollow Knight: Silksong', state: 'downloading', percent: 37, bytes: 0, total: 0, update: false },
@@ -131,7 +127,7 @@ export const mock = {
   },
   launch: async () => ({ ok: true }),
   steamDownloads: async () => downloads,
-  getGamePreset: async (appid) => ({ found: appid !== 1850570, preset: gamePresets[appid] || null, canRestore: !!gamePresets[appid], notes: gameNotes[appid] }),
+  getGamePreset: async (appid) => ({ found: true, preset: gamePresets[appid] || null, canRestore: !!gamePresets[appid], notes: gameNotes[appid] }),
   setGamePreset: async (appid, id) => { gamePresets[appid] = id; return { ok: true }; },
   restoreGamePreset: async (appid) => { delete gamePresets[appid]; return { ok: true }; },
   installGame: async () => ({ ok: true }),
