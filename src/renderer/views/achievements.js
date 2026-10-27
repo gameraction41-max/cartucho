@@ -1,0 +1,77 @@
+// Conquistas: nível de jogador do Cartucho e o progresso de cada jogo da Steam.
+import { h, cover, when } from '../lib/ui.js';
+import { emptyState } from './home.js';
+
+const SORTS = [
+  { id: 'near', label: 'Mais perto de completar', fn: (a, b) => done(a) - done(b) || pct(b) - pct(a) },
+  { id: 'most', label: 'Mais conquistas', fn: (a, b) => b.unlocked - a.unlocked },
+  { id: 'name', label: 'Nome', fn: (a, b) => a.title.localeCompare(b.title, 'pt-BR') },
+];
+const pct = (g) => g.unlocked / g.total;
+const done = (g) => (g.unlocked === g.total ? 1 : 0);
+let sortIndex = 0;
+
+function ring(level, progress) {
+  const c = 2 * Math.PI * 50;
+  return h('div', {
+    html: `<svg viewBox="0 0 120 120" role="img" aria-label="Nível ${level}">
+      <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="8"/>
+      <circle cx="60" cy="60" r="50" fill="none" stroke="var(--gold)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(progress * c).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 60 60)"/>
+      <text x="60" y="52" text-anchor="middle" fill="var(--muted)" font-family="Barlow, sans-serif" font-size="10" letter-spacing="2">NÍVEL</text>
+      <text x="60" y="80" text-anchor="middle" fill="var(--ink)" font-family="Oxanium, sans-serif" font-size="30" font-weight="800">${level}</text>
+    </svg>`,
+  });
+}
+
+export default {
+  label: 'Conquistas',
+  async render(ctx) {
+    const s = await ctx.api.achievementSummary();
+    if (!s.total) {
+      return {
+        el: h('div', { style: { display: 'contents' } }, emptyState(ctx, {
+          title: 'Nenhuma conquista ainda',
+          text: ctx.state.steamConfigured
+            ? 'As conquistas aparecem aqui depois da primeira sincronização com a Steam. Isso pode levar alguns minutos se você tem muitos jogos.'
+            : 'Conecte sua conta da Steam nas configurações para ver suas conquistas e seu nível.',
+        })),
+        hints: [['confirm', 'Selecionar']],
+      };
+    }
+
+    const gamesByKey = new Map(ctx.state.games.map((g) => [g.key, g]));
+    const sort = SORTS[sortIndex];
+    const rows = [...s.games].sort(sort.fn).map((row) => {
+      const g = gamesByKey.get(row.key) || { key: row.key, source: 'steam', title: row.title };
+      const left = row.total - row.unlocked;
+      return h('div', { class: 'gline', 'data-focus': true, 'data-key': row.key, role: 'button', onclick: () => ctx.go('game', { key: row.key }) },
+        cover(g),
+        h('div', { class: 'nm' }, row.title, h('div', { class: 'bar' }, h('i', { style: { width: `${pct(row) * 100}%` } }))),
+        h('div', { class: 'n' }, `${row.unlocked}/${row.total}`, h('small', {}, left ? `faltam ${left}` : 'completo')));
+    });
+
+    const el = h('div', { class: 'ach-wrap' },
+      h('section', { class: 'panel level' },
+        ring(s.level, s.progress),
+        h('div', { class: 'counts' },
+          h('span', {}, h('b', {}, s.unlocked), 'conquistas'),
+          h('span', {}, h('b', {}, s.perfect), 'jogos 100%'),
+          h('span', {}, h('b', {}, `+${s.month}`), 'últimos 30 dias')),
+        s.latest ? h('div', { class: 'latest' }, h('span', { class: 'ico' }), h('div', {}, s.latest.name, h('small', {}, `${s.latest.game} · ${when(s.latest.unlocktime)}`))) : null),
+      h('section', { class: 'list-col' },
+        h('div', { class: 'list-head' }, h('h2', { class: 'panel-title', style: { margin: 0 } }, 'Seus jogos'), h('span', { class: 'pill on' }, sort.label)),
+        h('div', { class: 'glist' }, rows)));
+
+    return {
+      el,
+      hints: [['confirm', 'Ver jogo'], ['x', 'Ordenar'], ['menu', 'Menu']],
+      onAction(action) {
+        if (action !== 'x') return false;
+        sortIndex = (sortIndex + 1) % SORTS.length;
+        ctx.sfx.tab();
+        ctx.rerender();
+        return true;
+      },
+    };
+  },
+};

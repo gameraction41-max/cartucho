@@ -1,0 +1,9 @@
+/* Fontes empacotadas com o app (pacotes @fontsource), para funcionar sem internet. */
+@font-face { font-family: "Oxanium"; font-weight: 600; font-display: swap; src: url("../../node_modules/@fontsource/oxanium/files/oxanium-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Oxanium"; font-weight: 700; font-display: swap; src: url("../../node_modules/@fontsource/oxanium/files/oxanium-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Oxanium"; font-weight: 800; font-display: swap; src: url("../../node_modules/@fontsource/oxanium/files/oxanium-latin-800-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 400; font-display: swap; src: url("../../node_modules/@fontsource/barlow/files/barlow-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 500; font-display: swap; src: url("../../node_modules/@fontsource/barlow/files/barlow-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; font-display: swap; src: url("../../node_modules/@fontsource/barlow/files/barlow-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("../../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 600; font-display: swap; src: url("../../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-600-normal.woff2") format("woff2"); }

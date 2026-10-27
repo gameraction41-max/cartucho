@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' file: data: https://*.steamstatic.com https://steamcdn-a.akamaihd.net https://*.akamaihd.net; media-src 'self' file:">
+  <title>Cartucho</title>
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="bg" aria-hidden="true"><div class="bg-layer"></div><div class="bg-layer"></div><div class="bg-shade"></div></div>
+
+  <header id="topbar" hidden>
+    <div class="me"><span class="avatar" id="me-avatar"></span><span id="me-name">Jogador</span></div>
+    <nav class="tabs" id="tabs"></nav>
+    <div class="status">
+      <span class="input-pill" id="input-pill" title="Dispositivo em uso"></span>
+      <span class="clock" id="clock"></span>
+    </div>
+  </header>
+
+  <main id="view"></main>
+  <footer id="hints"></footer>
+  <div id="overlay" hidden></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
