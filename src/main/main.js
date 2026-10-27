@@ -8,6 +8,7 @@ const library = require('./library');
 const prism = require('./prism');
 const watch = require('./watch');
 const system = require('./system');
+const { watchGuideButton } = require('./guide');
 
 const windowed = process.argv.includes('--windowed');
 let win = null;
@@ -23,6 +24,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     registerIpc();
     createWindow();
+    watchGuideButton(onGuide);
   });
   app.on('window-all-closed', () => app.quit());
 }
@@ -63,6 +65,14 @@ function bringToFront() {
   win.setAlwaysOnTop(true);
   win.focus();
   win.setAlwaysOnTop(false);
+}
+
+// Botão do Xbox: com o Cartucho na frente, abre ou fecha o menu rápido. Com um jogo na frente, traz o Cartucho de volta já com o menu aberto.
+function onGuide() {
+  if (!win || win.isDestroyed()) return;
+  const fromBackground = !win.isFocused();
+  if (fromBackground) bringToFront();
+  send('input:guide', { fromBackground });
 }
 
 function gameEnded(game) {

@@ -83,3 +83,9 @@ Os dados ficam em `%APPDATA%\Cartucho`: `config.json`, `steam-cache.json` (bibli
 Quando um jogo fecha, o Cartucho volta para a frente sozinho. Na Steam ele percebe isso pelo registro do Windows (`RunningAppID`). No Minecraft, pelo processo do Java, e no Hytale pelo processo do jogo.
 
 A música tema é gerada na hora pelo próprio app. Você pode trocar por um arquivo seu em Configurações > Som.
+
+### Botão do Xbox
+
+O navegador não enxerga o botão do Xbox, então o Cartucho lê esse botão direto do driver do controle (XInput). Com isso ele abre o menu rápido e, se um jogo estiver aberto, traz o Cartucho de volta para a frente.
+
+Para o Windows não abrir a Game Bar junto, vá em Configurações do Windows > Jogos > Game Bar e desligue "Abrir a Game Bar usando este botão em um controle". Se a Steam estiver aberta, ela também pode reagir ao botão. Para evitar isso, na Steam vá em Configurações > Controle e desative a opção do botão Guia.

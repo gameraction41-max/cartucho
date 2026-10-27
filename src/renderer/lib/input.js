@@ -11,13 +11,16 @@ const KEYS = {
 };
 
 // Mapeamento padrão do navegador para controles de Xbox, PlayStation e genéricos.
+// O botão 16 (Guide/Xbox) quase nunca chega por aqui no Windows; lá ele é lido pelo processo principal (main/guide.js).
 const BUTTONS = { 0: 'confirm', 1: 'back', 2: 'x', 3: 'y', 4: 'lb', 5: 'rb', 8: 'menu', 9: 'menu', 12: 'up', 13: 'down', 14: 'left', 15: 'right', 16: 'menu' };
 const REPEATABLE = new Set(['up', 'down', 'left', 'right']);
 const REPEAT_DELAY = 380;
 const REPEAT_RATE = 110;
 const STICK = 0.55;
 
-export function createInput({ onAction, onDevice }) {
+export function createInput({ onAction, onDevice, nativeGuide = false }) {
+  const buttons = { ...BUTTONS };
+  if (nativeGuide) delete buttons[16];
   let device = 'keyboard';
   const held = new Map(); // ação -> { next }
 
@@ -57,7 +60,7 @@ export function createInput({ onAction, onDevice }) {
     for (const pad of navigator.getGamepads()) {
       if (!pad) continue;
       pad.buttons.forEach((b, i) => {
-        if (b.pressed && BUTTONS[i]) active.add(BUTTONS[i]);
+        if (b.pressed && buttons[i]) active.add(buttons[i]);
       });
       const [x = 0, y = 0] = pad.axes;
       if (x < -STICK) active.add('left');
@@ -80,5 +83,5 @@ export function createInput({ onAction, onDevice }) {
   };
   requestAnimationFrame(poll);
 
-  return { get device() { return device; } };
+  return { setDevice, get device() { return device; } };
 }
