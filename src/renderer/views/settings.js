@@ -129,7 +129,7 @@ export default {
       volume,
 
       section('', 'Sobre'),
-      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.8.0', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
+      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.8.1', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
       updateRow(ctx));
 
     const el = h('div', { class: 'set-wrap' }, list);

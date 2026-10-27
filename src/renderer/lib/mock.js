@@ -37,7 +37,6 @@ const shotGroups = [
   { key: 'prism:FO', title: 'Fabulously Optimized', h: [200, 120], n: 7, source: 'minecraft' },
   { key: 'steam:1245620', title: 'ELDEN RING', h: [40, 30], n: 6, source: 'windows', clips: [1, 3] },
   { key: 'steam:105600', title: 'Terraria', h: [190, 100], n: 4, source: 'steam' },
-  { key: 'windows', title: 'Área de trabalho', h: [230, 220], n: 3, source: 'windows' },
 ].map((g, gi) => ({
   key: g.key, title: g.title, gameKey: g.key === 'windows' ? null : g.key,
   shots: Array.from({ length: g.n }, (_, i) => {

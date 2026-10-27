@@ -17,7 +17,7 @@ test('tira a data do nome das capturas da Barra de Jogo', () => {
   assert.strictEqual(ss.gamebarTitle('qualquer coisa.png'), null);
 });
 
-test('junta Steam, Barra de Jogo, prints do Windows e Minecraft por jogo, do mais recente para o mais antigo', () => {
+test('junta Steam, Barra de Jogo e Minecraft por jogo, sem área de trabalho nem outros programas, do mais recente para o mais antigo', () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-'));
   const t = Date.UTC(2026, 9, 27, 12);
   const steamRoot = path.join(home, 'Steam');
@@ -29,25 +29,24 @@ test('junta Steam, Barra de Jogo, prints do Windows e Minecraft por jogo, do mai
   touch(path.join(gamebarDir, 'ELDEN RING™ 2026-10-27 12-00-00.png'), t);
   touch(path.join(gamebarDir, 'Jogo Novo 2026-10-27 11-00-00.mp4'), t - 3600000);
   touch(path.join(gamebarDir, 'leiame.txt'), t);
-  const picturesDir = path.join(home, 'Screenshots');
-  touch(path.join(picturesDir, 'Captura de tela 2026-10-20 101010.png'), t - 86400000);
+  touch(path.join(gamebarDir, 'Explorador de Arquivos 2026-10-27 10-00-00.png'), t);
+  touch(path.join(gamebarDir, 'Minecraft 1.21.1 - Singleplayer 2026-10-27 09-00-00.png'), t - 3 * 3600000);
   const inst = { id: 'FO', name: 'Fabulously Optimized', dir: path.join(home, 'FO') };
   touch(path.join(inst.dir, '.minecraft', 'screenshots', '2026-10-26_10.00.00.png'), t - 7200000);
 
-  const groups = ss.scan({ gamebarDir, picturesDir, steamRoot, instances: [inst], games: [{ key: 'steam:1245620', title: 'ELDEN RING', appid: 1245620 }] });
+  const groups = ss.scan({ gamebarDir, steamRoot, instances: [inst], games: [{ key: 'steam:1245620', title: 'ELDEN RING', appid: 1245620 }] });
   assert.deepStrictEqual(groups.map((g) => [g.key, g.title, g.shots.length]), [
     ['steam:1245620', 'ELDEN RING', 3],
-    ['win:jogonovo', 'Jogo Novo', 1],
     ['prism:FO', 'Fabulously Optimized', 1],
-    ['windows', 'Área de trabalho', 1],
+    ['minecraft', 'Minecraft', 1],
   ]);
   const elden = groups[0].shots;
   assert.deepStrictEqual(elden.map((s) => s.source), ['windows', 'steam', 'steam']);
   assert.ok(elden[2].thumb && elden[2].thumb.startsWith('file:'));
   assert.strictEqual(elden[1].thumb, null);
-  assert.strictEqual(groups[1].shots[0].video, true);
+  assert.ok(!groups.some((g) => /Jogo Novo|Explorador/.test(g.title)));
 });
 
 test('sem pastas, devolve lista vazia', () => {
-  assert.deepStrictEqual(ss.scan({ gamebarDir: '/nao/existe', picturesDir: '/nao/existe', steamRoot: '/nao/existe' }), []);
+  assert.deepStrictEqual(ss.scan({ gamebarDir: '/nao/existe', steamRoot: '/nao/existe' }), []);
 });

@@ -1,5 +1,5 @@
-// Capturas de tela e clipes: os da Barra de Jogo do Windows (Vídeos\Capturas), os prints do Win+PrtScn
-// (Imagens\Capturas de tela), os da Steam (F12) e os do Minecraft (F2) de cada instância do Prism.
+// Capturas de tela e clipes tirados nos jogos: os da Barra de Jogo do Windows (Vídeos\Capturas), os da Steam (F12)
+// e os do Minecraft (F2) de cada instância do Prism.
 // Tudo é agrupado por jogo, do mais recente para o mais antigo.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -62,7 +62,7 @@ function steamShots(steamRoot) {
 }
 
 // games: [{ key, title, appid? }] da biblioteca; instances: [{ id, name, dir }] do Prism.
-function scan({ gamebarDir, picturesDir, steamRoot, instances = [], games = [], steamNames = new Map() } = {}) {
+function scan({ gamebarDir, steamRoot, instances = [], games = [], steamNames = new Map() } = {}) {
   const groups = new Map();
   const byTitle = new Map(games.map((g) => [norm(g.title), g]));
   const add = (key, title, s, gameKey = null) => {
@@ -80,13 +80,10 @@ function scan({ gamebarDir, picturesDir, steamRoot, instances = [], games = [], 
     for (const f of listFiles(gamebarDir, new RegExp(`${IMAGE.source}|${VIDEO.source}`, 'i'))) {
       const title = gamebarTitle(f.file);
       const g = title && byTitle.get(norm(title));
+      // Só entra o que foi tirado num jogo da biblioteca. Área de trabalho, navegador e outros programas ficam de fora.
       if (g) add(g.key, g.title, shot(f, 'windows'), g.key);
-      else if (title) add(`win:${norm(title)}`, title, shot(f, 'windows'));
-      else add('windows', 'Área de trabalho', shot(f, 'windows'));
+      else if (title && /^minecraft/i.test(title)) add('minecraft', 'Minecraft', shot(f, 'windows'));
     }
-  }
-  if (picturesDir) {
-    for (const f of listFiles(picturesDir, IMAGE)) add('windows', 'Área de trabalho', shot(f, 'windows'));
   }
   for (const inst of instances) {
     for (const sub of ['minecraft', '.minecraft']) {

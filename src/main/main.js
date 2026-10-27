@@ -287,7 +287,6 @@ function registerIpc() {
       .map((g) => ({ key: g.key, title: g.title, appid: Number.isInteger(g.appid) ? g.appid : null }));
     return screenshots.scan({
       gamebarDir: path.join(app.getPath('videos'), 'Captures'),
-      picturesDir: path.join(app.getPath('pictures'), 'Screenshots'),
       steamRoot: steamlocal.steamDir(),
       instances: prism.listInstances(library.prismDir()),
       games: list,
