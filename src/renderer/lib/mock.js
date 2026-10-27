@@ -66,6 +66,7 @@ export const mock = {
   pickFolder: async () => null,
   power: async () => true,
   minimize: async () => {},
+  releaseTop: async () => {},
   toggleFullscreen: async () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen().catch(() => {});

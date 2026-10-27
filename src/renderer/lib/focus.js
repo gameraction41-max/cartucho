@@ -15,14 +15,14 @@ export function createFocus() {
     el.dispatchEvent(new CustomEvent('focusin-nav', { bubbles: true }));
   }
 
-  function setScope(root, preferredKey) {
+  function setScope(root, preferredKey, { scroll = true } = {}) {
     if (current) current.classList.remove('focused');
     scope = root;
     current = null;
     const list = items();
     const byKey = preferredKey && list.find((el) => el.dataset.key === preferredKey);
     const initial = byKey || list.find((el) => el.hasAttribute('data-autofocus')) || list[0];
-    if (initial) set(initial, { scroll: !!byKey });
+    if (initial) set(initial, { scroll: scroll && !!byKey });
   }
 
   function move(dir) {

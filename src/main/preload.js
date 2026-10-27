@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('cartucho', {
   pickFolder: invoke('dialog:folder'),
   power: invoke('system:power'),
   minimize: invoke('window:minimize'),
+  releaseTop: invoke('window:release-top'),
   toggleFullscreen: invoke('window:fullscreen'),
   platform: process.platform,
   on(event, callback) {

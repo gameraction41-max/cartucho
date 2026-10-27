@@ -9,6 +9,7 @@ const prism = require('./prism');
 const watch = require('./watch');
 const system = require('./system');
 const { watchGuideButton } = require('./guide');
+const { forceForeground } = require('./foreground');
 
 const windowed = process.argv.includes('--windowed');
 let win = null;
@@ -57,21 +58,42 @@ function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
-// O Windows não deixa um app roubar o foco à toa; o truque do "sempre no topo" por um instante resolve.
+// O Windows não deixa um app roubar o foco à toa. Primeiro tenta o jeito nativo (foreground.js);
+// o "sempre no topo" por um instante cobre o caso em que ele não está disponível.
 function bringToFront() {
   if (!win) return;
   if (win.isMinimized()) win.restore();
   win.show();
+  forceForeground(win);
   win.setAlwaysOnTop(true);
   win.focus();
   win.setAlwaysOnTop(false);
 }
 
-// Botão do Xbox: com o Cartucho na frente, abre ou fecha o menu rápido. Com um jogo na frente, traz o Cartucho de volta já com o menu aberto.
+// Botão do Xbox com outro app ou jogo na frente: o Cartucho fica por cima de tudo até o menu fechar,
+// senão o jogo (principalmente em tela cheia sem bordas) continua cobrindo a janela.
+let overApp = false;
+
+function showOverApp() {
+  overApp = true;
+  if (win.isMinimized()) win.restore();
+  win.setAlwaysOnTop(true, 'screen-saver');
+  win.show();
+  forceForeground(win);
+  win.focus();
+}
+
+function releaseTop() {
+  if (!overApp) return;
+  overApp = false;
+  win.setAlwaysOnTop(false);
+}
+
+// Botão do Xbox: com o Cartucho na frente, abre ou fecha o menu rápido. Com um jogo na frente, traz o Cartucho por cima dele já com o menu aberto.
 function onGuide() {
   if (!win || win.isDestroyed()) return;
   const fromBackground = !win.isFocused();
-  if (fromBackground) bringToFront();
+  if (fromBackground) showOverApp();
   send('input:guide', { fromBackground });
 }
 
@@ -155,6 +177,11 @@ function registerIpc() {
     if (action === 'quit') return app.quit();
     return system.power(action);
   });
-  ipcMain.handle('window:minimize', () => win && win.minimize());
+  ipcMain.handle('window:minimize', () => {
+    if (!win) return;
+    releaseTop();
+    win.minimize();
+  });
+  ipcMain.handle('window:release-top', () => win && releaseTop());
   ipcMain.handle('window:fullscreen', () => win && win.setFullScreen(!win.isFullScreen()));
 }

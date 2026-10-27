@@ -15,6 +15,7 @@ import { createMenu } from './views/menu.js';
 
 const VIEWS = { home, game, achievements, minecraft, library, settings };
 const TABS = ['home', 'minecraft', 'achievements', 'library', 'settings'];
+const SCROLLERS = '.set-list, .glist, .grid, .row, .mc-row, .ach-list';
 
 const GLYPHS = {
   gamepad: { confirm: ['A', 'a'], back: ['B', 'b'], x: ['X', 'x'], y: ['Y', 'y'], lb: ['LB', ''], rb: ['RB', ''], menu: ['☰', ''] },
@@ -32,6 +33,7 @@ const stack = []; // [{ id, params }]
 let current = null; // { id, params, view: resultado do render }
 let menu = null;
 let focusBeforeMenu = null;
+let menuOverApp = false; // menu aberto pelo botão do Xbox com outro app ou jogo na frente
 let renderToken = 0;
 
 const $ = (id) => document.getElementById(id);
@@ -139,12 +141,20 @@ async function show({ keepFocus = false } = {}) {
   if (token !== renderToken) return;
   current = { ...top, view };
   const root = $('view');
+  // Ao redesenhar a mesma tela (volume, sincronização), as listas mantêm a rolagem em vez de voltar ao topo.
+  const scrolls = keepFocus ? [...root.querySelectorAll(SCROLLERS)].map((el) => [el.scrollTop, el.scrollLeft]) : [];
   root.replaceChildren(view.el);
+  root.querySelectorAll(SCROLLERS).forEach((el, i) => {
+    if (!scrolls[i]) return;
+    el.style.scrollBehavior = 'auto';
+    [el.scrollTop, el.scrollLeft] = scrolls[i];
+    el.style.scrollBehavior = '';
+  });
   if (!keepFocus) {
     view.el.classList.add('view-enter');
   }
   if (!view.keepBackground) setBackground(null);
-  focus.setScope(root, prevKey);
+  focus.setScope(root, prevKey, { scroll: !keepFocus });
   renderTopbar();
   renderHints();
 }
@@ -258,7 +268,19 @@ async function start() {
   state.running = cfg.running;
   await loadLibrary(await api.getLibrary());
 
-  menu = createMenu({ ctx, focus, root: $('overlay'), onClose: () => focus.setScope($('view'), focusBeforeMenu) });
+  menu = createMenu({
+    ctx,
+    focus,
+    root: $('overlay'),
+    onClose: (how) => {
+      focus.setScope($('view'), focusBeforeMenu, { scroll: false });
+      if (!menuOverApp) return;
+      menuOverApp = false;
+      // Fechar o menu volta para o que estava na frente (o jogo). Escolher uma tela fica no Cartucho.
+      if (how === 'dismiss') api.minimize();
+      else api.releaseTop();
+    },
+  });
 
   const input = createInput({
     onAction: handleAction,
@@ -279,6 +301,7 @@ async function start() {
     input.setDevice('gamepad');
     if (bootHandler) return bootHandler('confirm');
     if (fromBackground) {
+      menuOverApp = true;
       if (!menu.isOpen()) openMenu();
     } else if (menu.isOpen()) {
       menu.handle('menu');
