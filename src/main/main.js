@@ -32,6 +32,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     registerIpc();
     gamepresets.setBackupDir(() => path.join(app.getPath('userData'), 'backups'));
+    gamepresets.setInstallDir(downloads.installDir);
     createWindow();
     overlay.prepare();
     watchGuideButton(onGuide);
@@ -244,6 +245,17 @@ function registerIpc() {
       if (running && running.key === `prism:${inst.id}`) { skipped++; continue; }
       try {
         mcoptions.writePreset(inst.dir, presetId);
+        applied++;
+      } catch {
+        skipped++;
+      }
+    }
+    // Jogos da Steam que o Cartucho sabe ajustar (gamepresets.js) entram junto.
+    for (const appid of library.steamNames().keys()) {
+      if (!gamepresets.supported(appid)) continue;
+      if (running && running.key === `steam:${appid}`) { skipped++; continue; }
+      try {
+        gamepresets.write(appid, presetId);
         applied++;
       } catch {
         skipped++;

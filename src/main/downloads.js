@@ -30,6 +30,12 @@ function info(appid) {
   return a ? { installed: a.installed, download: a.download, size: a.size } : { installed: false, download: null };
 }
 
+// Pasta do jogo instalado (steamapps/common/...), para descobrir onde ele guarda as opções gráficas.
+function installDir(appid) {
+  const a = apps && apps.get(appid);
+  return a && a.installed ? a.dir : null;
+}
+
 function list(names = new Map()) {
   if (!apps) return [];
   return [...apps.values()]
@@ -83,4 +89,4 @@ function poke() {
   timer = setTimeout(tick, 500);
 }
 
-module.exports = { start, info, list, expectInstall, scan, poke };
+module.exports = { start, info, installDir, list, expectInstall, scan, poke };

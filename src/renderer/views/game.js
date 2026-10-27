@@ -117,10 +117,15 @@ function presetButton(ctx, g) {
   let presets = [];
   let state = { found: true, preset: null, canRestore: false };
   let recommendedId = null;
+  // Fora do recomendado, o botão sugere o preset que combina com o hardware (aba PC).
+  const suggestion = () => {
+    const rec = presets.find((x) => x.id === recommendedId);
+    return rec ? ` · sugerido: ${rec.label}` : '';
+  };
   const label = () => {
     const p = presets.find((x) => x.id === state.preset);
     btn.textContent = !state.found ? 'Preset gráfico: abra o jogo uma vez antes'
-      : `Preset gráfico: ${p ? p.label : 'Personalizado'}${p && p.id === recommendedId ? ' · recomendado' : ''}`;
+      : `Preset gráfico: ${p ? p.label : 'Personalizado'}${p && p.id === recommendedId ? ' · recomendado' : suggestion()}`;
     restoreBtn.hidden = !state.canRestore;
   };
   Promise.all([ctx.api.mcPresets(), backend.get(), ctx.api.recommendedPreset()]).then(([list, st, rec]) => {

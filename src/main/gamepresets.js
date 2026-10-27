@@ -1,5 +1,6 @@
-// Presets gráficos dos jogos da Steam. Cada jogo guarda as opções de vídeo num arquivo próprio,
-// então cada jogo suportado tem uma receita no CATALOG: onde fica o arquivo, o formato e os valores de cada preset.
+// Presets gráficos dos jogos da Steam. Cada jogo guarda as opções de vídeo num arquivo próprio, então cada jogo
+// suportado tem uma receita: onde fica o arquivo, o formato e os valores de cada preset. Jogos em Unreal Engine são
+// reconhecidos sozinhos pela pasta de instalação; os outros entram à mão no CATALOG.
 // Antes da primeira mudança, o arquivo original é copiado para a pasta do Cartucho e pode ser restaurado.
 const fs = require('node:fs');
 const os = require('node:os');
@@ -81,17 +82,58 @@ const FORMATS = { ini, json };
 const UE_GROUPS = ['ViewDistanceQuality', 'AntiAliasingQuality', 'ShadowQuality', 'GlobalIlluminationQuality', 'ReflectionQuality', 'PostProcessQuality', 'TextureQuality', 'EffectsQuality', 'FoliageQuality', 'ShadingQuality'];
 const UE_LEVEL = { desempenho: 1, equilibrado: 2, qualidade: 3 };
 
-function unreal(project, { folders = ['Windows', 'WindowsNoEditor', 'WindowsClient'] } = {}) {
+const UE_FOLDERS = ['Windows', 'WindowsNoEditor', 'WindowsClient'];
+
+function unreal(project, { folders = UE_FOLDERS } = {}) {
   const scal = (level) => ({ 'ScalabilityGroups': Object.fromEntries([['sg.ResolutionQuality', '100'], ...UE_GROUPS.map((g) => [`sg.${g}`, String(level)])]) });
   return {
     format: 'ini',
-    files: folders.map((f) => `%LOCALAPPDATA%/${project}/Saved/Config/${f}/GameUserSettings.ini`),
+    engine: 'Unreal Engine',
+    files: folders.flatMap((f) => [
+      `%LOCALAPPDATA%/${project}/Saved/Config/${f}/GameUserSettings.ini`,
+      `%DOCUMENTS%/My Games/${project}/Saved/Config/${f}/GameUserSettings.ini`,
+    ]),
     presets: Object.fromEntries(Object.entries(UE_LEVEL).map(([id, level]) => [id, scal(level)])),
   };
 }
 
-// appid -> receita. Os jogos entram aqui conforme a lista do Filipi.
+// appid -> receita feita à mão, para jogos que a detecção automática não pega.
 const CATALOG = {};
+
+// Detecção automática: um jogo em Unreal Engine tem, dentro da pasta de instalação, uma pasta com o nome do projeto
+// (com Binaries/Win64 ou Content/Paks). As opções dele ficam em %LOCALAPPDATA%/<projeto>/Saved/Config.
+function detectUnreal(dir, env) {
+  let entries = [];
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return null; }
+  for (const e of entries) {
+    if (!e.isDirectory() || e.name === 'Engine') continue;
+    const base = path.join(dir, e.name);
+    if (!fs.existsSync(path.join(base, 'Binaries', 'Win64')) && !fs.existsSync(path.join(base, 'Content', 'Paks'))) continue;
+    const recipe = unreal(e.name);
+    if (findFile(recipe, env)) return recipe;
+  }
+  return null;
+}
+
+// Pasta de instalação de cada jogo, fornecida pelo main.js (vem do downloads.js).
+let installDir = () => null;
+const detected = new Map(); // appid -> { recipe, at }
+const DETECT_TTL = 10 * 60 * 1000;
+
+function setInstallDir(fn) {
+  installDir = fn;
+}
+
+function recipeFor(appid, { catalog = CATALOG, env, dir } = {}) {
+  if (catalog[appid]) return catalog[appid];
+  if (catalog !== CATALOG && !dir) return null;
+  const cached = detected.get(appid);
+  if (!dir && cached && Date.now() - cached.at < DETECT_TTL) return cached.recipe;
+  const d = dir || installDir(appid);
+  const recipe = d ? detectUnreal(d, env) : null;
+  if (!dir) detected.set(appid, { recipe, at: Date.now() });
+  return recipe;
+}
 
 // ===== arquivos =====
 
@@ -124,21 +166,23 @@ function backupPath(appid, file) {
 
 // ===== API =====
 
-const supported = (appid) => !!CATALOG[appid];
+const supported = (appid) => !!recipeFor(appid);
 
-function read(appid, { catalog = CATALOG, env } = {}) {
-  const recipe = catalog[appid];
+function read(appid, opts = {}) {
+  const recipe = recipeFor(appid, opts);
+  const { env } = opts;
   if (!recipe) return null;
   const file = findFile(recipe, env);
   if (!file) return { found: false, preset: null, canRestore: false };
   const text = fs.readFileSync(file, 'utf8');
   const fmt = FORMATS[recipe.format];
   const preset = Object.keys(recipe.presets).find((id) => fmt.matches(text, recipe.presets[id])) || null;
-  return { found: true, preset, canRestore: fs.existsSync(backupPath(appid, file)) };
+  return { found: true, preset, canRestore: fs.existsSync(backupPath(appid, file)), engine: recipe.engine || null };
 }
 
-function write(appid, presetId, { catalog = CATALOG, env } = {}) {
-  const recipe = catalog[appid];
+function write(appid, presetId, opts = {}) {
+  const recipe = recipeFor(appid, opts);
+  const { env } = opts;
   if (!recipe || !recipe.presets[presetId]) throw new Error('Este jogo ainda não tem presets no Cartucho.');
   const file = findFile(recipe, env);
   if (!file) throw new Error('Não achei o arquivo de configuração. Abra o jogo uma vez e feche, para ele criar o arquivo.');
@@ -152,8 +196,9 @@ function write(appid, presetId, { catalog = CATALOG, env } = {}) {
   return presetId;
 }
 
-function restore(appid, { catalog = CATALOG, env } = {}) {
-  const recipe = catalog[appid];
+function restore(appid, opts = {}) {
+  const recipe = recipeFor(appid, opts);
+  const { env } = opts;
   const file = recipe && findFile(recipe, env);
   if (!file) throw new Error('Não achei o arquivo de configuração deste jogo.');
   const backup = backupPath(appid, file);
@@ -162,4 +207,4 @@ function restore(appid, { catalog = CATALOG, env } = {}) {
   fs.rmSync(backup);
 }
 
-module.exports = { CATALOG, supported, read, write, restore, setBackupDir, unreal, expand, ini, json };
+module.exports = { CATALOG, supported, recipeFor, setInstallDir, detectUnreal, read, write, restore, setBackupDir, unreal, expand, ini, json };

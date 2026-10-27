@@ -37,9 +37,9 @@ test('write faz backup do original uma vez, read reconhece o preset e restore de
   gp.setBackupDir(() => path.join(home, 'backups'));
   const catalog = { 42: gp.unreal('Jogo') };
 
-  assert.deepStrictEqual(gp.read(42, { catalog, env }), { found: true, preset: null, canRestore: false });
+  assert.deepStrictEqual(gp.read(42, { catalog, env }), { found: true, preset: null, canRestore: false, engine: 'Unreal Engine' });
   gp.write(42, 'desempenho', { catalog, env });
-  assert.deepStrictEqual(gp.read(42, { catalog, env }), { found: true, preset: 'desempenho', canRestore: true });
+  assert.deepStrictEqual(gp.read(42, { catalog, env }), { found: true, preset: 'desempenho', canRestore: true, engine: 'Unreal Engine' });
   gp.write(42, 'qualidade', { catalog, env });
   assert.strictEqual(gp.read(42, { catalog, env }).preset, 'qualidade');
   gp.restore(42, { catalog, env });
@@ -52,4 +52,22 @@ test('sem o arquivo do jogo, read avisa e write pede para abrir o jogo uma vez',
   const catalog = { 7: gp.unreal('Nada') };
   assert.deepStrictEqual(gp.read(7, { catalog, env }), { found: false, preset: null, canRestore: false });
   assert.throws(() => gp.write(7, 'equilibrado', { catalog, env }), /Abra o jogo uma vez/);
+});
+
+test('reconhece sozinho um jogo em Unreal Engine pela pasta de instalação', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gp-ue-'));
+  const env = { LOCALAPPDATA: path.join(home, 'Local'), USERPROFILE: home };
+  const game = path.join(home, 'steamapps', 'common', 'Meu Jogo');
+  fs.mkdirSync(path.join(game, 'Engine', 'Binaries', 'Win64'), { recursive: true });
+  fs.mkdirSync(path.join(game, 'Projeto', 'Binaries', 'Win64'), { recursive: true });
+  // Sem o arquivo de opções, ainda não dá para usar.
+  assert.strictEqual(gp.detectUnreal(game, env), null);
+  const ini = path.join(env.LOCALAPPDATA, 'Projeto', 'Saved', 'Config', 'WindowsNoEditor', 'GameUserSettings.ini');
+  fs.mkdirSync(path.dirname(ini), { recursive: true });
+  fs.writeFileSync(ini, SAMPLE);
+  const recipe = gp.detectUnreal(game, env);
+  assert.ok(recipe && recipe.engine === 'Unreal Engine');
+  gp.setBackupDir(() => path.join(home, 'backups'));
+  gp.write(99, 'equilibrado', { catalog: {}, env, dir: game });
+  assert.strictEqual(gp.ini.get(fs.readFileSync(ini, 'utf8'), 'ScalabilityGroups', 'sg.ShadowQuality'), '2');
 });
