@@ -1,0 +1,39 @@
+{
+  "name": "cartucho",
+  "version": "0.1.0",
+  "description": "Launcher em tela cheia, no estilo console, para Steam, Minecraft (Prism Launcher) e Hytale",
+  "main": "src/main/main.js",
+  "author": "Filipi",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --windowed",
+    "test": "node --test",
+    "dist": "electron-builder --win"
+  },
+  "dependencies": {
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/oxanium": "^5.3.0"
+  },
+  "devDependencies": {
+    "electron": "^44.9.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.filipi.cartucho",
+    "productName": "Cartucho",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
