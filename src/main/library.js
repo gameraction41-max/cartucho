@@ -11,6 +11,7 @@ const { computeLevel } = require('./level');
 const art = require('./art');
 const history = require('./history');
 const downloads = require('./downloads');
+const gamepresets = require('./gamepresets');
 
 const ACH_CONCURRENCY = 4;
 
@@ -56,6 +57,7 @@ function steamGames() {
     art: steam.art(g.appid),
     ach: achCounts(g.appid),
     ...downloads.info(g.appid),
+    presets: gamepresets.supported(g.appid),
   }));
 }
 

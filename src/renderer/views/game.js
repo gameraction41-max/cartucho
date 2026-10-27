@@ -92,34 +92,64 @@ async function resetArt(ctx, g) {
   ctx.toast('Arte original de volta.');
 }
 
-// Preset gráfico do Minecraft: cada aperto passa para o próximo e grava no options.txt da instância.
+// Onde cada tipo de jogo guarda o preset: options.txt da instância (Minecraft) ou o arquivo de vídeo do jogo da Steam (gamepresets.js).
+function presetBackend(ctx, g) {
+  if (g.source === 'prism') {
+    return {
+      get: async () => ({ found: true, preset: await ctx.api.getMcPreset(g.instanceId) }),
+      set: (id) => ctx.api.setMcPreset(g.instanceId, id),
+      applied: 'Vale na próxima vez que abrir a instância.',
+    };
+  }
+  return {
+    get: () => ctx.api.getGamePreset(g.appid),
+    set: (id) => ctx.api.setGamePreset(g.appid, id),
+    restore: () => ctx.api.restoreGamePreset(g.appid),
+    applied: 'Vale na próxima vez que abrir o jogo.',
+  };
+}
+
+// Preset gráfico: cada aperto passa para o próximo e grava no arquivo do jogo.
 function presetButton(ctx, g) {
+  const backend = presetBackend(ctx, g);
   const btn = h('button', { class: 'btn', 'data-focus': true, 'data-key': 'preset' }, 'Preset gráfico: …');
+  const restoreBtn = h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'preset-restore', hidden: true }, 'Voltar às opções originais do jogo');
   let presets = [];
-  let currentId = null;
+  let state = { found: true, preset: null, canRestore: false };
   let recommendedId = null;
   const label = () => {
-    const p = presets.find((x) => x.id === currentId);
-    btn.textContent = `Preset gráfico: ${p ? p.label : 'Personalizado'}${p && p.id === recommendedId ? ' · recomendado' : ''}`;
+    const p = presets.find((x) => x.id === state.preset);
+    btn.textContent = !state.found ? 'Preset gráfico: abra o jogo uma vez antes'
+      : `Preset gráfico: ${p ? p.label : 'Personalizado'}${p && p.id === recommendedId ? ' · recomendado' : ''}`;
+    restoreBtn.hidden = !state.canRestore;
   };
-  Promise.all([ctx.api.mcPresets(), ctx.api.getMcPreset(g.instanceId), ctx.api.recommendedPreset()]).then(([list, id, rec]) => {
+  Promise.all([ctx.api.mcPresets(), backend.get(), ctx.api.recommendedPreset()]).then(([list, st, rec]) => {
     presets = list;
-    currentId = id;
+    state = { ...state, ...(st || {}) };
     recommendedId = rec && rec.id;
     label();
   });
   btn.addEventListener('click', async () => {
     if (!presets.length) return;
-    const i = presets.findIndex((x) => x.id === currentId);
+    const i = presets.findIndex((x) => x.id === state.preset);
     const next = presets[(i + 1) % presets.length];
-    const r = await ctx.api.setMcPreset(g.instanceId, next.id);
+    const r = await backend.set(next.id);
     if (r && r.error) return ctx.toast(r.error, { error: true });
-    currentId = next.id;
+    state = { ...state, found: true, preset: next.id, canRestore: !!backend.restore };
     ctx.sfx.tab();
     label();
-    ctx.toast(`${next.label} aplicado. Vale na próxima vez que abrir a instância.`);
+    ctx.toast(`${next.label} aplicado. ${backend.applied}`);
   });
-  return btn;
+  restoreBtn.addEventListener('click', async () => {
+    const r = await backend.restore();
+    if (r && r.error) return ctx.toast(r.error, { error: true });
+    ctx.sfx.back();
+    state = { ...state, ...(await backend.get()) };
+    label();
+    ctx.refocus('preset');
+    ctx.toast('As opções gráficas voltaram a ser as do jogo antes do Cartucho mexer.');
+  });
+  return [btn, restoreBtn];
 }
 
 export default {
@@ -145,7 +175,7 @@ export default {
         h('div', { class: 'menu-v' },
           g.download ? dlBar(g.download, g.download.update ? 'Atualizando' : 'Baixando') : null,
           h('button', { class: 'btn primary', 'data-focus': true, 'data-autofocus': true, 'data-key': 'play', onclick: () => ctx.launch(g) }, playLabel(g)),
-          g.source === 'prism' ? presetButton(ctx, g) : null,
+          g.source === 'prism' || g.presets ? presetButton(ctx, g) : null,
           h('button', { class: 'btn', 'data-focus': true, 'data-key': 'open', onclick: () => ctx.api.openInSource(g) }, OPEN_LABEL[g.source]),
           h('div', { class: 'art-btns' },
             h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'art-cover', onclick: () => changeArt(ctx, g, 'cover') }, 'Trocar capa'),
