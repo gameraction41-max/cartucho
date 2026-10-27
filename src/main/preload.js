@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('cartucho', {
   installUpdate: invoke('update:install'),
   checkUpdate: invoke('update:check'),
   steamDownloads: invoke('steam:downloads'),
+  screenshots: invoke('screenshots:list'),
   getGamePreset: invoke('steam:preset-get'),
   setGamePreset: invoke('steam:preset-set'),
   restoreGamePreset: invoke('steam:preset-restore'),

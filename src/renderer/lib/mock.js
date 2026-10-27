@@ -22,6 +22,30 @@ const games = [
 for (const g of games) if ([1030300, 504230, 413150].includes(g.appid)) Object.assign(g, { installed: false, size: 0 });
 // Na demo, o Hades II tem presets e começa com as opções do jogo.
 for (const g of games) if (g.appid === 1145350) g.presets = true;
+
+// Capturas de exemplo: paisagens em SVG, cada jogo com suas cores.
+const fakeShot = (h1, h2, seed) => {
+  const hills = [0, 1, 2].map((i) => {
+    const y = 380 + i * 70 + ((seed * (i + 3)) % 40);
+    return `<path d="M0 ${y} Q 320 ${y - 90 - ((seed * 7 + i * 31) % 80)} 640 ${y} T 1280 ${y - 20} V 720 H 0 Z" fill="hsl(${h2} ${45 - i * 8}% ${28 - i * 7}%)"/>`;
+  }).join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(${h1} 60% 22%)"/><stop offset="1" stop-color="hsl(${h1 + 30} 70% 62%)"/></linearGradient></defs><rect width="1280" height="720" fill="url(#s)"/><circle cx="${200 + ((seed * 137) % 880)}" cy="${150 + ((seed * 53) % 120)}" r="${50 + (seed % 4) * 15}" fill="hsl(${h1 + 50} 90% 80%)" opacity=".85"/>${hills}</svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+};
+const shotGroups = [
+  { key: 'steam:1145350', title: 'Hades II', h: [350, 10], n: 9, source: 'windows', clips: [2, 5] },
+  { key: 'prism:FO', title: 'Fabulously Optimized', h: [200, 120], n: 7, source: 'minecraft' },
+  { key: 'steam:1245620', title: 'ELDEN RING', h: [40, 30], n: 6, source: 'windows', clips: [1, 3] },
+  { key: 'steam:105600', title: 'Terraria', h: [190, 100], n: 4, source: 'steam' },
+  { key: 'windows', title: 'Área de trabalho', h: [230, 220], n: 3, source: 'windows' },
+].map((g, gi) => ({
+  key: g.key, title: g.title, gameKey: g.key === 'windows' ? null : g.key,
+  shots: Array.from({ length: g.n }, (_, i) => {
+    const clip = (g.clips || []).includes(i);
+    const url = fakeShot(g.h[0] + i * 9, g.h[1] + i * 5, gi * 13 + i + 1);
+    return { url, thumb: clip ? url : null, at: now - gi * 2 * day - i * 5 * 3600000, video: clip, source: g.source, name: `${g.title} ${i}.png` };
+  }),
+}));
 const gamePresets = {};
 let downloads = [
   { key: 'steam:1030300', appid: 1030300, title: 'Hollow Knight: Silksong', state: 'downloading', percent: 37, bytes: 0, total: 0, update: false },
@@ -125,6 +149,7 @@ export const mock = {
     return { days, total: mins.reduce((a, b) => a + b, 0), top: [{ key: 'steam:1245620', minutes: 320 }, { key: 'prism:FO', minutes: 210 }, { key: 'steam:105600', minutes: 95 }], trackingSince: '' };
   },
   getFriends: async () => ({ configured: true, friends }),
+  screenshots: async () => shotGroups,
   openProfile: async () => {},
   updateStatus: async () => ({ state: 'current', version: null }),
   checkUpdate: async () => {

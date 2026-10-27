@@ -13,16 +13,17 @@ import library from './views/library.js';
 import settings from './views/settings.js';
 import pc from './views/pc.js';
 import friends from './views/friends.js';
+import screenshots from './views/screenshots.js';
 import { showBoot } from './views/boot.js';
 import { createMenu } from './views/menu.js';
 
-const VIEWS = { home, game, achievements, minecraft, friends, library, pc, settings };
-const TABS = ['home', 'minecraft', 'achievements', 'friends', 'library', 'pc', 'settings'];
-const SCROLLERS = '.set-list, .glist, .grid, .row, .mc-row, .ach-list';
+const VIEWS = { home, game, achievements, minecraft, friends, library, screenshots, pc, settings };
+const TABS = ['home', 'minecraft', 'achievements', 'friends', 'library', 'screenshots', 'pc', 'settings'];
+const SCROLLERS = '.shots-filters, .set-list, .glist, .grid, .row, .mc-row, .ach-list';
 
 const GLYPHS = {
-  gamepad: { confirm: ['A', 'a'], back: ['B', 'b'], x: ['X', 'x'], y: ['Y', 'y'], lb: ['LB', ''], rb: ['RB', ''], menu: ['☰', ''] },
-  keyboard: { confirm: ['Enter', 'key'], back: ['Esc', 'key'], x: ['F', 'key'], y: ['I', 'key'], lb: ['Q', 'key'], rb: ['E', 'key'], menu: ['M', 'key'] },
+  gamepad: { confirm: ['A', 'a'], back: ['B', 'b'], x: ['X', 'x'], y: ['Y', 'y'], lb: ['LB', ''], rb: ['RB', ''], menu: ['☰', ''], lr: ['◀ ▶', ''] },
+  keyboard: { confirm: ['Enter', 'key'], back: ['Esc', 'key'], x: ['F', 'key'], y: ['I', 'key'], lb: ['Q', 'key'], rb: ['E', 'key'], menu: ['M', 'key'], lr: ['← →', 'key'] },
 };
 const ICONS = {
   gamepad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9h4M8 7v4M15 10h.01M18 8h.01"/><path d="M7 4h10a5 5 0 0 1 5 5v4a4 4 0 0 1-7 2.6L14 14h-4l-1 1.6A4 4 0 0 1 2 13V9a5 5 0 0 1 5-5z"/></svg>',
@@ -185,6 +186,7 @@ const ctx = {
   refocus: (key) => { if (!menu.isOpen()) focus.setScope($('view'), key || focus.key, { scroll: false }); },
   reloadLibrary: async () => { await loadLibrary(await api.getLibrary()); show({ keepFocus: true }); },
   applyConfig,
+  hints: (list) => hintEls(list),
 };
 
 async function show({ keepFocus = false } = {}) {

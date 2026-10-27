@@ -16,6 +16,8 @@ const overlay = require('./overlay');
 const updater = require('./updater');
 const downloads = require('./downloads');
 const gamepresets = require('./gamepresets');
+const screenshots = require('./screenshots');
+const steamlocal = require('./steamlocal');
 
 const windowed = process.argv.includes('--windowed');
 let win = null;
@@ -278,6 +280,20 @@ function registerIpc() {
   ipcMain.handle('steam:preset-get', steamPreset(gamepresets.read, { changes: false }));
   ipcMain.handle('steam:preset-set', steamPreset(gamepresets.write));
   ipcMain.handle('steam:preset-restore', steamPreset(gamepresets.restore));
+  // Capturas: a lista de jogos vem da interface, só para dar nome certo às capturas da Barra de Jogo.
+  ipcMain.handle('screenshots:list', (_e, games) => {
+    const list = (Array.isArray(games) ? games : []).slice(0, 5000)
+      .filter((g) => g && typeof g.key === 'string' && typeof g.title === 'string')
+      .map((g) => ({ key: g.key, title: g.title, appid: Number.isInteger(g.appid) ? g.appid : null }));
+    return screenshots.scan({
+      gamebarDir: path.join(app.getPath('videos'), 'Captures'),
+      picturesDir: path.join(app.getPath('pictures'), 'Screenshots'),
+      steamRoot: steamlocal.steamDir(),
+      instances: prism.listInstances(library.prismDir()),
+      games: list,
+      steamNames: (() => { try { return library.steamNames(); } catch { return new Map(); } })(),
+    });
+  });
   ipcMain.handle('steam:downloads', () => downloads.list(library.steamNames()));
   ipcMain.handle('steam:install', async (_e, appid) => {
     if (!Number.isInteger(appid) || appid <= 0) return { error: 'Jogo inválido.' };
