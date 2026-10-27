@@ -18,6 +18,7 @@ const DEFAULTS = {
   musicFile: '',
   volume: 0.5,
   captureBuffer: true,
+  theme: 'cartucho',
 };
 
 let store;

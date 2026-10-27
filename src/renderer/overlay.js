@@ -4,6 +4,7 @@ import { createInput } from './lib/input.js';
 import { createFocus } from './lib/focus.js';
 import { sfx, configureSound } from './lib/sound.js';
 import { createMenu } from './views/menu.js';
+import { applyTheme } from './lib/themes.js';
 
 const state = { games: [], profile: null, running: null, device: 'gamepad', capture: null };
 const focus = createFocus();
@@ -34,6 +35,7 @@ createInput({
 api.on('overlay:open', async ({ running }) => {
   const [cfg, lib, cap] = await Promise.all([api.getConfig(), api.getLibrary(), api.captureStatus()]);
   state.capture = cap;
+  applyTheme(cfg);
   // Sem música aqui: o som do jogo continua tocando.
   configureSound({ sounds: cfg.sounds, music: false, volume: cfg.volume });
   state.games = lib.games || [];
