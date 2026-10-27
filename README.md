@@ -51,6 +51,7 @@ Abra a aba **Configurações** (aperte E ou RB algumas vezes).
 
 ## O que dá para fazer
 
+- **Temas:** em Configurações > Aparência, escolha entre **Cartucho** (o visual de sempre), **PS5** (arte do jogo em tela cheia, ícones no topo e o menu rápido como uma central na parte de baixo) e **Big Picture** (prateleiras de capas e barra de botões no rodapé, como o Steam). Aperte A ou use ← e → para trocar; muda na hora.
 - **Página do jogo:** jogar, abrir na loja, ver conquistas e trocar a capa e o fundo por imagens suas ("Restaurar" volta a arte original). Também dá para escolher uma música para o jogo: ela toca no lugar da música tema enquanto o jogo está selecionado.
 - **Capas do Minecraft:** instâncias sem capa ganham um bloco de grama com a cor do loader (Fabric, Forge, NeoForge, Quilt ou Vanilla) e a versão no canto.
 - **Tempo da semana:** a aba Conquistas mostra quanto você jogou em cada um dos últimos 7 dias e os jogos mais jogados. Conta também o que foi jogado fora do Cartucho, comparando os totais da Steam, do Prism e do Hytale.

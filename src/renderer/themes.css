@@ -1,0 +1,145 @@
+/* Temas do Cartucho. O html ganha data-theme (lib/themes.js), e cada bloco abaixo muda cores, fontes e o jeito de algumas telas.
+   O que vale para todos fica no styles.css; aqui só o que muda de um tema para outro. */
+
+/* peças que só alguns temas mostram */
+.row-label { margin: 0 0 1rem; font-family: var(--f-display); font-weight: 600; font-size: .9rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.tile-name { display: none; }
+.qico { display: none; }
+.choice { display: inline-flex; align-items: center; gap: .9rem; }
+.choice i { font-style: normal; font-size: .8rem; color: var(--muted); }
+
+/* ===================== Cartucho ===================== */
+/* O visual de sempre, com o laranja do Cartucho no botão Jogar e na aba aberta. */
+[data-theme="cartucho"] .btn.primary { background: var(--accent); color: #1a1206; }
+[data-theme="cartucho"] .tabs .on { border-bottom-color: var(--accent); }
+
+/* ===================== PS5 ===================== */
+/* A arte do jogo ocupa a tela, os jogos viram ícones quadrados no topo e o menu rápido vira uma central na parte de baixo. */
+[data-theme="ps5"] {
+  --page: #070912;
+  --ink: #ffffff;
+  --muted: #aab2c3;
+  --panel: rgba(22, 24, 38, .78);
+  --glass: rgba(255, 255, 255, .1);
+  --glass-strong: rgba(255, 255, 255, .18);
+  --glass-line: rgba(255, 255, 255, .14);
+  --glow: rgba(255, 255, 255, .35);
+  --f-display: "Manrope", "Segoe UI", sans-serif;
+  --f-body: "Manrope", "Segoe UI", sans-serif;
+}
+[data-theme="ps5"] .bg-shade { background: linear-gradient(90deg, rgba(7,9,18,.9) 0%, rgba(7,9,18,.35) 55%, rgba(7,9,18,0) 100%), linear-gradient(180deg, rgba(7,9,18,.6) 0%, rgba(7,9,18,0) 30%, rgba(7,9,18,0) 50%, rgba(7,9,18,.92) 100%); }
+[data-theme="ps5"] .tabs { font-weight: 500; font-size: 1.4rem; gap: 2.2rem; }
+[data-theme="ps5"] .tabs button { border-bottom: 0; padding-bottom: 0; }
+[data-theme="ps5"] .tabs .on { font-weight: 800; }
+[data-theme="ps5"] .clock { font-family: var(--f-body); font-weight: 500; }
+[data-theme="ps5"] .big-title { font-size: 5.2rem; letter-spacing: -.02em; }
+[data-theme="ps5"] .meta { font-family: var(--f-body); font-size: 1.2rem; color: #dfe3ec; }
+[data-theme="ps5"] .btn { border-radius: 3rem; border-color: transparent; background: rgba(255, 255, 255, .16); font-weight: 600; }
+[data-theme="ps5"] .btn.primary { background: #fff; color: #070912; font-weight: 800; padding-left: 4rem; padding-right: 4rem; }
+[data-theme="ps5"] .btn.focused { outline-offset: .3rem; }
+[data-theme="ps5"] .cover { border-radius: 1rem; }
+[data-theme="ps5"] .panel, [data-theme="ps5"] .dl-list { border-color: transparent; backdrop-filter: blur(14px); border-radius: 1.2rem; }
+[data-theme="ps5"] .pill { border-color: transparent; }
+[data-theme="ps5"] .pill.on { background: #fff; color: #070912; }
+[data-theme="ps5"] .opt { border-radius: 1rem; }
+[data-theme="ps5"] .src { font-family: var(--f-body); font-weight: 600; letter-spacing: .08em; }
+
+/* Início: fileira de ícones logo abaixo da barra de cima, informações do jogo embaixo. */
+[data-theme="ps5"] .row-label { display: none; }
+[data-theme="ps5"] .row { order: -1; align-items: flex-start; gap: 1.1rem; margin-top: calc(1.4rem - var(--bleed)); }
+[data-theme="ps5"] .tile { width: 7.6rem; height: 7.6rem; padding: .6rem; font-size: .85rem; box-shadow: 0 .4rem 1.2rem rgba(0, 0, 0, .4); }
+[data-theme="ps5"] .tile.focused { width: 11.4rem; height: 11.4rem; font-size: 1rem; border-radius: 1.2rem; }
+[data-theme="ps5"] .tile .t { visibility: hidden; }
+[data-theme="ps5"] .tile.focused .t { visibility: hidden; }
+[data-theme="ps5"] .tile .mc-tag, [data-theme="ps5"] .tile .inst-tag { display: none; }
+[data-theme="ps5"] .tile .mc-art svg { left: 22%; top: 14%; width: 56%; height: 72%; }
+[data-theme="ps5"] .tile.more { font-size: .8rem; padding: .4rem; border-style: solid; border-color: transparent; background: var(--glass-strong); color: var(--ink); }
+[data-theme="ps5"] .tile-name { display: block; flex: none; width: 13rem; padding: .4rem .2rem 0 .4rem; font-weight: 600; font-size: 1.55rem; line-height: 1.2; text-wrap: balance; text-shadow: 0 1px 6px rgba(0, 0, 0, .5); }
+[data-theme="ps5"] .home-info { margin-bottom: 0; }
+[data-theme="ps5"] .home-info .dl-list { position: fixed; right: var(--gutter); bottom: 6.5rem; width: 26rem; }
+[data-theme="ps5"] .tile .dl .dl-top { display: none; }
+[data-theme="ps5"] .tile .dl { padding: .35rem .45rem; }
+
+/* Menu rápido: central de controle na parte de baixo, com o jogo aberto em destaque e uma fileira de botões redondos. */
+[data-theme="ps5"] #overlay { background: linear-gradient(180deg, rgba(5, 6, 11, .55) 0%, rgba(5, 6, 11, .8) 50%, rgba(5, 6, 11, .97) 100%); }
+[data-theme="ps5"] body.overlay #overlay { background: linear-gradient(180deg, transparent 30%, rgba(5, 6, 11, .6) 60%, rgba(5, 6, 11, .92) 100%); }
+[data-theme="ps5"] .qmenu { top: auto; right: 0; width: auto; background: none; border: 0; padding: 2rem var(--gutter) 2.8rem; flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 1.4rem; animation-name: rise; }
+[data-theme="ps5"] .qmenu::after { content: ""; flex-basis: 100%; order: 3; }
+[data-theme="ps5"] .qhead { order: 0; flex-basis: 100%; margin: 0; }
+[data-theme="ps5"] .qhead .clock { font-family: var(--f-body); font-weight: 700; font-size: 2.6rem; }
+[data-theme="ps5"] .qnow { order: 1; width: 36rem; min-height: 12rem; border-radius: 1.2rem; border: 0; }
+[data-theme="ps5"] .qnow small { color: #cfd5e2; }
+[data-theme="ps5"] .qsep { display: none; }
+[data-theme="ps5"] .qcap { order: 2; align-content: center; padding: 1.2rem; border-radius: 1.2rem; background: var(--panel); backdrop-filter: blur(14px); min-width: 20rem; }
+[data-theme="ps5"] .qcap .qitem { font-size: 1.1rem; padding: .7rem 1rem; }
+[data-theme="ps5"] .qnav, [data-theme="ps5"] .qpower { order: 4; display: flex; gap: .6rem; align-items: flex-start; }
+[data-theme="ps5"] .qpower { order: 5; margin-left: auto; }
+[data-theme="ps5"] .qnav .qitem, [data-theme="ps5"] .qpower .qitem { flex-direction: column; justify-content: flex-start; gap: .7rem; width: 7.6rem; padding: 0; border-radius: 0; background: none; text-align: center; font-size: .95rem; font-weight: 600; line-height: 1.2; color: #d3d8e3; }
+[data-theme="ps5"] .qnav .qitem small, [data-theme="ps5"] .qpower .qitem small { display: none; }
+[data-theme="ps5"] .qnav .qico, [data-theme="ps5"] .qpower .qico { order: -1; display: grid; place-items: center; width: 4.4rem; height: 4.4rem; border-radius: 50%; background: rgba(40, 43, 64, .92); color: #fff; transition: transform .15s; }
+[data-theme="ps5"] .qico svg { width: 1.7rem; height: 1.7rem; }
+[data-theme="ps5"] .qnav .qitem.focused, [data-theme="ps5"] .qpower .qitem.focused { background: none; color: #fff; }
+[data-theme="ps5"] .qitem.focused .qico { background: #fff; color: #070912; transform: scale(1.08); box-shadow: 0 0 1.6rem rgba(255, 255, 255, .35); }
+[data-theme="ps5"] .qitem.confirm.focused .qico { background: var(--danger); color: #fff; }
+
+/* ===================== Big Picture ===================== */
+/* Azul-escuro do Steam, prateleiras de capas no topo e uma barra com os botões do controle no rodapé. */
+[data-theme="bigpicture"] {
+  --page: #0f1520;
+  --ink: #ffffff;
+  --muted: #9aa7ba;
+  --panel: #18212f;
+  --glass: rgba(255, 255, 255, .07);
+  --glass-strong: rgba(255, 255, 255, .13);
+  --glass-line: rgba(255, 255, 255, .1);
+  --glow: rgba(26, 159, 255, .55);
+  --accent: #1a9fff;
+  --f-display: "Figtree", "Segoe UI", sans-serif;
+  --f-body: "Figtree", "Segoe UI", sans-serif;
+}
+/* A arte do jogo só tinge o alto da tela, como no Steam. */
+[data-theme="bigpicture"] .bg-layer { opacity: 0; }
+[data-theme="bigpicture"] .bg-layer.on { opacity: .38; }
+[data-theme="bigpicture"] .bg-shade { background: linear-gradient(180deg, rgba(15, 21, 32, .25) 0%, #0f1520 60%); }
+[data-theme="bigpicture"] .tabs { font-weight: 600; font-size: 1.15rem; gap: .4rem; }
+[data-theme="bigpicture"] .tabs button { padding: .5rem 1.1rem; border-radius: 2rem; border-bottom: 0; }
+[data-theme="bigpicture"] .tabs .on { background: #fff; color: #0f1520; }
+[data-theme="bigpicture"] .tabs .shoulder { margin: 0 .6rem; }
+[data-theme="bigpicture"] .avatar { border-radius: .5rem; }
+[data-theme="bigpicture"] .clock { font-family: var(--f-body); font-weight: 600; }
+[data-theme="bigpicture"] .focused { outline-width: .2rem; outline-offset: .2rem; box-shadow: 0 0 0 .45rem rgba(26, 159, 255, .45), 0 .8rem 2.4rem rgba(0, 0, 0, .6) !important; }
+[data-theme="bigpicture"] .btn { border-radius: .4rem; border-color: transparent; background: rgba(255, 255, 255, .1); }
+[data-theme="bigpicture"] .btn.primary { background: var(--accent); color: #fff; }
+[data-theme="bigpicture"] .cover { border-radius: .4rem; }
+[data-theme="bigpicture"] .panel, [data-theme="bigpicture"] .dl-list { background: var(--panel); border-color: transparent; backdrop-filter: none; border-radius: .5rem; }
+[data-theme="bigpicture"] .dl-list h3 { color: var(--accent); }
+[data-theme="bigpicture"] .bar i { background: var(--accent); }
+[data-theme="bigpicture"] .pill { border-radius: 2rem; border-color: transparent; background: none; color: #b3bdcc; }
+[data-theme="bigpicture"] .pill.on { background: #fff; color: #0f1520; }
+[data-theme="bigpicture"] .opt { border-radius: .4rem; background: var(--panel); }
+[data-theme="bigpicture"] .src { font-family: var(--f-body); font-weight: 600; }
+[data-theme="bigpicture"] .meta { font-family: var(--f-body); }
+
+/* Rodapé com as dicas de botão, de ponta a ponta. */
+[data-theme="bigpicture"] #view { padding-bottom: 7rem; }
+[data-theme="bigpicture"] #hints { left: 0; right: 0; bottom: 0; height: 4.6rem; padding: 0 var(--gutter); justify-content: flex-end; align-items: center; background: #0a0e15; color: #d3d8e3; }
+
+/* Início: a prateleira vem primeiro e o jogo selecionado ganha um painel embaixo dela. */
+[data-theme="bigpicture"] .row-label { order: -2; margin-top: 1.2rem; font-family: var(--f-body); font-weight: 700; font-size: 1.45rem; letter-spacing: 0; text-transform: none; color: var(--ink); }
+[data-theme="bigpicture"] .row { order: -1; align-items: flex-start; }
+[data-theme="bigpicture"] .tile { width: 12.4rem; height: 18.6rem; box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .5); }
+[data-theme="bigpicture"] .tile.focused { width: 14.4rem; height: 21.6rem; }
+[data-theme="bigpicture"] .tile.more { border-radius: .4rem; }
+[data-theme="bigpicture"] .home-info { margin: 2.4rem 0 0; max-width: none; grid-template-columns: minmax(0, 1fr) 30rem; grid-template-areas: "src dl" "title dl" "meta dl" "actions dl"; align-items: start; column-gap: 3rem; padding: 1.8rem 2rem; border-radius: .5rem; background: var(--panel); }
+[data-theme="bigpicture"] .home-info .src { grid-area: src; }
+[data-theme="bigpicture"] .home-info .big-title { grid-area: title; font-size: 3rem; font-weight: 800; }
+[data-theme="bigpicture"] .home-info .meta { grid-area: meta; }
+[data-theme="bigpicture"] .home-info .actions { grid-area: actions; }
+[data-theme="bigpicture"] .home-info .dl-list { grid-area: dl; max-width: none; align-self: stretch; background: rgba(255, 255, 255, .05); }
+
+/* Menu rápido: painel lateral escuro, como o menu do botão Steam. */
+[data-theme="bigpicture"] .qmenu { background: #0e141b; border-right-color: rgba(255, 255, 255, .06); }
+[data-theme="bigpicture"] .qitem { border-radius: .4rem; }
+[data-theme="bigpicture"] .qitem.focused { background: #fff; color: #0f1520; }
+[data-theme="bigpicture"] .qnow { border-radius: .5rem; border: 0; }
+[data-theme="bigpicture"] .qnow small { color: var(--accent); }

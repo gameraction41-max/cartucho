@@ -1,5 +1,6 @@
 // Configurações em lista grande, para dar para mexer com o controle. Campos de texto pedem o teclado.
 import { h, when } from '../lib/ui.js';
+import { THEMES, themeOf } from '../lib/themes.js';
 
 const VOLUME_STEP = 0.1;
 
@@ -97,6 +98,18 @@ export default {
       h('span', { class: 'txt' }, 'Volume', h('small', {}, 'Use ← e → para ajustar')),
       h('span', { class: 'slider' }, h('span', { class: 'bar' }, h('i', { style: { width: `${cfg.volume * 100}%` } })), h('span', { class: 'mono' }, `${Math.round(cfg.volume * 100)}%`)));
 
+    // Tema: A ou → passa para o próximo, ← volta. Muda na hora.
+    const theme = themeOf(cfg);
+    const stepTheme = (delta) => {
+      const i = THEMES.indexOf(theme);
+      const next = THEMES[(i + delta + THEMES.length) % THEMES.length];
+      ctx.sfx.tab();
+      save({ theme: next.id }, `Tema ${next.label}.`);
+    };
+    const themeRow = h('button', { class: 'opt', 'data-focus': true, 'data-key': 'theme', 'data-choice': true, onclick: () => stepTheme(1) },
+      h('span', { class: 'txt' }, 'Tema', h('small', {}, theme.desc)),
+      h('span', { class: 'choice' }, h('i', {}, '◀'), h('span', { class: 'val' }, theme.label), h('i', {}, '▶')));
+
     const steamStatus = !ctx.state.steamConfigured ? 'falta a chave ou o SteamID' : ctx.state.syncedAt ? `sincronizado ${when(ctx.state.syncedAt)}` : 'ainda não sincronizado';
 
     const list = h('div', { class: 'set-list' },
@@ -105,6 +118,9 @@ export default {
       toggle('returnAfterGame', 'Voltar para o Cartucho ao fechar um jogo'),
       toggle('showBoot', 'Mostrar a tela de abertura'),
       action('fullscreen', 'Tela cheia', 'Também funciona com F11', () => ctx.api.toggleFullscreen()),
+
+      section('', 'Aparência'),
+      themeRow,
 
       section('steam', 'Steam'),
       text('steamApiKey', 'Chave da Steam Web API', 'Gere a sua em steamcommunity.com/dev/apikey. Fica guardada só neste PC.', {
@@ -133,7 +149,7 @@ export default {
       volume,
 
       section('', 'Sobre'),
-      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.9.0', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
+      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.10.0', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
       updateRow(ctx));
 
     const el = h('div', { class: 'set-wrap' }, list);
@@ -150,6 +166,10 @@ export default {
           return true;
         }
         if (!focused) return false;
+        if ('choice' in focused.dataset && (act === 'left' || act === 'right')) {
+          stepTheme(act === 'right' ? 1 : -1);
+          return true;
+        }
         if ('slider' in focused.dataset && (act === 'left' || act === 'right')) {
           const v = Math.min(1, Math.max(0, Math.round((cfg.volume + (act === 'right' ? VOLUME_STEP : -VOLUME_STEP)) * 10) / 10));
           ctx.sfx.move();

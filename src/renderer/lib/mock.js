@@ -58,6 +58,8 @@ setInterval(() => {
 let config = {
   steamId: '76561198000000000', hasSteamApiKey: true, steamApiKeyHint: 'A91F', prismDir: '', prismExe: '', hytaleExe: 'C:\\Program Files\\Hytale\\Hytale.exe', hytaleProcess: '',
   openAtLogin: true, returnAfterGame: true, captureBuffer: true, showBoot: true, sounds: true, music: true, musicFile: '', volume: 0.5,
+  // Na demo dá para abrir já com um tema: index.html?tema=ps5
+  theme: new URLSearchParams(location.search).get('tema') || 'cartucho',
   defaultPrismDir: 'C:\\Users\\Filipi\\AppData\\Roaming\\PrismLauncher', running: null,
 };
 

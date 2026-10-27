@@ -5,6 +5,7 @@ import { createFocus } from './lib/focus.js';
 import { createKeyboard } from './lib/keyboard.js';
 import { sfx, configureSound, setMusicPaused, setGameTrack } from './lib/sound.js';
 import { h, hue, loadFirst, downloadText } from './lib/ui.js';
+import { applyTheme } from './lib/themes.js';
 import home from './views/home.js';
 import game from './views/game.js';
 import achievements from './views/achievements.js';
@@ -310,6 +311,7 @@ function refreshLive() {
 
 async function applyConfig(cfg) {
   state.config = cfg;
+  applyTheme(cfg);
   configureSound({ sounds: cfg.sounds, music: cfg.music, volume: cfg.volume, musicFile: cfg.musicFile });
 }
 

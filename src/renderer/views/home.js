@@ -62,16 +62,22 @@ export default {
       ctx.setBackground(g);
     };
 
+    // Nome do jogo ao lado do ícone em foco. Só aparece no tema PS5 (themes.css).
+    const tileName = h('span', { class: 'tile-name' });
     const tiles = games.map((g) => {
       const t = cover(g, 'tile');
       Object.assign(t.dataset, { focus: '', key: g.key, selectFirst: '' });
       t.setAttribute('role', 'button');
       t.addEventListener('click', () => ctx.launch(g));
-      t.addEventListener('focusin-nav', () => showInfo(g));
+      t.addEventListener('focusin-nav', () => {
+        showInfo(g);
+        tileName.textContent = g.title;
+        t.after(tileName);
+      });
       return t;
     });
     const more = h('div', { class: 'cover tile more', 'data-focus': true, 'data-key': 'more', role: 'button', onclick: () => ctx.goTab('library') }, 'Biblioteca completa');
-    more.addEventListener('focusin-nav', () => ctx.setBackground(null));
+    more.addEventListener('focusin-nav', () => { ctx.setBackground(null); tileName.remove(); });
 
     showInfo(selected);
     const el = h('div', { style: { display: 'contents' } },
@@ -79,6 +85,7 @@ export default {
         h('div', { class: 'actions' },
           playBtn,
           h('button', { class: 'btn', onclick: () => ctx.go('game', { key: selected.key }) }, 'Detalhes'))),
+      h('h3', { class: 'row-label' }, 'Jogados recentemente'),
       h('div', { class: 'row' }, tiles, more));
 
     return {
