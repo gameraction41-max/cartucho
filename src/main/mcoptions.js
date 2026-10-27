@@ -1,0 +1,98 @@
+// Presets gráficos do Minecraft: mexe só nas linhas de vídeo do options.txt de cada instância e mantém o resto.
+const fs = require('node:fs');
+const path = require('node:path');
+
+// Valores no formato que o Minecraft 1.19+ grava. Versões antigas usam fancyGraphics no lugar de graphicsMode.
+const PRESETS = {
+  desempenho: {
+    label: 'Desempenho',
+    values: { renderDistance: '8', simulationDistance: '6', graphicsMode: '0', particles: '2', renderClouds: '"false"', entityShadows: 'false', ao: 'false', biomeBlendRadius: '0', mipmapLevels: '0', maxFps: '260', enableVsync: 'false', entityDistanceScaling: '0.75' },
+  },
+  equilibrado: {
+    label: 'Equilibrado',
+    values: { renderDistance: '12', simulationDistance: '10', graphicsMode: '1', particles: '1', renderClouds: '"fast"', entityShadows: 'true', ao: 'true', biomeBlendRadius: '2', mipmapLevels: '2', maxFps: '144', enableVsync: 'false', entityDistanceScaling: '1.0' },
+  },
+  qualidade: {
+    label: 'Qualidade',
+    values: { renderDistance: '20', simulationDistance: '12', graphicsMode: '2', particles: '0', renderClouds: '"true"', entityShadows: 'true', ao: 'true', biomeBlendRadius: '4', mipmapLevels: '4', maxFps: '260', enableVsync: 'true', entityDistanceScaling: '1.25' },
+  },
+};
+
+function parse(text) {
+  const entries = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (!line) continue;
+    const i = line.indexOf(':');
+    entries.push(i < 0 ? { raw: line } : { key: line.slice(0, i), value: line.slice(i + 1) });
+  }
+  return entries;
+}
+
+function serialize(entries) {
+  return entries.map((e) => (e.raw != null ? e.raw : `${e.key}:${e.value}`)).join('\n') + '\n';
+}
+
+// Aplica o preset em cima do options.txt existente. Linhas que não são de vídeo ficam como estavam.
+function applyPreset(text, presetId) {
+  const preset = PRESETS[presetId];
+  if (!preset) throw new Error(`Preset desconhecido: ${presetId}`);
+  const entries = parse(text || '');
+  const byKey = new Map(entries.filter((e) => e.key).map((e) => [e.key, e]));
+  const values = { ...preset.values };
+  // Versões antigas (até 1.15) usam fancyGraphics:true/false em vez de graphicsMode.
+  if (byKey.has('fancyGraphics') && !byKey.has('graphicsMode')) {
+    byKey.get('fancyGraphics').value = values.graphicsMode === '0' ? 'false' : 'true';
+    delete values.graphicsMode;
+  }
+  for (const [key, value] of Object.entries(values)) {
+    const entry = byKey.get(key);
+    if (entry) entry.value = value;
+    else entries.push({ key, value });
+  }
+  return serialize(entries);
+}
+
+// Descobre qual preset está em uso, olhando só as chaves que mais pesam. null quando é personalizado.
+function detectPreset(text) {
+  if (!text) return null;
+  const map = new Map(parse(text).filter((e) => e.key).map((e) => [e.key, e.value]));
+  const keys = ['renderDistance', 'simulationDistance', 'graphicsMode', 'particles'];
+  for (const [id, preset] of Object.entries(PRESETS)) {
+    if (keys.every((k) => !map.has(k) || map.get(k) === preset.values[k]) && keys.some((k) => map.has(k))) return id;
+  }
+  return null;
+}
+
+function optionsFile(instDir) {
+  for (const sub of ['minecraft', '.minecraft']) {
+    const dir = path.join(instDir, sub);
+    if (fs.existsSync(dir)) return path.join(dir, 'options.txt');
+  }
+  return path.join(instDir, 'minecraft', 'options.txt');
+}
+
+function readPreset(instDir) {
+  try {
+    return detectPreset(fs.readFileSync(optionsFile(instDir), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+// Guarda uma cópia do options.txt original na primeira vez, para dar para desfazer na mão.
+function writePreset(instDir, presetId) {
+  const file = optionsFile(instDir);
+  let text = '';
+  try {
+    text = fs.readFileSync(file, 'utf8');
+    const backup = `${file}.cartucho-backup`;
+    if (!fs.existsSync(backup)) fs.writeFileSync(backup, text);
+  } catch {}
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, applyPreset(text, presetId));
+  return presetId;
+}
+
+const PRESET_LIST = Object.entries(PRESETS).map(([id, p]) => ({ id, label: p.label }));
+
+module.exports = { PRESET_LIST, applyPreset, detectPreset, readPreset, writePreset, optionsFile };

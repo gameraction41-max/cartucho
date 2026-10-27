@@ -1,6 +1,6 @@
 {
   "name": "cartucho",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Launcher em tela cheia, no estilo console, para Steam, Minecraft (Prism Launcher) e Hytale",
   "main": "src/main/main.js",
   "author": "Filipi",
@@ -16,7 +16,8 @@
     "@fontsource/barlow": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@fontsource/oxanium": "^5.3.0",
-    "koffi": "3.3.3"
+    "koffi": "3.3.3",
+    "systeminformation": "5.33.15"
   },
   "devDependencies": {
     "electron": "^44.9.0",
@@ -34,7 +35,16 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Cartucho-Setup-${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "gameraction41-max",
+        "repo": "cartucho",
+        "releaseType": "release"
+      }
+    ]
   }
 }

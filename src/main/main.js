@@ -8,7 +8,10 @@ const library = require('./library');
 const prism = require('./prism');
 const watch = require('./watch');
 const system = require('./system');
+const art = require('./art');
+const mcoptions = require('./mcoptions');
 const { watchGuideButton } = require('./guide');
+const { forceForeground } = require('./foreground');
 
 const windowed = process.argv.includes('--windowed');
 let win = null;
@@ -57,21 +60,42 @@ function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
-// O Windows não deixa um app roubar o foco à toa; o truque do "sempre no topo" por um instante resolve.
+// O Windows não deixa um app roubar o foco à toa. Primeiro tenta o jeito nativo (foreground.js);
+// o "sempre no topo" por um instante cobre o caso em que ele não está disponível.
 function bringToFront() {
   if (!win) return;
   if (win.isMinimized()) win.restore();
   win.show();
+  forceForeground(win);
   win.setAlwaysOnTop(true);
   win.focus();
   win.setAlwaysOnTop(false);
 }
 
-// Botão do Xbox: com o Cartucho na frente, abre ou fecha o menu rápido. Com um jogo na frente, traz o Cartucho de volta já com o menu aberto.
+// Botão do Xbox com outro app ou jogo na frente: o Cartucho fica por cima de tudo até o menu fechar,
+// senão o jogo (principalmente em tela cheia sem bordas) continua cobrindo a janela.
+let overApp = false;
+
+function showOverApp() {
+  overApp = true;
+  if (win.isMinimized()) win.restore();
+  win.setAlwaysOnTop(true, 'screen-saver');
+  win.show();
+  forceForeground(win);
+  win.focus();
+}
+
+function releaseTop() {
+  if (!overApp) return;
+  overApp = false;
+  win.setAlwaysOnTop(false);
+}
+
+// Botão do Xbox: com o Cartucho na frente, abre ou fecha o menu rápido. Com um jogo na frente, traz o Cartucho por cima dele já com o menu aberto.
 function onGuide() {
   if (!win || win.isDestroyed()) return;
   const fromBackground = !win.isFocused();
-  if (fromBackground) bringToFront();
+  if (fromBackground) showOverApp();
   send('input:guide', { fromBackground });
 }
 
@@ -82,13 +106,24 @@ function gameEnded(game) {
   if (config.get('returnAfterGame')) bringToFront();
 }
 
+// Conquistas novas aparecem como aviso na tela do Cartucho. Com um jogo aberto, a própria Steam já avisa por cima dele.
+function notifyUnlocks(list) {
+  if (list && list.length) send('achievements:unlocked', list);
+}
+
+function instanceDir(instanceId) {
+  const inst = prism.listInstances(library.prismDir()).find((i) => i.id === instanceId);
+  return inst ? inst.dir : null;
+}
+
 async function launchGame(game) {
   if (game.source === 'steam') {
     await shell.openExternal(`steam://rungameid/${game.appid}`);
     watch.watchSteam(game.appid, {
       onEnd: async () => {
-        await library.refreshSteamGame(game.appid);
+        const unlocked = await library.refreshSteamGame(game.appid);
         gameEnded(game);
+        notifyUnlocks(unlocked);
       },
     });
   } else if (game.source === 'prism') {
@@ -133,7 +168,10 @@ function registerIpc() {
   ipcMain.handle('library:sync', async (_e, opts = {}) => {
     try {
       const lib = await library.syncSteam();
-      library.syncAchievements(opts).then(() => send('achievements:changed')).catch(() => {});
+      library.syncAchievements(opts).then((unlocked) => {
+        send('achievements:changed');
+        notifyUnlocks(unlocked);
+      }).catch(() => {});
       return lib;
     } catch (err) {
       return { ...library.getLibrary(), error: err.message };
@@ -143,6 +181,41 @@ function registerIpc() {
   ipcMain.handle('achievements:game', (_e, appid) => library.gameAchievements(appid));
   ipcMain.handle('game:launch', (_e, game) => launchGame(game));
   ipcMain.handle('game:open-source', (_e, game) => openInSource(game));
+  ipcMain.handle('art:pick', async (_e, key, kind) => {
+    const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'Imagens', extensions: art.IMAGE_EXT.map((e) => e.slice(1)) }] });
+    if (r.canceled) return { canceled: true };
+    try {
+      art.set(key, kind, r.filePaths[0]);
+      return { ok: true };
+    } catch (err) {
+      return { error: err.message };
+    }
+  });
+  ipcMain.handle('art:reset', (_e, key) => art.reset(key));
+  ipcMain.handle('prism:presets', () => mcoptions.PRESET_LIST);
+  ipcMain.handle('prism:preset-get', (_e, instanceId) => {
+    const dir = instanceDir(instanceId);
+    return dir ? mcoptions.readPreset(dir) : null;
+  });
+  ipcMain.handle('prism:preset-set', (_e, instanceId, presetId) => {
+    const dir = instanceDir(instanceId);
+    if (!dir) return { error: 'Não encontrei a pasta desta instância.' };
+    if (running && running.key === `prism:${instanceId}`) return { error: 'Feche o jogo antes de trocar o preset. O Minecraft regrava o options.txt ao sair.' };
+    try {
+      return { ok: true, preset: mcoptions.writePreset(dir, presetId) };
+    } catch (err) {
+      return { error: err.message };
+    }
+  });
+  ipcMain.handle('system:stats', () => system.stats());
+  ipcMain.handle('system:power-plans', () => system.powerPlans());
+  ipcMain.handle('system:set-power-plan', async (_e, guid) => {
+    try {
+      return { ok: await system.setPowerPlan(guid) };
+    } catch (err) {
+      return { error: err.message };
+    }
+  });
   ipcMain.handle('dialog:file', async (_e, opts = {}) => {
     const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: opts.filters, defaultPath: opts.defaultPath });
     return r.canceled ? null : r.filePaths[0];
@@ -155,6 +228,11 @@ function registerIpc() {
     if (action === 'quit') return app.quit();
     return system.power(action);
   });
-  ipcMain.handle('window:minimize', () => win && win.minimize());
+  ipcMain.handle('window:minimize', () => {
+    if (!win) return;
+    releaseTop();
+    win.minimize();
+  });
+  ipcMain.handle('window:release-top', () => win && releaseTop());
   ipcMain.handle('window:fullscreen', () => win && win.setFullScreen(!win.isFullScreen()));
 }

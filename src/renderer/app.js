@@ -10,11 +10,13 @@ import achievements from './views/achievements.js';
 import minecraft from './views/minecraft.js';
 import library from './views/library.js';
 import settings from './views/settings.js';
+import pc from './views/pc.js';
 import { showBoot } from './views/boot.js';
 import { createMenu } from './views/menu.js';
 
-const VIEWS = { home, game, achievements, minecraft, library, settings };
-const TABS = ['home', 'minecraft', 'achievements', 'library', 'settings'];
+const VIEWS = { home, game, achievements, minecraft, library, pc, settings };
+const TABS = ['home', 'minecraft', 'achievements', 'library', 'pc', 'settings'];
+const SCROLLERS = '.set-list, .glist, .grid, .row, .mc-row, .ach-list';
 
 const GLYPHS = {
   gamepad: { confirm: ['A', 'a'], back: ['B', 'b'], x: ['X', 'x'], y: ['Y', 'y'], lb: ['LB', ''], rb: ['RB', ''], menu: ['☰', ''] },
@@ -32,6 +34,7 @@ const stack = []; // [{ id, params }]
 let current = null; // { id, params, view: resultado do render }
 let menu = null;
 let focusBeforeMenu = null;
+let menuOverApp = false; // menu aberto pelo botão do Xbox com outro app ou jogo na frente
 let renderToken = 0;
 
 const $ = (id) => document.getElementById(id);
@@ -92,7 +95,8 @@ function tickClock() {
 let bgFront = 0;
 let bgWanted = null;
 async function setBackground(g) {
-  const key = g ? g.key : null;
+  // A arte entra na comparação para o fundo mudar na hora quando a pessoa troca a imagem do jogo.
+  const key = g ? `${g.key}|${JSON.stringify(g.art)}` : null;
   if (key === bgWanted) return;
   bgWanted = key;
   const urls = g && g.art ? [...(g.art.hero || []), ...(g.source === 'prism' ? [] : g.art.cover || [])] : [];
@@ -107,6 +111,36 @@ async function setBackground(g) {
   next.classList.add('on');
   layers[bgFront].classList.remove('on');
   bgFront = 1 - bgFront;
+}
+
+// Aviso de conquista desbloqueada, um de cada vez, no canto da tela, como nos consoles.
+const notices = [];
+let noticeShowing = false;
+function notifyAchievements(list) {
+  notices.push(...list);
+  if (!noticeShowing) nextNotice();
+}
+
+function nextNotice() {
+  const a = notices.shift();
+  const box = $('notice');
+  if (!a) {
+    noticeShowing = false;
+    return;
+  }
+  noticeShowing = true;
+  const ico = h('span', { class: 'ico' });
+  if (a.icon) ico.style.backgroundImage = `url("${a.icon}")`;
+  box.replaceChildren(ico, h('div', { class: 'txt' },
+    h('small', {}, `Conquista desbloqueada · ${a.game}`),
+    h('b', {}, a.name),
+    a.description ? h('span', {}, a.description) : null));
+  box.classList.add('show');
+  sfx.achievement();
+  setTimeout(() => {
+    box.classList.remove('show');
+    setTimeout(nextNotice, 450);
+  }, 5200);
 }
 
 // ===== navegação entre telas =====
@@ -127,6 +161,9 @@ const ctx = {
   launch,
   sync,
   rerender: () => show({ keepFocus: true }),
+  // Para telas que ganham itens depois de abrir (dados que chegam depois): coloca a seleção de volta.
+  refocus: (key) => { if (!menu.isOpen()) focus.setScope($('view'), key || focus.key, { scroll: false }); },
+  reloadLibrary: async () => { await loadLibrary(await api.getLibrary()); show({ keepFocus: true }); },
   applyConfig,
 };
 
@@ -139,12 +176,20 @@ async function show({ keepFocus = false } = {}) {
   if (token !== renderToken) return;
   current = { ...top, view };
   const root = $('view');
+  // Ao redesenhar a mesma tela (volume, sincronização), as listas mantêm a rolagem em vez de voltar ao topo.
+  const scrolls = keepFocus ? [...root.querySelectorAll(SCROLLERS)].map((el) => [el.scrollTop, el.scrollLeft]) : [];
   root.replaceChildren(view.el);
+  root.querySelectorAll(SCROLLERS).forEach((el, i) => {
+    if (!scrolls[i]) return;
+    el.style.scrollBehavior = 'auto';
+    [el.scrollTop, el.scrollLeft] = scrolls[i];
+    el.style.scrollBehavior = '';
+  });
   if (!keepFocus) {
     view.el.classList.add('view-enter');
   }
   if (!view.keepBackground) setBackground(null);
-  focus.setScope(root, prevKey);
+  focus.setScope(root, prevKey, { scroll: !keepFocus });
   renderTopbar();
   renderHints();
 }
@@ -258,7 +303,19 @@ async function start() {
   state.running = cfg.running;
   await loadLibrary(await api.getLibrary());
 
-  menu = createMenu({ ctx, focus, root: $('overlay'), onClose: () => focus.setScope($('view'), focusBeforeMenu) });
+  menu = createMenu({
+    ctx,
+    focus,
+    root: $('overlay'),
+    onClose: (how) => {
+      focus.setScope($('view'), focusBeforeMenu, { scroll: false });
+      if (!menuOverApp) return;
+      menuOverApp = false;
+      // Fechar o menu volta para o que estava na frente (o jogo). Escolher uma tela fica no Cartucho.
+      if (how === 'dismiss') api.minimize();
+      else api.releaseTop();
+    },
+  });
 
   const input = createInput({
     onAction: handleAction,
@@ -271,6 +328,7 @@ async function start() {
 
   api.on('library:changed', async () => { await loadLibrary(await api.getLibrary()); refreshLive(); });
   api.on('achievements:changed', () => refreshLive());
+  api.on('achievements:unlocked', notifyAchievements);
   api.on('game:started', (r) => { state.running = r; });
   api.on('game:ended', () => { state.running = null; });
   api.on('window:blur', () => setMusicPaused(true));
@@ -279,6 +337,7 @@ async function start() {
     input.setDevice('gamepad');
     if (bootHandler) return bootHandler('confirm');
     if (fromBackground) {
+      menuOverApp = true;
       if (!menu.isOpen()) openMenu();
     } else if (menu.isOpen()) {
       menu.handle('menu');
@@ -299,7 +358,10 @@ async function start() {
     await enter();
   }
   sync({ quiet: true }).catch(() => {});
-  if (isDemo) document.title = 'Cartucho (demonstração)';
+  if (isDemo) {
+    document.title = 'Cartucho (demonstração)';
+    window.demoNotice = notifyAchievements;
+  }
 }
 
 start();

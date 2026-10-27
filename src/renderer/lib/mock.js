@@ -25,6 +25,14 @@ let config = {
   defaultPrismDir: 'C:\\Users\\Filipi\\AppData\\Roaming\\PrismLauncher', running: null,
 };
 
+const mcPresets = { FO: 'desempenho' };
+const plans = [
+  { guid: '381b4222-f694-41f0-9685-ff5bb260df2e', name: 'Equilibrado' },
+  { guid: '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c', name: 'Alto desempenho' },
+  { guid: 'a1841308-3541-4fab-bc81-f71556f20b4a', name: 'Economia de energia' },
+];
+let activePlan = plans[0].guid;
+
 const library = () => ({ games, profile: { name: 'Filipi', avatar: '' }, syncedAt: now, steamConfigured: true });
 
 export const mock = {
@@ -62,10 +70,23 @@ export const mock = {
   },
   launch: async () => ({ ok: true }),
   openInSource: async () => {},
+  pickArt: async () => ({ canceled: true }),
+  resetArt: async () => {},
+  mcPresets: async () => [{ id: 'desempenho', label: 'Desempenho' }, { id: 'equilibrado', label: 'Equilibrado' }, { id: 'qualidade', label: 'Qualidade' }],
+  getMcPreset: async (id) => mcPresets[id] ?? null,
+  setMcPreset: async (id, preset) => { mcPresets[id] = preset; return { ok: true, preset }; },
+  systemStats: async () => ({
+    cpu: 'AMD Ryzen 7 5800X3D', cores: 8, threads: 16, gpu: [{ model: 'NVIDIA GeForce RTX 4070', vram: 12282 }], os: 'Microsoft Windows 11 Pro 10.0.26100',
+    cpuLoad: 8 + Math.random() * 20, cpuTemp: 46 + Math.random() * 4, memUsed: 11.2 * 1024 ** 3, memTotal: 32 * 1024 ** 3,
+    disks: [{ mount: 'C:', used: 402 * 1024 ** 3, size: 931 * 1024 ** 3 }, { mount: 'D:', used: 1.71 * 1024 ** 4, size: 1.82 * 1024 ** 4 }],
+  }),
+  powerPlans: async () => plans.map((p) => ({ ...p, active: p.guid === activePlan })),
+  setPowerPlan: async (guid) => { activePlan = guid; return { ok: true }; },
   pickFile: async () => null,
   pickFolder: async () => null,
   power: async () => true,
   minimize: async () => {},
+  releaseTop: async () => {},
   toggleFullscreen: async () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen().catch(() => {});
