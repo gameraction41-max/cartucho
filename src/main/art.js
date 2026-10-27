@@ -1,5 +1,5 @@
-// Capa e fundo escolhidos pela pessoa para cada jogo. As imagens são copiadas para a pasta de dados,
-// então continuam funcionando mesmo se o arquivo original for apagado ou mudar de lugar.
+// Capa, fundo e música escolhidos pela pessoa para cada jogo. Os arquivos são copiados para a pasta de dados,
+// então continuam funcionando mesmo se o original for apagado ou mudar de lugar.
 const path = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
@@ -8,6 +8,8 @@ const { JsonStore } = require('./store');
 
 const KINDS = ['cover', 'hero'];
 const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+const AUDIO_EXT = ['.mp3', '.ogg', '.wav', '.flac', '.m4a'];
+const EXT = { cover: IMAGE_EXT, hero: IMAGE_EXT, music: AUDIO_EXT };
 
 let store;
 function custom() {
@@ -37,31 +39,38 @@ function apply(game) {
     const url = urlFor(entry[kind]);
     if (url) art[kind].unshift(url);
   }
-  return { ...game, art, customArt: KINDS.filter((k) => urlFor(entry[k])) };
+  const music = entry.music && fs.existsSync(entry.music.file) ? entry.music.file : null;
+  return { ...game, art, music, musicName: music ? entry.music.name || 'Música própria' : null, customArt: KINDS.filter((k) => urlFor(entry[k])) };
 }
 
 function set(key, kind, source) {
-  if (!KINDS.includes(kind)) throw new Error('Tipo de arte desconhecido.');
+  if (!EXT[kind]) throw new Error('Tipo de arquivo desconhecido.');
   const ext = path.extname(source).toLowerCase();
-  if (!IMAGE_EXT.includes(ext)) throw new Error('Escolha uma imagem JPG, PNG, WEBP ou GIF.');
+  if (!EXT[kind].includes(ext)) throw new Error(kind === 'music' ? 'Escolha uma música MP3, OGG, WAV, FLAC ou M4A.' : 'Escolha uma imagem JPG, PNG, WEBP ou GIF.');
   fs.mkdirSync(artDir(), { recursive: true });
   const games = custom().get('games');
   const entry = games[key] || {};
   if (entry[kind]) fs.rmSync(entry[kind].file, { force: true });
   const file = path.join(artDir(), `${safeName(key)}-${kind}${ext}`);
   fs.copyFileSync(source, file);
-  entry[kind] = { file, at: Date.now() };
+  entry[kind] = { file, at: Date.now(), name: path.basename(source, ext) };
   games[key] = entry;
   custom().set('games', games);
 }
 
-function reset(key) {
+// Sem kind, volta a capa e o fundo originais (a música fica). Com kind, tira só aquele arquivo.
+function reset(key, kind) {
   const games = custom().get('games');
   const entry = games[key];
   if (!entry) return;
-  for (const kind of KINDS) if (entry[kind]) fs.rmSync(entry[kind].file, { force: true });
-  delete games[key];
+  for (const k of kind ? [kind] : KINDS) {
+    if (!entry[k]) continue;
+    fs.rmSync(entry[k].file, { force: true });
+    delete entry[k];
+  }
+  if (Object.keys(entry).length) games[key] = entry;
+  else delete games[key];
   custom().set('games', games);
 }
 
-module.exports = { apply, set, reset, IMAGE_EXT };
+module.exports = { apply, set, reset, EXT };

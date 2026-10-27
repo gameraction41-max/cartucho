@@ -9,6 +9,7 @@ let settings = { sounds: true, music: true, volume: 0.5, musicFile: '' };
 let pad = null;
 let audioEl = null;
 let paused = false;
+let gameTrack = null; // música do jogo selecionado, no lugar da música tema
 
 function ensure() {
   if (ctx) return;
@@ -103,7 +104,8 @@ function fileUrl(path) {
 function refreshMusic() {
   ensure();
   const want = settings.music && !paused;
-  if (audioEl && (!want || !settings.musicFile || audioEl.dataset.src !== settings.musicFile)) {
+  const file = gameTrack || settings.musicFile;
+  if (audioEl && (!want || !file || audioEl.dataset.src !== file)) {
     audioEl.pause();
     audioEl = null;
   }
@@ -111,12 +113,12 @@ function refreshMusic() {
     musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.4);
     return;
   }
-  if (settings.musicFile) {
+  if (file) {
     stopPad();
     musicGain.gain.value = 0;
     if (!audioEl) {
-      audioEl = new Audio(fileUrl(settings.musicFile));
-      audioEl.dataset.src = settings.musicFile;
+      audioEl = new Audio(fileUrl(file));
+      audioEl.dataset.src = file;
       audioEl.loop = true;
       audioEl.volume = settings.volume * 0.6;
       audioEl.play().catch(() => {});
@@ -132,6 +134,13 @@ export function configureSound(next) {
   ensure();
   applyVolume();
   refreshMusic();
+}
+
+// Jogo com música própria selecionado: ela toca no lugar da música tema. null volta para a tema.
+export function setGameTrack(file) {
+  if ((file || null) === gameTrack) return;
+  gameTrack = file || null;
+  if (ctx) refreshMusic();
 }
 
 // Quando um jogo abre, o launcher perde o foco e a música para, como num console.

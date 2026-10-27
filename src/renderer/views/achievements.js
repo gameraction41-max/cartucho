@@ -1,5 +1,5 @@
 // Conquistas: nível de jogador do Cartucho e o progresso de cada jogo da Steam.
-import { h, cover, when } from '../lib/ui.js';
+import { h, cover, when, hours } from '../lib/ui.js';
 import { emptyState } from './home.js';
 
 const SORTS = [
@@ -23,10 +23,28 @@ function ring(level, progress) {
   });
 }
 
+const WEEKDAY = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+
+// Tempo jogado nos últimos 7 dias, somando Steam, Minecraft e Hytale.
+function weekPanel(ctx, w) {
+  const titles = new Map(ctx.state.games.map((g) => [g.key, g.title]));
+  const max = Math.max(1, ...w.days.map((d) => d.minutes));
+  const bars = h('div', { class: 'wbars' }, w.days.map((d, i) => h('div', { class: `wday ${i === 6 ? 'today' : ''}`, title: hours(d.minutes) },
+    h('span', { class: 'col' }, h('i', { style: { height: `${Math.max(d.minutes ? 6 : 0, (d.minutes / max) * 100)}%` } })),
+    h('small', {}, WEEKDAY[d.weekday]))));
+  const empty = !w.total;
+  return h('section', { class: 'panel week' },
+    h('div', { class: 'week-head' }, h('h2', { class: 'panel-title', style: { margin: 0 } }, 'Últimos 7 dias'), h('b', { class: 'mono' }, hours(w.total))),
+    bars,
+    empty
+      ? h('p', { class: 'muted', style: { margin: 0, fontSize: '.9rem' } }, 'O Cartucho começou a contar agora. Conforme você joga, o tempo de cada dia aparece aqui.')
+      : h('div', { class: 'wtop' }, w.top.map((t) => h('div', {}, h('span', {}, titles.get(t.key) || t.key), h('b', { class: 'mono' }, hours(t.minutes))))));
+}
+
 export default {
   label: 'Conquistas',
   async render(ctx) {
-    const s = await ctx.api.achievementSummary();
+    const [s, w] = await Promise.all([ctx.api.achievementSummary(), ctx.api.playWeek()]);
     const st = s.status || {};
     if (!s.total) {
       // Diz o que está acontecendo: ainda lendo, a Steam recusou, ou nada para mostrar.
@@ -61,6 +79,7 @@ export default {
     });
 
     const el = h('div', { class: 'ach-wrap' },
+      h('div', { class: 'ach-side' },
       h('section', { class: 'panel level' },
         ring(s.level, s.progress),
         h('div', { class: 'counts' },
@@ -68,6 +87,7 @@ export default {
           h('span', {}, h('b', {}, s.perfect), 'jogos 100%'),
           h('span', {}, h('b', {}, `+${s.month}`), 'últimos 30 dias')),
         s.latest ? h('div', { class: 'latest' }, h('span', { class: 'ico' }), h('div', {}, s.latest.name, h('small', {}, `${s.latest.game} · ${when(s.latest.unlocktime)}`))) : null),
+      weekPanel(ctx, w)),
       h('section', { class: 'list-col' },
         h('div', { class: 'list-head' },
           h('h2', { class: 'panel-title', style: { margin: 0 } }, 'Seus jogos'),

@@ -8,7 +8,7 @@ const steamArt = (appid) => ({
 
 const games = [
   { key: 'steam:1145350', source: 'steam', appid: 1145350, title: 'Hades II', minutes: 3744, lastPlayed: now - day, ach: { unlocked: 31, total: 49 } },
-  { key: 'prism:FO', source: 'prism', instanceId: 'FO', title: 'Fabulously Optimized', minutes: 2290, lastPlayed: now - 3600000, mcVersion: '1.21.1', loader: 'Fabric', mods: 94, art: null },
+  { key: 'prism:FO', source: 'prism', instanceId: 'FO', title: 'Fabulously Optimized', minutes: 2290, lastPlayed: now - 3600000, mcVersion: '1.21.1', loader: 'Fabric', mods: 94, art: null, music: 'C:\\Users\\Filipi\\Music\\sweden.mp3', musicName: 'Sweden - C418' },
   { key: 'hytale', source: 'hytale', title: 'Hytale', minutes: 720, lastPlayed: now - 5 * day, installed: true, art: null },
   { key: 'steam:1245620', source: 'steam', appid: 1245620, title: 'ELDEN RING', minutes: 8592, lastPlayed: now - 3 * day, ach: { unlocked: 20, total: 42 } },
   { key: 'steam:1030300', source: 'steam', appid: 1030300, title: 'Hollow Knight: Silksong', minutes: 1158, lastPlayed: now - 9 * day, ach: { unlocked: 11, total: 50 } },
@@ -98,6 +98,11 @@ export const mock = {
   setMcPresetAll: async (preset) => {
     for (const g of games.filter((x) => x.source === 'prism')) mcPresets[g.instanceId] = preset;
     return { applied: 3, skipped: 0 };
+  },
+  playWeek: async () => {
+    const mins = [95, 0, 140, 60, 210, 35, 120];
+    const days = mins.map((m, i) => ({ date: '', weekday: (new Date(now - (6 - i) * day)).getDay(), minutes: m }));
+    return { days, total: mins.reduce((a, b) => a + b, 0), top: [{ key: 'steam:1245620', minutes: 320 }, { key: 'prism:FO', minutes: 210 }, { key: 'steam:105600', minutes: 95 }], trackingSince: '' };
   },
   getFriends: async () => ({ configured: true, friends }),
   openProfile: async () => {},

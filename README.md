@@ -51,7 +51,9 @@ Abra a aba **Configurações** (aperte E ou RB algumas vezes).
 
 ## O que dá para fazer
 
-- **Página do jogo:** jogar, abrir na loja, ver conquistas e trocar a capa e o fundo por imagens suas ("Restaurar" volta a arte original).
+- **Página do jogo:** jogar, abrir na loja, ver conquistas e trocar a capa e o fundo por imagens suas ("Restaurar" volta a arte original). Também dá para escolher uma música para o jogo: ela toca no lugar da música tema enquanto o jogo está selecionado.
+- **Capas do Minecraft:** instâncias sem capa ganham um bloco de grama com a cor do loader (Fabric, Forge, NeoForge, Quilt ou Vanilla) e a versão no canto.
+- **Tempo da semana:** a aba Conquistas mostra quanto você jogou em cada um dos últimos 7 dias e os jogos mais jogados. Conta também o que foi jogado fora do Cartucho, comparando os totais da Steam, do Prism e do Hytale.
 - **Minecraft:** na página de cada instância, "Preset gráfico" alterna entre Desempenho, Equilibrado e Qualidade. O Cartucho muda só as opções de vídeo do `options.txt` da instância e guarda uma cópia do original em `options.txt.cartucho-backup`. Troque com o jogo fechado.
 - **PC:** uso do processador e da memória, placa de vídeo e espaço nos discos. Com base nesse hardware, o Cartucho recomenda um preset gráfico e aplica em todas as instâncias do Minecraft de uma vez.
 - **Menu por cima do jogo:** com um jogo aberto, o botão do Xbox abre só o menu lateral, com o jogo em destaque no topo e o jogo continuando visível atrás. Fechar o menu volta para o jogo.
@@ -98,7 +100,7 @@ src/
 test/          testes (npm test)
 ```
 
-Os dados ficam em `%APPDATA%\Cartucho`: `config.json`, `steam-cache.json` (biblioteca e conquistas, para abrir rápido e funcionar offline) `playtime.json` (tempo do Hytale), `custom-art.json` e a pasta `art` (capas e fundos personalizados).
+Os dados ficam em `%APPDATA%\Cartucho`: `config.json`, `steam-cache.json` (biblioteca e conquistas, para abrir rápido e funcionar offline) `playtime.json` (tempo do Hytale), `custom-art.json` e a pasta `art` (capas, fundos e músicas personalizados) e `history.json` (tempo jogado por dia).
 
 Quando um jogo fecha, o Cartucho volta para a frente sozinho. Na Steam ele percebe isso pelo registro do Windows (`RunningAppID`). No Minecraft, pelo processo do Java, e no Hytale pelo processo do jogo.
 

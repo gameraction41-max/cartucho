@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('cartucho', {
   recommendedPreset: invoke('system:recommended-preset'),
   setMcPresetAll: invoke('prism:preset-all'),
   getFriends: invoke('friends:get'),
+  playWeek: invoke('history:week'),
   openProfile: invoke('steam:profile'),
   updateStatus: invoke('update:status'),
   installUpdate: invoke('update:install'),
