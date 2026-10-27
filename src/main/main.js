@@ -2,7 +2,7 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const { spawn } = require('node:child_process');
-const { app, BrowserWindow, ipcMain, shell, dialog, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, globalShortcut } = require('electron');
 const config = require('./config');
 const library = require('./library');
 const prism = require('./prism');
@@ -17,6 +17,7 @@ const updater = require('./updater');
 const downloads = require('./downloads');
 const gamepresets = require('./gamepresets');
 const screenshots = require('./screenshots');
+const capture = require('./capture');
 const steamlocal = require('./steamlocal');
 
 const windowed = process.argv.includes('--windowed');
@@ -37,7 +38,14 @@ if (!app.requestSingleInstanceLock()) {
     gamepresets.setInstallDir(downloads.installDir);
     createWindow();
     overlay.prepare();
-    watchGuideButton(onGuide);
+    capture.setup({
+      buffer: () => config.get('captureBuffer') !== false,
+      onStatus: (s) => { send('capture:status', s); overlay.send('capture:status', s); },
+      log: (line) => {
+        try { fs.appendFileSync(path.join(app.getPath('userData'), 'capture.log'), `${new Date().toISOString()} ${line}\n`); } catch {}
+      },
+    });
+    watchGuideButton(onGuide, onGuideCombo);
     updater.watchUpdates((status) => send('update:status', status));
     downloads.start({
       names: library.steamNames,
@@ -51,6 +59,10 @@ if (!app.requestSingleInstanceLock()) {
     });
   });
   app.on('window-all-closed', () => app.quit());
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
+    capture.shutdown();
+  });
 }
 
 function createWindow() {
@@ -123,8 +135,25 @@ function onGuide() {
   send('input:guide', { fromBackground });
 }
 
+// Botão Xbox + Y tira print, + X salva os últimos 30 s, + RB começa ou para a gravação.
+const COMBO_ACTION = { y: 'screenshot', x: 'clip', rb: 'record' };
+function onGuideCombo(button) {
+  const action = COMBO_ACTION[button];
+  if (action && running) capture.actions[action]();
+}
+
+// Atalhos do teclado durante o jogo. Não usam os do app da NVIDIA (Alt+F1, F9, F10) para não capturar duas vezes.
+const SHORTCUTS = { 'Alt+Shift+P': 'screenshot', 'Alt+Shift+G': 'clip', 'Alt+Shift+R': 'record' };
+function captureShortcuts(on) {
+  for (const [accel, action] of Object.entries(SHORTCUTS)) {
+    if (on) { try { globalShortcut.register(accel, () => capture.actions[action]()); } catch {} } else globalShortcut.unregister(accel);
+  }
+}
+
 function gameEnded(game) {
   running = null;
+  captureShortcuts(false);
+  capture.gameEnded();
   overlay.close({ backToGame: false });
   send('game:ended', { key: game.key });
   send('library:changed');
@@ -173,6 +202,8 @@ async function launchGame(game) {
   }
   running = { key: game.key, title: game.title, since: Date.now() };
   send('game:started', running);
+  captureShortcuts(true);
+  capture.gameStarted(running);
   return { ok: true };
 }
 
@@ -188,7 +219,19 @@ function openInSource(game) {
 
 function registerIpc() {
   ipcMain.handle('config:get', () => ({ ...config.getPublic(), defaultPrismDir: prism.defaultPrismDir(), running }));
-  ipcMain.handle('config:set', (_e, patch) => config.update(patch || {}));
+  ipcMain.handle('config:set', (_e, patch) => {
+    const out = config.update(patch || {});
+    if (patch && 'captureBuffer' in patch) capture.setBuffer(patch.captureBuffer !== false);
+    return out;
+  });
+  ipcMain.handle('capture:status', () => capture.status());
+  // Pelo menu: fecha o menu antes, para ele não sair na captura.
+  ipcMain.handle('capture:do', (_e, what) => {
+    if (!capture.actions[what]) return;
+    const fromOverlay = overlay.isOpen();
+    overlay.close();
+    setTimeout(() => capture.actions[what](), fromOverlay ? 350 : 0);
+  });
   ipcMain.handle('library:get', () => library.getLibrary());
   ipcMain.handle('library:sync', async (_e, opts = {}) => {
     try {
@@ -286,10 +329,8 @@ function registerIpc() {
       .filter((g) => g && typeof g.key === 'string' && typeof g.title === 'string')
       .map((g) => ({ key: g.key, title: g.title, appid: Number.isInteger(g.appid) ? g.appid : null }));
     return screenshots.scan({
-      gamebarDir: path.join(app.getPath('videos'), 'Captures'),
-      picturesDir: path.join(app.getPath('pictures'), 'Screenshots'),
+      cartuchoDirs: Object.values(capture.roots()),
       steamRoot: steamlocal.steamDir(),
-      instances: prism.listInstances(library.prismDir()),
       games: list,
       steamNames: (() => { try { return library.steamNames(); } catch { return new Map(); } })(),
     });

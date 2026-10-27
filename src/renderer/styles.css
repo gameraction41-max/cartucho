@@ -409,3 +409,18 @@ body.overlay #overlay { background: linear-gradient(90deg, rgba(5, 6, 11, .55) 0
 .sv-nav.next { right: 1.4rem; }
 .sv-nav:disabled { opacity: .2; }
 .hide-cursor .sv-nav { display: none; }
+
+/* ===== avisos durante o jogo (notify.html) ===== */
+body.notify { background: transparent; display: flex; flex-direction: column; align-items: flex-end; gap: .6rem; padding: .4rem; }
+#nrec { display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .8rem; border-radius: 2rem; background: rgba(5, 6, 11, .78); color: #fff; font-weight: 700; font-size: .9rem; }
+#nrec[hidden], #ntoast[hidden] { display: none; }
+#nrec i { width: .65rem; height: .65rem; border-radius: 50%; background: #ff4b4b; animation: rec-blink 1.2s infinite; }
+#nrec b { font-weight: 600; opacity: .85; }
+@keyframes rec-blink { 50% { opacity: .25; } }
+#ntoast { display: flex; align-items: center; gap: .9rem; width: 100%; padding: .9rem 1.1rem; border-radius: 1rem; background: rgba(12, 14, 24, .9); border: 1px solid var(--glass-line); color: var(--ink); box-shadow: 0 .8rem 2rem rgba(0, 0, 0, .45); }
+#ntoast > i { flex: none; width: 2.4rem; height: 2.4rem; border-radius: 50%; display: grid; place-items: center; font-style: normal; background: var(--glass-strong); font-size: 1.1rem; }
+#ntoast.k-rec > i { color: #ff4b4b; }
+#ntoast.k-error > i { background: #b33; color: #fff; font-weight: 800; }
+#ntoast span { display: flex; flex-direction: column; min-width: 0; }
+#ntoast b { font-family: var(--f-display); font-size: 1.15rem; }
+#ntoast small { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

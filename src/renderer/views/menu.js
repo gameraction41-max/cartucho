@@ -59,6 +59,20 @@ export function createMenu({ ctx, focus, root, onClose }) {
     return el;
   }
 
+  // Prints e gravação, só no menu por cima do jogo. O menu fecha antes da captura.
+  function captureItems(running) {
+    if (!ctx.overlay || !running) return null;
+    const cap = ctx.state.capture || {};
+    const doIt = (what) => () => { close('navigate'); ctx.api.capture(what); };
+    return [
+      h('div', { class: 'qsep' }),
+      h('div', { class: 'qlist' },
+        item('cap-shot', 'Tirar print', doIt('screenshot'), { small: 'Xbox + Y' }),
+        cap.buffer ? item('cap-clip', 'Salvar os últimos 30 s', doIt('clip'), { small: 'Xbox + X' }) : null,
+        item('cap-rec', cap.recording ? 'Parar a gravação' : 'Gravar', doIt('record'), { small: cap.recording ? `começou ${since(cap.recording)}` : 'Xbox + RB' })),
+    ];
+  }
+
   function render(focusKey) {
     armed = null;
     const running = ctx.state.running;
@@ -79,6 +93,7 @@ export function createMenu({ ctx, focus, root, onClose }) {
         ctx.state.update && ctx.state.update.state === 'ready'
           ? item('update', `Atualizar para a ${ctx.state.update.version}`, () => ctx.api.installUpdate(), { small: 'reinicia o app' })
           : null),
+      captureItems(running),
       h('div', { class: 'qsep' }),
       h('div', { class: 'qlist' },
         item('quit', 'Sair para o Windows', () => ctx.api.power('quit')),

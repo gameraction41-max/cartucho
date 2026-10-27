@@ -1,5 +1,4 @@
-// Capturas de tela e clipes: os da Barra de Jogo do Windows (Vídeos\Capturas), os prints do Win+PrtScn
-// (Imagens\Capturas de tela), os da Steam (F12) e os do Minecraft (F2) de cada instância do Prism.
+// Galeria: os prints e vídeos que o Cartucho fez (Imagens\Cartucho e Vídeos\Cartucho) e os prints da Steam (F12).
 // Tudo é agrupado por jogo, do mais recente para o mais antigo.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -7,18 +6,16 @@ const { pathToFileURL } = require('node:url');
 
 const IMAGE = /\.(png|jpe?g|webp|bmp|gif)$/i;
 const VIDEO = /\.(mp4|webm)$/i;
+const MEDIA = /\.(png|jpe?g|webp|bmp|gif|mp4|webm)$/i;
 const MAX_PER_DIR = 2000;
 
-// "Hades II 2026-10-27 22-08-55.png" (Windows 11) ou "Hades II 10_27_2026 10_08_55 PM.png" (Windows 10).
-const GAMEBAR_DATE = /\s+(\d{4}[-_.]\d{1,2}[-_.]\d{1,2}|\d{1,2}[-_.]\d{1,2}[-_.]\d{4})\s+\d{1,2}[-_.]\d{2}[-_.]\d{2}.*$/;
-
-function gamebarTitle(file) {
-  const base = path.parse(file).name;
-  const title = base.replace(GAMEBAR_DATE, '').replace(/\s+Screenshot$/i, '').trim();
-  return title && title !== base ? title : null;
+// Nome do jogo que dá para usar como pasta e arquivo no Windows.
+function safeName(title) {
+  const name = String(title || 'Jogo').replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().replace(/[. ]+$/, '');
+  return (name || 'Jogo').slice(0, 80);
 }
 
-// Para achar o jogo da biblioteca pelo nome da janela: "HADES II" e "Hades II™" viram a mesma coisa.
+// Para achar o jogo da biblioteca pelo nome da pasta: "HADES II" e "Hades II™" viram a mesma coisa.
 const norm = (s) => String(s).replace(/[™®©]/g, '').normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 function listFiles(dir, test) {
@@ -61,37 +58,34 @@ function steamShots(steamRoot) {
   return out;
 }
 
-// games: [{ key, title, appid? }] da biblioteca; instances: [{ id, name, dir }] do Prism.
-function scan({ gamebarDir, picturesDir, steamRoot, instances = [], games = [], steamNames = new Map() } = {}) {
+// Pastas do Cartucho (Imagens\Cartucho e Vídeos\Cartucho): uma subpasta por jogo, com o nome dele.
+function cartuchoShots(root) {
+  let dirs = [];
+  try { dirs = fs.readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name); } catch { return []; }
+  return dirs.flatMap((name) => listFiles(path.join(root, name), MEDIA).map((f) => ({ folder: name, shot: shot(f, 'cartucho') })));
+}
+
+// games: [{ key, title, appid? }] da biblioteca. As pastas do Cartucho viram o jogo da biblioteca com o mesmo nome.
+function scan({ cartuchoDirs = [], steamRoot, games = [], steamNames = new Map() } = {}) {
   const groups = new Map();
-  const byTitle = new Map(games.map((g) => [norm(g.title), g]));
+  const byTitle = new Map(games.map((g) => [norm(safeName(g.title)), g]));
   const add = (key, title, s, gameKey = null) => {
     if (!groups.has(key)) groups.set(key, { key, title, gameKey, shots: [] });
     groups.get(key).shots.push(s);
   };
 
+  for (const root of cartuchoDirs) {
+    for (const { folder, shot: s } of cartuchoShots(root)) {
+      const g = byTitle.get(norm(folder));
+      if (g) add(g.key, g.title, s, g.key);
+      else add(`pasta:${norm(folder)}`, folder, s);
+    }
+  }
   if (steamRoot) {
     for (const { appid, shot: s } of steamShots(steamRoot)) {
       const g = games.find((x) => x.appid === appid);
-      add(`steam:${appid}`, g ? g.title : steamNames.get(appid) || `Jogo ${appid}`, s, g ? g.key : null);
-    }
-  }
-  if (gamebarDir) {
-    for (const f of listFiles(gamebarDir, new RegExp(`${IMAGE.source}|${VIDEO.source}`, 'i'))) {
-      const title = gamebarTitle(f.file);
-      const g = title && byTitle.get(norm(title));
-      if (g) add(g.key, g.title, shot(f, 'windows'), g.key);
-      else if (title) add(`win:${norm(title)}`, title, shot(f, 'windows'));
-      else add('windows', 'Área de trabalho', shot(f, 'windows'));
-    }
-  }
-  if (picturesDir) {
-    for (const f of listFiles(picturesDir, IMAGE)) add('windows', 'Área de trabalho', shot(f, 'windows'));
-  }
-  for (const inst of instances) {
-    for (const sub of ['minecraft', '.minecraft']) {
-      const files = listFiles(path.join(inst.dir, sub, 'screenshots'), IMAGE);
-      for (const f of files) add(`prism:${inst.id}`, inst.name, shot(f, 'minecraft'), `prism:${inst.id}`);
+      if (g) add(g.key, g.title, s, g.key);
+      else add(`steam:${appid}`, steamNames.get(appid) || `Jogo ${appid}`, s);
     }
   }
 
@@ -100,4 +94,4 @@ function scan({ gamebarDir, picturesDir, steamRoot, instances = [], games = [], 
   return list.sort((a, b) => b.shots[0].at - a.shots[0].at);
 }
 
-module.exports = { scan, gamebarTitle };
+module.exports = { scan, safeName };

@@ -122,6 +122,10 @@ export default {
       path('hytaleExe', 'Executável do Hytale', 'Escolha o .exe que abre o jogo', { filters: [{ name: 'Programas', extensions: ['exe'] }] }),
       text('hytaleProcess', 'Nome do processo do jogo', 'Opcional. Usado para contar o tempo quando o .exe acima é só o launcher', { placeholder: 'HytaleClient.exe' }),
 
+      section('', 'Capturas'),
+      toggle('captureBuffer', 'Guardar os últimos 30 segundos enquanto joga', 'Grava em segundo plano pela placa de vídeo. Os arquivos vão para Imagens e Vídeos › Cartucho'),
+      action('captureKeys', 'Atalhos durante o jogo', 'Xbox + Y print · Xbox + X últimos 30 s · Xbox + RB gravar · no teclado, Alt+Shift+P, G e R', () => {}),
+
       section('', 'Som'),
       toggle('sounds', 'Sons de navegação'),
       toggle('music', 'Música tema'),
@@ -129,7 +133,7 @@ export default {
       volume,
 
       section('', 'Sobre'),
-      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.8.0', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
+      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.9.0', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
       updateRow(ctx));
 
     const el = h('div', { class: 'set-wrap' }, list);

@@ -1,9 +1,9 @@
-// Capturas: prints e clipes da Barra de Jogo do Windows, da Steam e do Minecraft, separados por jogo.
+// Capturas: prints e vídeos feitos pelo Cartucho e prints da Steam, separados por jogo.
 // A abre em tela cheia; nela, esquerda e direita passam as fotos, A dá play no clipe e B volta para a grade.
 import { h, when } from '../lib/ui.js';
 
 const CACHE_MS = 15 * 1000;
-const SOURCE = { windows: 'Windows', steam: 'Steam', minecraft: 'Minecraft' };
+const SOURCE = { cartucho: 'Cartucho', steam: 'Steam' };
 let cache = null; // { at, groups }
 let filterKey = 'all';
 let kind = 'prints'; // 'prints' ou 'videos'
@@ -33,7 +33,7 @@ export default {
       return {
         el: h('div', { class: 'empty', style: { marginTop: 'auto', marginBottom: '6rem' } },
           h('h2', {}, 'Nenhuma captura ainda'),
-          h('p', {}, 'Tire prints no jogo com Win+Alt+PrtScn ou o botão Xbox (Barra de Jogo do Windows), F12 na Steam ou F2 no Minecraft. Eles aparecem aqui, separados por jogo.')),
+          h('p', {}, 'Com um jogo aberto pelo Cartucho, Xbox + Y tira print, Xbox + X salva os últimos 30 segundos e Xbox + RB grava. Também dá pelo menu do botão Xbox. Os prints da Steam (F12) aparecem aqui junto.')),
         hints: [['menu', 'Menu']],
       };
     }
@@ -111,7 +111,7 @@ export default {
         h('div', { class: 'shots-kind' }, kindPills),
         h('div', { class: 'shots-filters' }, pills)),
       h('div', { class: 'grid shots-grid' }, cards.length ? cards : h('p', { class: 'muted' }, kind === 'videos'
-        ? 'Nenhum vídeo ainda. Grave um clipe com Win+Alt+G (últimos segundos) ou Win+Alt+R (começar e parar) na Barra de Jogo.'
+        ? 'Nenhum vídeo ainda. Com um jogo aberto, Xbox + X salva os últimos 30 segundos e Xbox + RB começa e para a gravação.'
         : 'Nenhum print ainda.')));
     // Fica no body, por cima da barra de abas e das dicas.
     document.body.append(viewer);

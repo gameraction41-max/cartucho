@@ -33,13 +33,12 @@ const fakeShot = (h1, h2, seed) => {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 const shotGroups = [
-  { key: 'steam:1145350', title: 'Hades II', h: [350, 10], n: 9, source: 'windows', clips: [2, 5] },
-  { key: 'prism:FO', title: 'Fabulously Optimized', h: [200, 120], n: 7, source: 'minecraft' },
-  { key: 'steam:1245620', title: 'ELDEN RING', h: [40, 30], n: 6, source: 'windows', clips: [1, 3] },
+  { key: 'steam:1145350', title: 'Hades II', h: [350, 10], n: 9, source: 'cartucho', clips: [2, 5] },
+  { key: 'prism:FO', title: 'Fabulously Optimized', h: [200, 120], n: 7, source: 'cartucho' },
+  { key: 'steam:1245620', title: 'ELDEN RING', h: [40, 30], n: 6, source: 'cartucho', clips: [1, 3] },
   { key: 'steam:105600', title: 'Terraria', h: [190, 100], n: 4, source: 'steam' },
-  { key: 'windows', title: 'Área de trabalho', h: [230, 220], n: 3, source: 'windows' },
 ].map((g, gi) => ({
-  key: g.key, title: g.title, gameKey: g.key === 'windows' ? null : g.key,
+  key: g.key, title: g.title, gameKey: g.key,
   shots: Array.from({ length: g.n }, (_, i) => {
     const clip = (g.clips || []).includes(i);
     const url = fakeShot(g.h[0] + i * 9, g.h[1] + i * 5, gi * 13 + i + 1);
@@ -58,7 +57,7 @@ setInterval(() => {
 
 let config = {
   steamId: '76561198000000000', hasSteamApiKey: true, steamApiKeyHint: 'A91F', prismDir: '', prismExe: '', hytaleExe: 'C:\\Program Files\\Hytale\\Hytale.exe', hytaleProcess: '',
-  openAtLogin: true, returnAfterGame: true, showBoot: true, sounds: true, music: true, musicFile: '', volume: 0.5,
+  openAtLogin: true, returnAfterGame: true, captureBuffer: true, showBoot: true, sounds: true, music: true, musicFile: '', volume: 0.5,
   defaultPrismDir: 'C:\\Users\\Filipi\\AppData\\Roaming\\PrismLauncher', running: null,
 };
 
@@ -150,6 +149,10 @@ export const mock = {
   },
   getFriends: async () => ({ configured: true, friends }),
   screenshots: async () => shotGroups,
+  capture: async () => {},
+  captureStatus: async () => ({ game: 'Hades II', buffer: true, recording: null }),
+  sendAudio: () => {},
+  sendAudioError: () => {},
   openProfile: async () => {},
   updateStatus: async () => ({ state: 'current', version: null }),
   checkUpdate: async () => {
