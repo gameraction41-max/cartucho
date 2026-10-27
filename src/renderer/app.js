@@ -260,9 +260,10 @@ async function start() {
 
   menu = createMenu({ ctx, focus, root: $('overlay'), onClose: () => focus.setScope($('view'), focusBeforeMenu) });
 
-  createInput({
+  const input = createInput({
     onAction: handleAction,
     onDevice: (d) => { state.device = d; renderDevice(); },
+    nativeGuide: api.platform === 'win32',
   });
   renderDevice();
   tickClock();
@@ -274,6 +275,17 @@ async function start() {
   api.on('game:ended', () => { state.running = null; });
   api.on('window:blur', () => setMusicPaused(true));
   api.on('window:focus', () => setMusicPaused(false));
+  api.on('input:guide', ({ fromBackground }) => {
+    input.setDevice('gamepad');
+    if (bootHandler) return bootHandler('confirm');
+    if (fromBackground) {
+      if (!menu.isOpen()) openMenu();
+    } else if (menu.isOpen()) {
+      menu.handle('menu');
+    } else {
+      openMenu();
+    }
+  });
 
   stack.push({ id: 'home', params: {} });
   const enter = async () => {

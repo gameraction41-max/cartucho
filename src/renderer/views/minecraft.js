@@ -32,7 +32,7 @@ export default {
       h('section', { class: 'home-info', style: { marginBottom: 0 } },
         h('span', { class: 'src prism' }, h('i'), `Prism Launcher · ${list.length} ${list.length === 1 ? 'instância' : 'instâncias'}`),
         h('h1', { class: 'big-title' }, 'Minecraft')),
-      h('div', { class: 'mc-row', style: { marginBottom: '1rem' } }, cards));
+      h('div', { class: 'mc-row' }, cards));
 
     return {
       el,
