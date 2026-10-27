@@ -2,7 +2,7 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const { spawn } = require('node:child_process');
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, clipboard } = require('electron');
 const config = require('./config');
 const library = require('./library');
 const prism = require('./prism');
@@ -283,6 +283,7 @@ function registerIpc() {
     const r = await dialog.showOpenDialog(win, { properties: ['openDirectory'], defaultPath: opts.defaultPath });
     return r.canceled ? null : r.filePaths[0];
   });
+  ipcMain.handle('clipboard:read', () => clipboard.readText().slice(0, 500));
   ipcMain.handle('system:power', (_e, action) => {
     if (action === 'quit') return app.quit();
     return system.power(action);

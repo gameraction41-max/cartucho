@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('cartucho', {
   pickFile: invoke('dialog:file'),
   pickFolder: invoke('dialog:folder'),
   power: invoke('system:power'),
+  readClipboard: invoke('clipboard:read'),
   minimize: invoke('window:minimize'),
   releaseTop: invoke('window:release-top'),
   toggleFullscreen: invoke('window:fullscreen'),

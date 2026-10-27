@@ -82,6 +82,7 @@ export function createMenu({ ctx, focus, root, onClose }) {
       h('div', { class: 'qsep' }),
       h('div', { class: 'qlist' },
         item('quit', 'Sair para o Windows', () => ctx.api.power('quit')),
+        item('sleep', 'Suspender o PC', () => { close(); ctx.api.power('sleep'); }, { confirm: 'Aperte de novo para suspender' }),
         item('shutdown', 'Desligar o PC', () => ctx.api.power('shutdown'), { confirm: 'Aperte de novo para desligar' }),
         item('restart', 'Reiniciar o PC', () => ctx.api.power('restart'), { confirm: 'Aperte de novo para reiniciar' })));
 
