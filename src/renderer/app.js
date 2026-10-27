@@ -3,7 +3,7 @@ import { api, isDemo } from './lib/api.js';
 import { createInput } from './lib/input.js';
 import { createFocus } from './lib/focus.js';
 import { sfx, configureSound, setMusicPaused, setGameTrack } from './lib/sound.js';
-import { h, hue, loadFirst } from './lib/ui.js';
+import { h, hue, loadFirst, downloadText } from './lib/ui.js';
 import home from './views/home.js';
 import game from './views/game.js';
 import achievements from './views/achievements.js';
@@ -30,7 +30,7 @@ const ICONS = {
 };
 const DEVICE_NAME = { gamepad: 'Controle', keyboard: 'Teclado', mouse: 'Mouse' };
 
-const state = { update: null, config: {}, games: [], profile: null, steamConfigured: false, syncedAt: 0, running: null, device: 'keyboard' };
+const state = { downloads: [], update: null, config: {}, games: [], profile: null, steamConfigured: false, syncedAt: 0, running: null, device: 'keyboard' };
 const stack = []; // [{ id, params }]
 let current = null; // { id, params, view: resultado do render }
 let menu = null;
@@ -166,6 +166,8 @@ const ctx = {
   back,
   goTab,
   launch,
+  install,
+  uninstall,
   sync,
   resume: () => api.minimize(),
   rerender: () => show({ keepFocus: true }),
@@ -226,14 +228,55 @@ function cycleTab(delta) {
 // ===== jogos e dados =====
 
 async function launch(g) {
+  // Jogo da Steam que não está neste PC: Jogar vira Instalar.
+  if (g.source === 'steam' && g.installed === false) return g.download ? api.openDownloads() : install(g);
   sfx.confirm();
   toast(`Abrindo ${g.title}…`);
   const r = await api.launch(g);
   if (r && r.error) toast(r.error, { error: true });
 }
 
+async function install(g) {
+  sfx.confirm();
+  toast(`Confirme a instalação de ${g.title} na janela da Steam. O Cartucho volta sozinho quando o download começar.`);
+  const r = await api.installGame(g.appid);
+  if (r && r.error) toast(r.error, { error: true });
+}
+
+async function uninstall(g) {
+  sfx.back();
+  toast(`Confirme na janela da Steam para desinstalar ${g.title}.`);
+  const r = await api.uninstallGame(g.appid);
+  if (r && r.error) toast(r.error, { error: true });
+}
+
+// ===== downloads da Steam =====
+
+function mergeDownloads() {
+  const byKey = new Map(state.downloads.map((d) => [d.key, d]));
+  for (const g of state.games) if (g.source === 'steam') g.download = byKey.get(g.key) || null;
+}
+
+// A barra anda sem redesenhar a tela: só a largura e o texto de cada [data-dl] mudam.
+function onDownloads(list) {
+  const before = state.downloads.map((d) => d.key).join();
+  state.downloads = list || [];
+  mergeDownloads();
+  if (state.downloads.map((d) => d.key).join() !== before) return refreshLive();
+  for (const d of state.downloads) {
+    document.querySelectorAll(`[data-dl="${d.key}"]`).forEach((el) => {
+      const bar = el.querySelector('.bar i');
+      if (bar) bar.style.width = `${d.percent}%`;
+      const txt = el.querySelector('.dl-pct');
+      if (txt) txt.textContent = downloadText(d);
+      el.classList.toggle('paused', d.state !== 'downloading');
+    });
+  }
+}
+
 async function loadLibrary(lib) {
   state.games = lib.games || [];
+  mergeDownloads();
   state.profile = lib.profile;
   state.steamConfigured = lib.steamConfigured;
   state.syncedAt = lib.syncedAt;
@@ -405,6 +448,12 @@ async function start() {
     if (current && current.id === 'settings' && !menu.isOpen() && !typing) show({ keepFocus: true });
   };
   api.on('update:status', onUpdate);
+  api.on('steam:downloads', onDownloads);
+  api.on('steam:install-started', ({ appid }) => {
+    const g = state.games.find((x) => x.appid === appid);
+    toast(g ? `${g.title} está baixando. Dá para acompanhar na tela inicial.` : 'O download começou.');
+  });
+  api.steamDownloads().then(onDownloads).catch(() => {});
   api.updateStatus().then(onUpdate).catch(() => {});
   // Item escolhido no menu que abriu por cima do jogo: a janela principal vem para a frente e vai para a tela pedida.
   api.on('menu:navigate', (target) => {

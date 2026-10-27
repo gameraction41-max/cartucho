@@ -17,7 +17,17 @@ const games = [
   { key: 'steam:413150', source: 'steam', appid: 413150, title: 'Stardew Valley', minutes: 6120, lastPlayed: now - 60 * day, ach: { unlocked: 49, total: 49 } },
   { key: 'prism:VS', source: 'prism', instanceId: 'VS', title: 'Vanilla Survival', minutes: 542, lastPlayed: now - 55 * day, mcVersion: '1.21.4', loader: 'Vanilla', mods: 0, art: null },
   { key: 'steam:504230', source: 'steam', appid: 504230, title: 'Celeste', minutes: 1320, lastPlayed: now - 120 * day, ach: { unlocked: 22, total: 32 } },
-].map((g) => (g.source === 'steam' ? { ...g, art: steamArt(g.appid) } : g));
+].map((g) => (g.source === 'steam' ? { ...g, art: steamArt(g.appid), installed: true, size: 18.4 * 1024 ** 3 } : g));
+// Na demo, Silksong está baixando, Celeste e Stardew não estão no PC e o Terraria tem atualização na fila.
+for (const g of games) if ([1030300, 504230, 413150].includes(g.appid)) Object.assign(g, { installed: false, size: 0 });
+let downloads = [
+  { key: 'steam:1030300', appid: 1030300, title: 'Hollow Knight: Silksong', state: 'downloading', percent: 37, bytes: 0, total: 0, update: false },
+  { key: 'steam:105600', appid: 105600, title: 'Terraria', state: 'queued', percent: 0, bytes: 0, total: 0, update: true },
+];
+setInterval(() => {
+  downloads = downloads.map((d) => (d.state === 'downloading' ? { ...d, percent: Math.min(99, d.percent + 1) } : d));
+  if (window.mockEmit) window.mockEmit('steam:downloads', downloads);
+}, 1500);
 
 let config = {
   steamId: '76561198000000000', hasSteamApiKey: true, steamApiKeyHint: 'A91F', prismDir: '', prismExe: '', hytaleExe: 'C:\\Program Files\\Hytale\\Hytale.exe', hytaleProcess: '',
@@ -79,6 +89,10 @@ export const mock = {
     }));
   },
   launch: async () => ({ ok: true }),
+  steamDownloads: async () => downloads,
+  installGame: async () => ({ ok: true }),
+  uninstallGame: async () => ({ ok: true }),
+  openDownloads: async () => {},
   openInSource: async () => {},
   pickArt: async () => ({ canceled: true }),
   resetArt: async () => {},

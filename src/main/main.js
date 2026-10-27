@@ -14,6 +14,7 @@ const { watchGuideButton } = require('./guide');
 const { forceForeground } = require('./foreground');
 const overlay = require('./overlay');
 const updater = require('./updater');
+const downloads = require('./downloads');
 
 const windowed = process.argv.includes('--windowed');
 let win = null;
@@ -33,6 +34,16 @@ if (!app.requestSingleInstanceLock()) {
     overlay.prepare();
     watchGuideButton(onGuide);
     updater.watchUpdates((status) => send('update:status', status));
+    downloads.start({
+      names: library.steamNames,
+      onDownloads: (list) => send('steam:downloads', list),
+      onInstalledChange: () => send('library:changed'),
+      // A janela de instalação é da Steam. Quando o download começa, o Cartucho volta para a frente.
+      onStarted: (appid) => {
+        bringToFront();
+        send('steam:install-started', { appid });
+      },
+    });
   });
   app.on('window-all-closed', () => app.quit());
 }
@@ -240,6 +251,20 @@ function registerIpc() {
   });
   ipcMain.handle('friends:get', () => library.friends());
   ipcMain.handle('history:week', () => library.playWeek());
+  ipcMain.handle('steam:downloads', () => downloads.list(library.steamNames()));
+  ipcMain.handle('steam:install', async (_e, appid) => {
+    if (!Number.isInteger(appid) || appid <= 0) return { error: 'Jogo inválido.' };
+    downloads.expectInstall(appid);
+    await shell.openExternal(`steam://install/${appid}`);
+    downloads.poke();
+    return { ok: true };
+  });
+  ipcMain.handle('steam:uninstall', async (_e, appid) => {
+    if (!Number.isInteger(appid) || appid <= 0) return { error: 'Jogo inválido.' };
+    await shell.openExternal(`steam://uninstall/${appid}`);
+    return { ok: true };
+  });
+  ipcMain.handle('steam:open-downloads', () => shell.openExternal('steam://open/downloads'));
   ipcMain.handle('steam:profile', (_e, steamId) => /^\d{17}$/.test(String(steamId)) && shell.openExternal(`steam://url/SteamIDPage/${steamId}`));
   ipcMain.handle('update:status', () => updater.getStatus());
   ipcMain.handle('update:install', () => updater.installNow());

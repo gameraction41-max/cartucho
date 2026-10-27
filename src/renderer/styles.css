@@ -113,10 +113,7 @@ img { max-width: 100%; }
 .cover img.loaded { opacity: 1; }
 .cover.icon img { inset: 22%; width: 56%; height: 56%; object-fit: contain; image-rendering: pixelated; }
 .cover.blocks { background-image: linear-gradient(rgba(0,0,0,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.2) 1px, transparent 1px), linear-gradient(160deg, hsl(var(--h, 120) 40% 36%), hsl(var(--h, 120) 45% 10%)); background-size: 1.4rem 1.4rem, 1.4rem 1.4rem, auto; }
-.cover .dot { position: absolute; top: .6rem; right: .6rem; width: .7rem; height: .7rem; border-radius: 50%; box-shadow: 0 0 0 .15rem rgba(0,0,0,.45); z-index: 1; }
-.dot.steam { background: var(--steam); } .dot.prism { background: var(--prism); } .dot.hytale { background: var(--hytale); }
 .cover .t { position: relative; z-index: 2; }
-.cover .dot { z-index: 2; }
 .cover img { z-index: 1; }
 .mc-art { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, hsl(var(--lh) 45% 34%) 0%, hsl(var(--lh) 50% 9%) 75%); }
 .mc-art svg { position: absolute; left: 15%; top: 12%; width: 70%; height: 62%; display: block; }
@@ -337,3 +334,18 @@ body.overlay #overlay { background: linear-gradient(90deg, rgba(5, 6, 11, .55) 0
 
 /* listas longas somem suavemente no fim, em vez de terminar num corte reto */
 .set-list, .glist, .grid { mask-image: linear-gradient(to bottom, #000 calc(100% - 3rem), transparent); }
+
+/* ===== jogos da Steam fora do PC e downloads ===== */
+.cover.not-installed img.loaded { opacity: .5; filter: grayscale(.75); }
+.cover.not-installed .t { color: rgba(255,255,255,.75); }
+.inst-tag { position: absolute; top: .55rem; left: .6rem; z-index: 3; font-family: var(--f-mono); font-size: .68em; font-weight: 600; padding: .12rem .45rem; border-radius: .3rem; background: rgba(8,10,18,.65); color: var(--ink); text-shadow: none; }
+.cover .dl { position: absolute; left: .6rem; right: .6rem; bottom: .6rem; z-index: 3; text-shadow: none; font-family: var(--f-mono); font-size: .75rem; font-weight: 600; padding: .4rem .5rem; border-radius: .45rem; background: rgba(8,10,18,.72); }
+.cover:has(.dl) .t { margin-bottom: 2.4rem; }
+.dl-top { display: flex; justify-content: space-between; gap: .8rem; margin-bottom: .3rem; }
+.dl-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.dl .bar i { transition: width .6s ease; }
+.dl.paused .bar i { background: var(--muted); }
+.dl-list { display: grid; gap: .7rem; max-width: 30rem; padding: .9rem 1.1rem; border-radius: .8rem; background: rgba(8,10,18,.55); border: 1px solid var(--glass-line); }
+.dl-list h3 { margin: 0; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); font-family: var(--f-mono); }
+.dl-list .dl { font-size: .95rem; }
+.game .dl { max-width: 24rem; font-size: 1rem; }

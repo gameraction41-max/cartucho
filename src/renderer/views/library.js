@@ -4,6 +4,7 @@ import { emptyState } from './home.js';
 
 const FILTERS = [
   { id: 'all', label: 'Todos', test: () => true },
+  { id: 'installed', label: 'Instalados', test: (g) => g.installed !== false },
   { id: 'steam', label: 'Steam', test: (g) => g.source === 'steam' },
   { id: 'prism', label: 'Minecraft', test: (g) => g.source === 'prism' },
   { id: 'hytale', label: 'Hytale', test: (g) => g.source === 'hytale' },

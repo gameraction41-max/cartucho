@@ -80,12 +80,27 @@ function blockArt(game) {
   </svg>`;
 }
 
+const DL_TEXT = { downloading: (d) => `${d.percent}%`, paused: () => 'Pausado', queued: () => 'Na fila' };
+
+export function downloadText(d) {
+  return (DL_TEXT[d.state] || DL_TEXT.queued)(d);
+}
+
+// Barra de download que o app.js atualiza no lugar pelo data-dl, sem redesenhar a tela.
+export function dlBar(d, label = '') {
+  return h('div', { class: `dl ${d.state !== 'downloading' ? 'paused' : ''}`, 'data-dl': d.key },
+    h('div', { class: 'dl-top' }, label ? h('span', { class: 'dl-name' }, label) : null, h('span', { class: 'dl-pct mono' }, downloadText(d))),
+    h('div', { class: 'bar' }, h('i', { style: { width: `${d.percent}%` } })));
+}
+
 export function cover(game, cls = '') {
   const isPrism = game.source === 'prism';
-  const el = h('div', { class: `cover ${cls} ${isPrism ? 'blocks' : ''}`, style: { '--h': String(hue(game.title)) } },
+  const missing = game.installed === false;
+  const el = h('div', { class: `cover ${cls} ${isPrism ? 'blocks' : ''} ${missing ? 'not-installed' : ''}`, style: { '--h': String(hue(game.title)) } },
+    missing && !game.download ? h('span', { class: 'inst-tag' }, '⤓ Instalar') : null,
+    game.download ? dlBar(game.download) : null,
     isPrism ? h('span', { class: 'mc-art', style: { '--lh': String(LOADER_HUE[game.loader] ?? 125) }, html: blockArt(game) }) : null,
     isPrism && game.loader ? h('span', { class: 'mc-tag' }, `${game.mcVersion || ''} ${game.loader}`.trim()) : null,
-    h('i', { class: `dot ${game.source}` }),
     h('span', { class: 't' }, game.title));
   const urls = game.art && game.art.cover;
   if (urls && urls.length) {
