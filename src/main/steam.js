@@ -94,7 +94,12 @@ async function getFriends(key, steamId) {
 async function getPlayerAchievements(key, steamId, appid) {
   try {
     const data = await call('/ISteamUserStats/GetPlayerAchievements/v1/', { key, steamid: steamId, appid, l: LANG });
-    const list = data.playerstats && data.playerstats.achievements;
+    const stats = data.playerstats || {};
+    // Perfil privado pode vir com status 200 e success: false. Sem isso, o jogo pareceria não ter conquistas.
+    if (stats.success === false && stats.error && !/no stats/i.test(stats.error)) {
+      throw new SteamError(stats.error);
+    }
+    const list = stats.achievements;
     if (!list) return null;
     return list.map((a) => ({
       api: a.apiname,

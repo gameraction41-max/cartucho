@@ -177,7 +177,7 @@ function registerIpc() {
   ipcMain.handle('library:sync', async (_e, opts = {}) => {
     try {
       const lib = await library.syncSteam();
-      library.syncAchievements(opts).then((unlocked) => {
+      library.syncAchievements({ ...opts, onProgress: () => send('achievements:changed') }).then((unlocked) => {
         send('achievements:changed');
         notifyUnlocks(unlocked);
       }).catch(() => {});

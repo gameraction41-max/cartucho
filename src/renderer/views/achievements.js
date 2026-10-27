@@ -27,14 +27,24 @@ export default {
   label: 'Conquistas',
   async render(ctx) {
     const s = await ctx.api.achievementSummary();
+    const st = s.status || {};
     if (!s.total) {
+      // Diz o que está acontecendo: ainda lendo, a Steam recusou, ou nada para mostrar.
+      let title = 'Nenhuma conquista ainda';
+      let text = 'Conecte sua conta da Steam nas configurações para ver suas conquistas e seu nível.';
+      if (ctx.state.steamConfigured) {
+        if (st.running) {
+          title = 'Lendo suas conquistas…';
+          text = `${st.done} de ${st.total} jogos lidos. Elas vão aparecendo aqui enquanto a leitura continua.`;
+        } else if (st.failed && st.error) {
+          title = 'Não deu para ler as conquistas';
+          text = st.error;
+        } else {
+          text = 'As conquistas aparecem aqui depois da sincronização com a Steam. Aperte Sincronizar no menu rápido para tentar agora.';
+        }
+      }
       return {
-        el: h('div', { style: { display: 'contents' } }, emptyState(ctx, {
-          title: 'Nenhuma conquista ainda',
-          text: ctx.state.steamConfigured
-            ? 'As conquistas aparecem aqui depois da primeira sincronização com a Steam. Isso pode levar alguns minutos se você tem muitos jogos.'
-            : 'Conecte sua conta da Steam nas configurações para ver suas conquistas e seu nível.',
-        })),
+        el: h('div', { style: { display: 'contents' } }, emptyState(ctx, { title, text })),
         hints: [['confirm', 'Selecionar']],
       };
     }
@@ -59,7 +69,10 @@ export default {
           h('span', {}, h('b', {}, `+${s.month}`), 'últimos 30 dias')),
         s.latest ? h('div', { class: 'latest' }, h('span', { class: 'ico' }), h('div', {}, s.latest.name, h('small', {}, `${s.latest.game} · ${when(s.latest.unlocktime)}`))) : null),
       h('section', { class: 'list-col' },
-        h('div', { class: 'list-head' }, h('h2', { class: 'panel-title', style: { margin: 0 } }, 'Seus jogos'), h('span', { class: 'pill on' }, sort.label)),
+        h('div', { class: 'list-head' },
+          h('h2', { class: 'panel-title', style: { margin: 0 } }, 'Seus jogos'),
+          st.running ? h('span', { class: 'muted' }, `lendo ${st.done} de ${st.total}…`) : null,
+          h('span', { class: 'pill on' }, sort.label)),
         h('div', { class: 'glist' }, rows)));
 
     return {
