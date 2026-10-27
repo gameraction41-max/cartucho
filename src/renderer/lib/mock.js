@@ -33,16 +33,17 @@ const fakeShot = (h1, h2, seed) => {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 const shotGroups = [
-  { key: 'steam:1145350', title: 'Hades II', h: [350, 10], n: 9, source: 'windows', clip: 2 },
+  { key: 'steam:1145350', title: 'Hades II', h: [350, 10], n: 9, source: 'windows', clips: [2, 5] },
   { key: 'prism:FO', title: 'Fabulously Optimized', h: [200, 120], n: 7, source: 'minecraft' },
-  { key: 'steam:1245620', title: 'ELDEN RING', h: [40, 30], n: 6, source: 'steam' },
+  { key: 'steam:1245620', title: 'ELDEN RING', h: [40, 30], n: 6, source: 'windows', clips: [1, 3] },
   { key: 'steam:105600', title: 'Terraria', h: [190, 100], n: 4, source: 'steam' },
   { key: 'windows', title: 'Área de trabalho', h: [230, 220], n: 3, source: 'windows' },
 ].map((g, gi) => ({
   key: g.key, title: g.title, gameKey: g.key === 'windows' ? null : g.key,
   shots: Array.from({ length: g.n }, (_, i) => {
+    const clip = (g.clips || []).includes(i);
     const url = fakeShot(g.h[0] + i * 9, g.h[1] + i * 5, gi * 13 + i + 1);
-    return { url, thumb: i === g.clip ? url : null, at: now - gi * 2 * day - i * 5 * 3600000, video: i === g.clip, source: g.source, name: `${g.title} ${i}.png` };
+    return { url, thumb: clip ? url : null, at: now - gi * 2 * day - i * 5 * 3600000, video: clip, source: g.source, name: `${g.title} ${i}.png` };
   }),
 }));
 const gamePresets = {};

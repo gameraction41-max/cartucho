@@ -374,7 +374,12 @@ body.overlay #overlay { background: linear-gradient(90deg, rgba(5, 6, 11, .55) 0
 
 /* ===== capturas ===== */
 .shots-head { min-width: 0; }
-.shots-head h2 { flex: none; }
+.shots-kind { display: flex; flex: none; gap: .3rem; padding: .3rem; border-radius: 2rem; background: var(--glass); border: 1px solid var(--glass-line); }
+.shots-kind .pill { border-color: transparent; background: none; font-size: 1.1rem; padding: .55rem 1.3rem; }
+.shots-kind .pill.on { background: var(--ink); color: #0b0d14; }
+.shots-kind .pill small { margin-left: .5rem; opacity: .6; font-family: var(--f-mono, monospace); }
+.shots-kind .pill.on small { opacity: .7; }
+.shots-head .shots-filters { margin-left: auto; }
 .shots-filters { display: flex; gap: .6rem; overflow-x: auto; scrollbar-width: none; padding: .4rem; margin: -.4rem; min-width: 0; }
 .shots-filters::-webkit-scrollbar { display: none; }
 .shots-filters .pill { flex: none; white-space: nowrap; }

@@ -6,6 +6,8 @@ const CACHE_MS = 15 * 1000;
 const SOURCE = { windows: 'Windows', steam: 'Steam', minecraft: 'Minecraft' };
 let cache = null; // { at, groups }
 let filterKey = 'all';
+let kind = 'prints'; // 'prints' ou 'videos'
+const KINDS = [{ id: 'prints', label: 'Prints', test: (s) => !s.video }, { id: 'videos', label: 'Vídeos', test: (s) => s.video }];
 
 const fullDate = (ms) => new Date(ms).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -36,13 +38,19 @@ export default {
       };
     }
 
-    if (filterKey !== 'all' && !groups.some((g) => g.key === filterKey)) filterKey = 'all';
-    const filters = [{ key: 'all', title: 'Todas', count: total }, ...groups.map((g) => ({ key: g.key, title: g.title, count: g.shots.length }))];
-    const shots = filterKey === 'all'
-      ? groups.flatMap((g) => g.shots.map((s) => ({ ...s, game: g.title }))).sort((a, b) => b.at - a.at)
-      : groups.find((g) => g.key === filterKey).shots.map((s) => ({ ...s, game: groups.find((g) => g.key === filterKey).title }));
+    // Prints e vídeos ficam separados; cada jogo só aparece se tiver algo do tipo escolhido.
+    const kindTest = KINDS.find((k) => k.id === kind).test;
+    const counts = Object.fromEntries(KINDS.map((k) => [k.id, groups.reduce((n, g) => n + g.shots.filter(k.test).length, 0)]));
+    const byKind = groups.map((g) => ({ ...g, shots: g.shots.filter(kindTest) })).filter((g) => g.shots.length);
+    if (filterKey !== 'all' && !byKind.some((g) => g.key === filterKey)) filterKey = 'all';
+    const filters = [{ key: 'all', title: 'Todos os jogos', count: counts[kind] }, ...byKind.map((g) => ({ key: g.key, title: g.title, count: g.shots.length }))];
+    const picked = filterKey === 'all' ? byKind : byKind.filter((g) => g.key === filterKey);
+    const shots = picked.flatMap((g) => g.shots.map((s) => ({ ...s, game: g.title }))).sort((a, b) => b.at - a.at);
 
     const setFilter = (key) => { filterKey = key; ctx.sfx.tab(); ctx.rerender(); };
+    const setKind = (id) => { kind = id; filterKey = 'all'; ctx.sfx.tab(); ctx.rerender(); };
+    const kindPills = KINDS.map((k) => h('button', { class: `pill ${k.id === kind ? 'on' : ''}`, 'data-focus': true, 'data-key': `kind:${k.id}`, onclick: () => setKind(k.id) },
+      k.label, h('small', {}, String(counts[k.id]))));
     const pills = filters.map((f) => h('button', { class: `pill ${f.key === filterKey ? 'on' : ''}`, 'data-focus': true, 'data-key': `filter:${f.key}`, onclick: () => setFilter(f.key) },
       f.title, h('small', {}, String(f.count))));
 
@@ -99,14 +107,18 @@ export default {
     }
 
     const el = h('div', { style: { display: 'contents' } },
-      h('div', { class: 'lib-head shots-head' }, h('h2', {}, `${shots.length} ${shots.length === 1 ? 'captura' : 'capturas'}`), h('div', { class: 'shots-filters' }, pills)),
-      h('div', { class: 'grid shots-grid' }, cards));
+      h('div', { class: 'lib-head shots-head' },
+        h('div', { class: 'shots-kind' }, kindPills),
+        h('div', { class: 'shots-filters' }, pills)),
+      h('div', { class: 'grid shots-grid' }, cards.length ? cards : h('p', { class: 'muted' }, kind === 'videos'
+        ? 'Nenhum vídeo ainda. Grave um clipe com Win+Alt+G (últimos segundos) ou Win+Alt+R (começar e parar) na Barra de Jogo.'
+        : 'Nenhum print ainda.')));
     // Fica no body, por cima da barra de abas e das dicas.
     document.body.append(viewer);
 
     return {
       el,
-      hints: [['confirm', 'Ver'], ['x', 'Trocar jogo'], ['menu', 'Menu']],
+      hints: [['confirm', 'Ver'], ['y', kind === 'prints' ? 'Ver vídeos' : 'Ver prints'], ['x', 'Trocar jogo'], ['menu', 'Menu']],
       onAction(action) {
         if (index >= 0) {
           if (action === 'left' || action === 'up') step(-1);
@@ -116,6 +128,10 @@ export default {
             const v = viewer.querySelector('video');
             if (v) { if (v.paused) v.play(); else v.pause(); }
           } else return action !== 'menu' && action !== 'fullscreen';
+          return true;
+        }
+        if (action === 'y') {
+          setKind(kind === 'prints' ? 'videos' : 'prints');
           return true;
         }
         if (action === 'x') {
