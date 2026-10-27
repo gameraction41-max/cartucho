@@ -113,10 +113,7 @@ img { max-width: 100%; }
 .cover img.loaded { opacity: 1; }
 .cover.icon img { inset: 22%; width: 56%; height: 56%; object-fit: contain; image-rendering: pixelated; }
 .cover.blocks { background-image: linear-gradient(rgba(0,0,0,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.2) 1px, transparent 1px), linear-gradient(160deg, hsl(var(--h, 120) 40% 36%), hsl(var(--h, 120) 45% 10%)); background-size: 1.4rem 1.4rem, 1.4rem 1.4rem, auto; }
-.cover .dot { position: absolute; top: .6rem; right: .6rem; width: .7rem; height: .7rem; border-radius: 50%; box-shadow: 0 0 0 .15rem rgba(0,0,0,.45); z-index: 1; }
-.dot.steam { background: var(--steam); } .dot.prism { background: var(--prism); } .dot.hytale { background: var(--hytale); }
 .cover .t { position: relative; z-index: 2; }
-.cover .dot { z-index: 2; }
 .cover img { z-index: 1; }
 .mc-art { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, hsl(var(--lh) 45% 34%) 0%, hsl(var(--lh) 50% 9%) 75%); }
 .mc-art svg { position: absolute; left: 15%; top: 12%; width: 70%; height: 62%; display: block; }

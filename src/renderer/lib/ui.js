@@ -101,7 +101,6 @@ export function cover(game, cls = '') {
     game.download ? dlBar(game.download) : null,
     isPrism ? h('span', { class: 'mc-art', style: { '--lh': String(LOADER_HUE[game.loader] ?? 125) }, html: blockArt(game) }) : null,
     isPrism && game.loader ? h('span', { class: 'mc-tag' }, `${game.mcVersion || ''} ${game.loader}`.trim()) : null,
-    h('i', { class: `dot ${game.source}` }),
     h('span', { class: 't' }, game.title));
   const urls = game.art && game.art.cover;
   if (urls && urls.length) {
