@@ -12,10 +12,12 @@ const art = require('./art');
 const mcoptions = require('./mcoptions');
 const { watchGuideButton } = require('./guide');
 const { forceForeground } = require('./foreground');
+const overlay = require('./overlay');
 
 const windowed = process.argv.includes('--windowed');
 let win = null;
 let running = null;
+let recommended = null; // preset gráfico que combina com o hardware, calculado uma vez
 
 // Música e sons tocam sem precisar de um clique antes, como num console.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -27,6 +29,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     registerIpc();
     createWindow();
+    overlay.prepare();
     watchGuideButton(onGuide);
   });
   app.on('window-all-closed', () => app.quit());
@@ -91,9 +94,12 @@ function releaseTop() {
   win.setAlwaysOnTop(false);
 }
 
-// Botão do Xbox: com o Cartucho na frente, abre ou fecha o menu rápido. Com um jogo na frente, traz o Cartucho por cima dele já com o menu aberto.
+// Botão do Xbox: com o Cartucho na frente, abre ou fecha o menu rápido. Com um jogo aberto na frente,
+// abre só o menu lateral por cima dele (overlay.js). Com outro programa na frente, traz o Cartucho já com o menu aberto.
 function onGuide() {
   if (!win || win.isDestroyed()) return;
+  if (overlay.isOpen()) return overlay.send('input:guide');
+  if (running && !win.isFocused()) return overlay.open({ running });
   const fromBackground = !win.isFocused();
   if (fromBackground) showOverApp();
   send('input:guide', { fromBackground });
@@ -101,6 +107,7 @@ function onGuide() {
 
 function gameEnded(game) {
   running = null;
+  overlay.close({ backToGame: false });
   send('game:ended', { key: game.key });
   send('library:changed');
   if (config.get('returnAfterGame')) bringToFront();
@@ -208,13 +215,30 @@ function registerIpc() {
     }
   });
   ipcMain.handle('system:stats', () => system.stats());
-  ipcMain.handle('system:power-plans', () => system.powerPlans());
-  ipcMain.handle('system:set-power-plan', async (_e, guid) => {
-    try {
-      return { ok: await system.setPowerPlan(guid) };
-    } catch (err) {
-      return { error: err.message };
+  ipcMain.handle('system:recommended-preset', async () => {
+    if (!recommended) recommended = system.stats().then(system.recommendPreset).catch(() => null);
+    return recommended;
+  });
+  // Aplica o mesmo preset em todas as instâncias do Minecraft, menos a que estiver aberta.
+  ipcMain.handle('prism:preset-all', (_e, presetId) => {
+    let applied = 0;
+    let skipped = 0;
+    for (const inst of prism.listInstances(library.prismDir())) {
+      if (running && running.key === `prism:${inst.id}`) { skipped++; continue; }
+      try {
+        mcoptions.writePreset(inst.dir, presetId);
+        applied++;
+      } catch {
+        skipped++;
+      }
     }
+    return { applied, skipped };
+  });
+  ipcMain.handle('overlay:close', () => overlay.close());
+  ipcMain.handle('overlay:navigate', (_e, target) => {
+    overlay.close({ backToGame: false });
+    bringToFront();
+    send('menu:navigate', target || {});
   });
   ipcMain.handle('dialog:file', async (_e, opts = {}) => {
     const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: opts.filters, defaultPath: opts.defaultPath });

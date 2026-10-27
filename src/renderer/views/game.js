@@ -76,13 +76,15 @@ function presetButton(ctx, g) {
   const btn = h('button', { class: 'btn', 'data-focus': true, 'data-key': 'preset' }, 'Preset gráfico: …');
   let presets = [];
   let currentId = null;
+  let recommendedId = null;
   const label = () => {
     const p = presets.find((x) => x.id === currentId);
-    btn.textContent = `Preset gráfico: ${p ? p.label : 'Personalizado'}`;
+    btn.textContent = `Preset gráfico: ${p ? p.label : 'Personalizado'}${p && p.id === recommendedId ? ' · recomendado' : ''}`;
   };
-  Promise.all([ctx.api.mcPresets(), ctx.api.getMcPreset(g.instanceId)]).then(([list, id]) => {
+  Promise.all([ctx.api.mcPresets(), ctx.api.getMcPreset(g.instanceId), ctx.api.recommendedPreset()]).then(([list, id, rec]) => {
     presets = list;
     currentId = id;
+    recommendedId = rec && rec.id;
     label();
   });
   btn.addEventListener('click', async () => {

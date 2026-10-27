@@ -1,4 +1,4 @@
-// Painel do PC: processador, placa de vídeo, memória e discos, e troca do plano de energia do Windows.
+// Painel do PC: processador, placa de vídeo, memória e discos. Ao lado, o preset gráfico que combina com esse hardware.
 import { h } from '../lib/ui.js';
 
 const REFRESH_MS = 2000;
@@ -39,31 +39,42 @@ export default {
       h('div', { class: 'pc-block' }, mem.el),
       h('div', { class: 'pc-block' }, h('div', { class: 'meter-head' }, h('span', {}, 'Discos')), disksBox));
 
-    const plansBox = h('div', { class: 'plans' }, h('p', { class: 'muted' }, 'Carregando…'));
-    const plansPanel = h('section', { class: 'panel pc-plans' },
-      h('h2', { class: 'panel-title' }, 'Plano de energia'),
-      h('p', { class: 'muted', style: { margin: '0 0 1rem' } }, '"Alto desempenho" deixa o processador sempre acelerado nos jogos. "Equilibrado" economiza energia no dia a dia.'),
-      plansBox);
+    const presetsBox = h('div', { class: 'plans' }, h('p', { class: 'muted' }, 'Carregando…'));
+    const intro = h('p', { class: 'muted', style: { margin: '0 0 1rem' } }, 'Vendo o seu hardware…');
+    const instances = ctx.state.games.filter((g) => g.source === 'prism');
+    const presetsPanel = h('section', { class: 'panel pc-plans' },
+      h('h2', { class: 'panel-title' }, 'Presets gráficos'),
+      intro,
+      presetsBox,
+      h('p', { class: 'muted note' }, instances.length
+        ? `Vale para as ${instances.length} instâncias do Minecraft. Dá para trocar uma a uma na página de cada instância.`
+        : 'Os presets valem para as instâncias do Minecraft, e nenhuma foi encontrada ainda.'));
 
-    async function loadPlans(focusGuid) {
-      const plans = await ctx.api.powerPlans();
+    // Preset em uso: só aparece marcado quando todas as instâncias estão com o mesmo.
+    async function currentPreset() {
+      const ids = await Promise.all(instances.map((g) => ctx.api.getMcPreset(g.instanceId)));
+      return ids.length && ids.every((id) => id && id === ids[0]) ? ids[0] : null;
+    }
+
+    async function loadPresets(focusId) {
+      const [list, rec, current] = await Promise.all([ctx.api.mcPresets(), ctx.api.recommendedPreset(), currentPreset()]);
       if (!alive) return;
-      if (!plans.length) {
-        plansBox.replaceChildren(h('p', { class: 'muted' }, 'Os planos de energia só aparecem no Windows.'));
-        return;
-      }
-      plansBox.replaceChildren(...plans.map((p) => h('button', {
-        class: `opt plan ${p.active ? 'active' : ''}`, 'data-focus': true, 'data-key': `plan:${p.guid}`,
+      const recLabel = rec && (list.find((p) => p.id === rec.id) || {}).label;
+      intro.textContent = rec ? `Pelo seu PC (${rec.reason}), o recomendado é ${recLabel}.` : 'Não deu para ler o hardware, mas dá para escolher na mão.';
+      presetsBox.replaceChildren(...list.map((p) => h('button', {
+        class: `opt plan ${p.id === current ? 'active' : ''}`, 'data-focus': true, 'data-key': `preset:${p.id}`,
+        'data-autofocus': rec && p.id === rec.id ? true : undefined,
+        disabled: !instances.length,
         onclick: async () => {
-          if (p.active) return;
-          const r = await ctx.api.setPowerPlan(p.guid);
-          if (r && r.error) return ctx.toast(`Não deu para trocar o plano: ${r.error}`, { error: true });
+          const r = await ctx.api.setMcPresetAll(p.id);
           ctx.sfx.confirm();
-          ctx.toast(`Plano "${p.name}" ativado.`);
-          loadPlans(p.guid);
+          ctx.toast(r.skipped ? `${p.label} aplicado em ${r.applied} instâncias. ${r.skipped} ficou de fora porque está aberta.` : `${p.label} aplicado em ${r.applied} ${r.applied === 1 ? 'instância' : 'instâncias'}.`);
+          loadPresets(p.id);
         },
-      }, h('span', { class: 'txt' }, p.name), h('i', { class: `sw ${p.active ? 'on' : ''}` }))));
-      if (plansBox.isConnected) ctx.refocus(focusGuid ? `plan:${focusGuid}` : null);
+      },
+      h('span', { class: 'txt' }, p.label, rec && p.id === rec.id ? h('em', { class: 'rec' }, 'recomendado') : null, h('small', {}, p.desc)),
+      h('i', { class: `sw ${p.id === current ? 'on' : ''}` }))));
+      if (presetsBox.isConnected) ctx.refocus(focusId ? `preset:${focusId}` : null);
     }
 
     let timer = null;
@@ -90,16 +101,16 @@ export default {
       timer = setTimeout(tick, REFRESH_MS);
     }
     tick();
-    loadPlans();
+    loadPresets();
 
     const el = h('div', { class: 'pc' },
       h('section', { class: 'home-info', style: { marginBottom: '1.6rem', marginTop: 0 } },
         h('h1', { class: 'big-title' }, 'Seu PC'), osName),
-      h('div', { class: 'pc-grid' }, hw, plansPanel));
+      h('div', { class: 'pc-grid' }, hw, presetsPanel));
 
     return {
       el,
-      hints: [['confirm', 'Ativar plano'], ['menu', 'Menu']],
+      hints: [['confirm', 'Aplicar preset'], ['menu', 'Menu']],
       destroy() {
         alive = false;
         clearTimeout(timer);

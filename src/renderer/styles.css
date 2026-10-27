@@ -224,8 +224,11 @@ img { max-width: 100%; }
 .meter small { color: var(--muted); font-size: .9rem; min-height: 1.2em; }
 .disks { display: grid; gap: .9rem; }
 .disks .meter-head { font-size: 1rem; }
-.plans { display: grid; gap: .5rem; }
+.plans { display: grid; grid-template-columns: minmax(0, 1fr); gap: .5rem; }
 .plan.active { color: var(--ink); }
+.opt.plan small { white-space: normal; }
+.plan .rec { font-style: normal; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); margin-left: .7rem; vertical-align: .1rem; }
+.pc-plans .note { margin: 1rem 0 0; font-size: .9rem; }
 
 /* ===== configurações ===== */
 .set-wrap { margin-top: 1rem; display: grid; grid-template-columns: minmax(0, 64rem); flex: 1; min-height: 0; }
@@ -249,6 +252,9 @@ img { max-width: 100%; }
 .slider .bar i { background: var(--ink); }
 
 /* ===== menu rápido ===== */
+/* Janela do menu por cima do jogo: fundo transparente, só um véu escuro para o menu se destacar do jogo. */
+body.overlay { background: transparent; }
+body.overlay #overlay { background: linear-gradient(90deg, rgba(5, 6, 11, .55) 0%, rgba(5, 6, 11, .15) 45%, transparent 70%); }
 #overlay { position: fixed; inset: 0; z-index: 10; background: rgba(5, 6, 11, .6); animation: fade .15s ease; }
 @keyframes fade { from { opacity: 0; } }
 .qmenu { position: absolute; top: 0; bottom: 0; left: 0; width: 28rem; background: rgba(14, 18, 32, .97); border-right: 1px solid var(--glass-line); padding: 2.4rem 2rem; display: flex; flex-direction: column; gap: 1.2rem; animation: slide .2s ease; }
@@ -262,6 +268,15 @@ img { max-width: 100%; }
 .qitem.focused { background: var(--ink); color: #0b0d14; box-shadow: none !important; outline: none; }
 .qitem.focused small { color: #3a3f4d; }
 .qitem.confirm.focused { background: var(--danger); color: #fff; }
+.qnow { position: relative; overflow: hidden; display: flex; align-items: flex-end; min-height: 11rem; width: 100%; padding: 1.1rem 1.2rem; border-radius: .9rem; background: linear-gradient(135deg, #24304f, #121828); border: 1px solid var(--glass-line); text-align: left; }
+.qnow .art { position: absolute; inset: 0; background: center / cover no-repeat; }
+.qnow .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(8,10,18,.95) 0%, rgba(8,10,18,.55) 55%, rgba(8,10,18,.2) 100%); }
+.qnow .info { position: relative; display: grid; gap: .25rem; }
+.qnow small { color: var(--prism); font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; }
+.qnow b { font-family: var(--f-display); font-size: 1.5rem; line-height: 1.1; }
+.qnow .cta { color: var(--muted); font-size: .95rem; }
+.qnow.focused { outline-offset: .2rem; }
+.qnow.focused .cta { color: var(--ink); }
 .qsep { height: 1px; background: var(--glass-line); margin: .3rem 0; }
 
 @media (prefers-reduced-motion: reduce) {
