@@ -1,6 +1,7 @@
 // Presets gráficos dos jogos da Steam. Cada jogo guarda as opções de vídeo num arquivo próprio, então cada jogo
 // suportado tem uma receita: onde fica o arquivo, o formato e os valores de cada preset. Jogos em Unreal Engine são
-// reconhecidos sozinhos pela pasta de instalação; os outros entram à mão no CATALOG.
+// reconhecidos sozinhos pela pasta de instalação; os outros entram à mão no CATALOG (RDR2, Euro Truck 2, No Man's Sky,
+// Cyberpunk 2077 e Death Stranding Director's Cut, desde a 0.10.1).
 // Antes da primeira mudança, o arquivo original é copiado para a pasta do Cartucho e pode ser restaurado.
 const fs = require('node:fs');
 const os = require('node:os');
@@ -74,7 +75,128 @@ const json = {
   },
 };
 
-const FORMATS = { ini, json };
+// Formatos "planos": cada jogo tem um jeito de escrever chave e valor, mas a regra é a mesma. Só troca o que já existe
+// no arquivo (o jogo escreve todas as opções dele ao salvar), para não inventar chaves que uma versão nova não conhece.
+// Se nada bater, o arquivo é de um formato diferente do esperado e nada é gravado.
+function flat({ get, put }) {
+  return {
+    get,
+    set(text, values) {
+      let out = text;
+      let hits = 0;
+      for (const [key, value] of Object.entries(values)) {
+        const next = put(out, key, String(value));
+        if (next == null) continue;
+        out = next;
+        hits++;
+      }
+      if (!hits) throw new Error('O arquivo de opções deste jogo está diferente do que o Cartucho conhece. Nada foi mudado.');
+      return out;
+    },
+    // Bate quando todas as chaves que existem no arquivo estão com o valor do preset (e pelo menos uma existe).
+    matches(text, values) {
+      const found = Object.entries(values).map(([k, v]) => [get(text, k), String(v)]).filter(([cur]) => cur != null);
+      return found.length > 0 && found.every(([cur, v]) => cur === v);
+    },
+  };
+}
+
+const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Euro Truck Simulator 2 (config.cfg): uset r_sun_shadow_quality "3"
+const cfg = flat({
+  get(text, key) {
+    const m = text.match(new RegExp(`^\\s*uset\\s+${escape(key)}\\s+"([^"]*)"`, 'm'));
+    return m ? m[1] : null;
+  },
+  put(text, key, value) {
+    const re = new RegExp(`^(\\s*uset\\s+${escape(key)}\\s+)"[^"]*"`, 'm');
+    return re.test(text) ? text.replace(re, (_m, head) => `${head}"${value}"`) : null;
+  },
+});
+
+// Red Dead Redemption 2 (system.xml): <shadowQuality>kSettingLevel_High</shadowQuality> ou <msaa value="0" />
+const xml = flat({
+  get(text, key) {
+    const k = escape(key);
+    const m = text.match(new RegExp(`<${k}>([^<]*)</${k}>`)) || text.match(new RegExp(`<${k}\\s+value="([^"]*)"\\s*/>`));
+    return m ? m[1] : null;
+  },
+  put(text, key, value) {
+    const k = escape(key);
+    const inner = new RegExp(`(<${k}>)[^<]*(</${k}>)`);
+    if (inner.test(text)) return text.replace(inner, (_m, a, b) => `${a}${value}${b}`);
+    const attr = new RegExp(`(<${k}\\s+value=")[^"]*("\\s*/>)`);
+    return attr.test(text) ? text.replace(attr, (_m, a, b) => `${a}${value}${b}`) : null;
+  },
+});
+
+// No Man's Sky (TKGRAPHICSSETTINGS.MXML): <Property name="ShadowQuality" value="High" /> ou, nas versões novas, a
+// qualidade dentro de um bloco: <Property name="ShadowQuality" value="TkGraphicsDetailTypes"><Property name="GraphicsDetail" value="High" /></Property>
+const mxml = flat({
+  get(text, key) {
+    const k = escape(key);
+    const nested = text.match(new RegExp(`<Property name="${k}" value="[^"]*">\\s*<Property name="GraphicsDetail" value="([^"]*)"`));
+    if (nested) return nested[1];
+    const m = text.match(new RegExp(`<Property name="${k}" value="([^"]*)"\\s*/>`));
+    return m ? m[1] : null;
+  },
+  put(text, key, value) {
+    const k = escape(key);
+    const nested = new RegExp(`(<Property name="${k}" value="[^"]*">\\s*<Property name="GraphicsDetail" value=")[^"]*(")`);
+    if (nested.test(text)) return text.replace(nested, (_m, a, b) => `${a}${value}${b}`);
+    const re = new RegExp(`(<Property name="${k}" value=")[^"]*("\\s*/>)`);
+    return re.test(text) ? text.replace(re, (_m, a, b) => `${a}${value}${b}`) : null;
+  },
+});
+
+// Death Stranding (settings.cfg na pasta do jogo): aceita "chave": valor, chave = valor e chave: valor.
+const loose = flat({
+  get(text, key) {
+    const m = text.match(new RegExp(`^\\s*"?${escape(key)}"?\\s*[:=]\\s*"?([^",\\r\\n}]*?)"?\\s*,?\\s*$`, 'm'));
+    return m ? m[1].trim() : null;
+  },
+  put(text, key, value) {
+    const re = new RegExp(`^(\\s*"?${escape(key)}"?\\s*[:=]\\s*"?)([^",\\r\\n}]*?)("?\\s*,?\\s*)$`, 'm');
+    return re.test(text) ? text.replace(re, (_m, a, _v, b) => `${a}${value}${b}`) : null;
+  },
+});
+
+// Cyberpunk 2077 (UserSettings.json): { data: [{ group_name: "/graphics/advanced", options: [{ name, type, value }] }] }.
+// A chave é "grupo/nome", e o valor só troca se for do mesmo tipo do que o jogo gravou.
+function cpOption(data, key) {
+  const i = key.lastIndexOf('/');
+  const group = (data.data || []).find((g) => g && g.group_name === key.slice(0, i));
+  return group && Array.isArray(group.options) ? group.options.find((o) => o && o.name === key.slice(i + 1)) || null : null;
+}
+
+const cpjson = {
+  get(text, key) {
+    const opt = cpOption(json.read(text), key);
+    return opt ? opt.value : null;
+  },
+  set(text, values) {
+    const data = JSON.parse(text);
+    let hits = 0;
+    for (const [key, value] of Object.entries(values)) {
+      const opt = cpOption(data, key);
+      if (!opt || typeof opt.value !== typeof value) continue;
+      opt.value = value;
+      hits++;
+    }
+    if (!hits) throw new Error('O arquivo de opções deste jogo está diferente do que o Cartucho conhece. Nada foi mudado.');
+    const indent = (text.match(/\n([ \t]+)\S/) || [, '  '])[1];
+    const eol = text.includes('\r\n') ? '\r\n' : '\n';
+    return JSON.stringify(data, null, indent).replace(/\n/g, eol);
+  },
+  matches(text, values) {
+    const data = json.read(text);
+    const found = Object.entries(values).map(([k, v]) => [cpOption(data, k), v]).filter(([o]) => o);
+    return found.length > 0 && found.every(([o, v]) => o.value === v);
+  },
+};
+
+const FORMATS = { ini, json, cfg, xml, mxml, loose, cpjson };
 
 // ===== receitas =====
 
@@ -97,8 +219,136 @@ function unreal(project, { folders = UE_FOLDERS } = {}) {
   };
 }
 
+// Monta os três presets a partir de uma tabela chave -> [desempenho, equilibrado, qualidade].
+function levels(table) {
+  const ids = ['desempenho', 'equilibrado', 'qualidade'];
+  return Object.fromEntries(ids.map((id, i) => [id, Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v[i]]))]));
+}
+
+// Red Dead Redemption 2: o "Qualidade" fica no alto, e não no ultra, porque é o que uma placa de 8 GB segura
+// a 60 FPS. Texturas ficam no ultra em todos, porque só pesam na memória de vídeo.
+const RDR = (l) => `kSettingLevel_${l}`;
+const rdr2 = {
+  format: 'xml',
+  engine: 'RAGE',
+  files: ['%DOCUMENTS%/Rockstar Games/Red Dead Redemption 2/Settings/system.xml'],
+  presets: levels({
+    textureQuality: [RDR('High'), RDR('Ultra'), RDR('Ultra')],
+    shadowQuality: [RDR('Medium'), RDR('High'), RDR('High')],
+    farShadowQuality: [RDR('Low'), RDR('Medium'), RDR('High')],
+    reflectionQuality: [RDR('Low'), RDR('Medium'), RDR('High')],
+    mirrorQuality: [RDR('Low'), RDR('Medium'), RDR('High')],
+    ssao: [RDR('Medium'), RDR('Medium'), RDR('High')],
+    tessellation: [RDR('Low'), RDR('Medium'), RDR('High')],
+    particleQuality: [RDR('Low'), RDR('Medium'), RDR('High')],
+    volumetricsQuality: [RDR('Low'), RDR('Medium'), RDR('High')],
+    lightingQuality: [RDR('Medium'), RDR('High'), RDR('High')],
+    ambientLightingQuality: [RDR('Medium'), RDR('Medium'), RDR('High')],
+    taa: [RDR('Medium'), RDR('High'), RDR('High')],
+    fxaaEnabled: ['false', 'false', 'false'],
+    msaa: ['0', '0', '0'],
+  }),
+  notes: {
+    desempenho: 'Sombras e volumétricos leves, texturas no alto',
+    equilibrado: 'Texturas no ultra, sombras e luz no alto',
+    qualidade: 'Quase tudo no alto, texturas no ultra, sem MSAA',
+  },
+};
+
+// Euro Truck Simulator 2: as opções ficam em Documentos/Euro Truck Simulator 2/config.cfg.
+const ets2 = {
+  format: 'cfg',
+  engine: 'Prism3D',
+  files: ['%DOCUMENTS%/Euro Truck Simulator 2/config.cfg'],
+  presets: levels({
+    r_sun_shadow_quality: ['1', '3', '4'],
+    r_sun_shadow_texture_size: ['2048', '4096', '4096'],
+    r_cloud_shadows: ['0', '1', '1'],
+    r_ssao: ['0', '1', '3'],
+    g_vegetation_detail: ['0', '1', '2'],
+    g_light_distance_factor: ['1', '2', '3'],
+  }),
+  notes: {
+    desempenho: 'Sombras baixas, sem oclusão de ambiente',
+    equilibrado: 'Sombras altas e luzes vistas de mais longe',
+    qualidade: 'Sombras no máximo, vegetação cheia',
+  },
+};
+
+// No Man's Sky: o arquivo fica na pasta de instalação, em Binaries/SETTINGS.
+const nms = {
+  format: 'mxml',
+  engine: 'No Man\'s Sky',
+  files: ['%INSTALL%/Binaries/SETTINGS/TKGRAPHICSSETTINGS.MXML'],
+  presets: levels({
+    TextureQuality: ['High', 'Ultra', 'Ultra'],
+    AnimationQuality: ['Medium', 'High', 'Ultra'],
+    ShadowQuality: ['Medium', 'High', 'Ultra'],
+    ReflectionsQuality: ['Low', 'High', 'Ultra'],
+    VolumetricsQuality: ['Low', 'Medium', 'High'],
+    TerrainTessellation: ['Medium', 'High', 'Ultra'],
+    PlanetQuality: ['Medium', 'High', 'Ultra'],
+    BaseQuality: ['Medium', 'High', 'Ultra'],
+    PostProcessingEffects: ['Medium', 'High', 'Ultra'],
+  }),
+  notes: {
+    desempenho: 'Médio, com texturas no alto e névoa leve',
+    equilibrado: 'Alto, com texturas no ultra',
+    qualidade: 'Ultra, com névoa volumétrica no alto',
+  },
+};
+
+// Cyberpunk 2077: avançadas do UserSettings.json, sem ray tracing (na 4060 ele só vale com DLSS no desempenho).
+const CP = '/graphics/advanced/';
+const cyberpunk = {
+  format: 'cpjson',
+  engine: 'REDengine',
+  files: ['%LOCALAPPDATA%/CD Projekt Red/Cyberpunk 2077/UserSettings.json'],
+  presets: levels({
+    [`${CP}ContactShadows`]: [false, true, true],
+    [`${CP}CascadedShadowsRange`]: ['Low', 'Medium', 'High'],
+    [`${CP}CascadedShadowsResolution`]: ['Low', 'Medium', 'High'],
+    [`${CP}DistantShadowsResolution`]: ['Low', 'High', 'High'],
+    [`${CP}LocalShadowsQuality`]: ['Low', 'Medium', 'High'],
+    [`${CP}VolumetricFogResolution`]: ['Low', 'Medium', 'High'],
+    [`${CP}VolumetricCloudsQuality`]: ['Medium', 'Medium', 'High'],
+    [`${CP}ScreenSpaceReflectionsQuality`]: ['Low', 'Medium', 'High'],
+    [`${CP}SubsurfaceScatteringQuality`]: ['Low', 'Medium', 'High'],
+    [`${CP}AmbientOcclusion`]: ['Low', 'Medium', 'High'],
+    [`${CP}MirrorQuality`]: ['Low', 'Medium', 'High'],
+    [`${CP}ColorPrecision`]: ['Medium', 'High', 'High'],
+  }),
+  notes: {
+    desempenho: 'Sombras, névoa e reflexos no baixo',
+    equilibrado: 'Médio, com sombras distantes no alto',
+    qualidade: 'Alto, sem ray tracing',
+  },
+};
+
+// Death Stranding Director's Cut: settings.cfg na pasta de instalação.
+const deathStranding = {
+  format: 'loose',
+  engine: 'Decima',
+  files: ['%INSTALL%/settings.cfg'],
+  presets: levels({
+    lod_scale: ['2', '3', '4'],
+  }),
+  notes: {
+    desempenho: 'Detalhe de modelos reduzido',
+    equilibrado: 'Detalhe de modelos padrão',
+    qualidade: 'Detalhe de modelos no máximo',
+  },
+};
+
 // appid -> receita feita à mão, para jogos que a detecção automática não pega.
-const CATALOG = {};
+// Cada lista nova que o Filipi manda entra aqui e sai num patch.
+const CATALOG = {
+  1174180: rdr2, // Red Dead Redemption 2
+  227300: ets2, // Euro Truck Simulator 2
+  275850: nms, // No Man's Sky
+  1091500: cyberpunk, // Cyberpunk 2077
+  1850570: deathStranding, // Death Stranding Director's Cut
+};
 
 // Detecção automática: um jogo em Unreal Engine tem, dentro da pasta de instalação, uma pasta com o nome do projeto
 // (com Binaries/Win64 ou Content/Paks). As opções dele ficam em %LOCALAPPDATA%/<projeto>/Saved/Config.
@@ -110,7 +360,7 @@ function detectUnreal(dir, env) {
     const base = path.join(dir, e.name);
     if (!fs.existsSync(path.join(base, 'Binaries', 'Win64')) && !fs.existsSync(path.join(base, 'Content', 'Paks'))) continue;
     const recipe = unreal(e.name);
-    if (findFile(recipe, env)) return recipe;
+    if (findFile(recipe, env, dir)) return recipe;
   }
   return null;
 }
@@ -137,9 +387,10 @@ function recipeFor(appid, { catalog = CATALOG, env, dir } = {}) {
 
 // ===== arquivos =====
 
-function expand(p, env = process.env) {
+function expand(p, env = process.env, install = null) {
   const home = env.USERPROFILE || os.homedir();
   const vars = {
+    INSTALL: install,
     LOCALAPPDATA: env.LOCALAPPDATA || path.join(home, 'AppData', 'Local'),
     APPDATA: env.APPDATA || path.join(home, 'AppData', 'Roaming'),
     LOCALLOW: path.join(home, 'AppData', 'LocalLow'),
@@ -150,9 +401,12 @@ function expand(p, env = process.env) {
   return path.normalize(p.replace(/%(\w+)%/g, (m, name) => vars[name] || m));
 }
 
-function findFile(recipe, env) {
-  return recipe.files.map((f) => expand(f, env)).find((f) => fs.existsSync(f)) || null;
+// Caminhos com %INSTALL% só valem quando a pasta de instalação do jogo é conhecida.
+function findFile(recipe, env, install) {
+  return recipe.files.filter((f) => install || !f.includes('%INSTALL%')).map((f) => expand(f, env, install)).find((f) => fs.existsSync(f)) || null;
 }
+
+const installOf = (appid, opts) => opts.dir || installDir(appid);
 
 let backupDir = () => path.join(os.tmpdir(), 'cartucho-backups');
 
@@ -172,34 +426,38 @@ function read(appid, opts = {}) {
   const recipe = recipeFor(appid, opts);
   const { env } = opts;
   if (!recipe) return null;
-  const file = findFile(recipe, env);
+  const file = findFile(recipe, env, installOf(appid, opts));
   if (!file) return { found: false, preset: null, canRestore: false };
   const text = fs.readFileSync(file, 'utf8');
   const fmt = FORMATS[recipe.format];
   const preset = Object.keys(recipe.presets).find((id) => fmt.matches(text, recipe.presets[id])) || null;
-  return { found: true, preset, canRestore: fs.existsSync(backupPath(appid, file)), engine: recipe.engine || null };
+  const out = { found: true, preset, canRestore: fs.existsSync(backupPath(appid, file)), engine: recipe.engine || null };
+  if (recipe.notes) out.notes = recipe.notes;
+  return out;
 }
 
 function write(appid, presetId, opts = {}) {
   const recipe = recipeFor(appid, opts);
   const { env } = opts;
   if (!recipe || !recipe.presets[presetId]) throw new Error('Este jogo ainda não tem presets no Cartucho.');
-  const file = findFile(recipe, env);
+  const file = findFile(recipe, env, installOf(appid, opts));
   if (!file) throw new Error('Não achei o arquivo de configuração. Abra o jogo uma vez e feche, para ele criar o arquivo.');
   const text = fs.readFileSync(file, 'utf8');
+  // O texto novo sai antes do backup: se o arquivo for de um formato desconhecido, nada é tocado.
+  const next = FORMATS[recipe.format].set(text, recipe.presets[presetId]);
   const backup = backupPath(appid, file);
   if (!fs.existsSync(backup)) {
     fs.mkdirSync(path.dirname(backup), { recursive: true });
     fs.copyFileSync(file, backup);
   }
-  fs.writeFileSync(file, FORMATS[recipe.format].set(text, recipe.presets[presetId]));
+  fs.writeFileSync(file, next);
   return presetId;
 }
 
 function restore(appid, opts = {}) {
   const recipe = recipeFor(appid, opts);
   const { env } = opts;
-  const file = recipe && findFile(recipe, env);
+  const file = recipe && findFile(recipe, env, installOf(appid, opts));
   if (!file) throw new Error('Não achei o arquivo de configuração deste jogo.');
   const backup = backupPath(appid, file);
   if (!fs.existsSync(backup)) throw new Error('Não há backup: o Cartucho ainda não mexeu neste jogo.');
@@ -207,4 +465,4 @@ function restore(appid, opts = {}) {
   fs.rmSync(backup);
 }
 
-module.exports = { CATALOG, supported, recipeFor, setInstallDir, detectUnreal, read, write, restore, setBackupDir, unreal, expand, ini, json };
+module.exports = { CATALOG, supported, recipeFor, setInstallDir, detectUnreal, read, write, restore, setBackupDir, unreal, expand, ini, json, cfg, xml, mxml, loose, cpjson };
