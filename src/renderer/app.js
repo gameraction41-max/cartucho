@@ -2,6 +2,7 @@
 import { api, isDemo } from './lib/api.js';
 import { createInput } from './lib/input.js';
 import { createFocus } from './lib/focus.js';
+import { createKeyboard } from './lib/keyboard.js';
 import { sfx, configureSound, setMusicPaused, setGameTrack } from './lib/sound.js';
 import { h, hue, loadFirst, downloadText } from './lib/ui.js';
 import home from './views/home.js';
@@ -40,6 +41,7 @@ let renderToken = 0;
 
 const $ = (id) => document.getElementById(id);
 const focus = createFocus();
+const vkb = createKeyboard({ root: document.getElementById('vkb-root'), focus, sfx, hints: (list) => hintEls(list), readClipboard: () => api.readClipboard() });
 
 // ===== interface comum =====
 
@@ -69,13 +71,16 @@ function glyphSet() {
   return state.device === 'gamepad' ? 'gamepad' : 'keyboard';
 }
 
-function renderHints() {
-  const hints = (current && current.view.hints) || [];
+function hintEls(hints) {
   const glyphs = GLYPHS[glyphSet()];
-  $('hints').replaceChildren(...hints.map(([action, label]) => {
+  return hints.map(([action, label]) => {
     const [text, cls] = glyphs[action];
     return h('span', {}, h('i', { class: `k ${cls}` }, text), label);
-  }));
+  });
+}
+
+function renderHints() {
+  $('hints').replaceChildren(...hintEls((current && current.view.hints) || []));
 }
 
 function renderDevice() {
@@ -171,6 +176,11 @@ const ctx = {
   sync,
   resume: () => api.minimize(),
   rerender: () => show({ keepFocus: true }),
+  // Teclado na tela. Ao fechar, a seleção volta para onde estava.
+  keyboard: (opts) => {
+    const back = focus.key;
+    vkb.open({ ...opts, restore: () => focus.setScope(menu.isOpen() ? $('overlay') : $('view'), back, { scroll: false }) });
+  },
   // Para telas que ganham itens depois de abrir (dados que chegam depois): coloca a seleção de volta.
   refocus: (key) => { if (!menu.isOpen()) focus.setScope($('view'), key || focus.key, { scroll: false }); },
   reloadLibrary: async () => { await loadLibrary(await api.getLibrary()); show({ keepFocus: true }); },
@@ -306,6 +316,7 @@ async function applyConfig(cfg) {
 function handleAction(action, info = {}) {
   if (action === 'fullscreen') return api.toggleFullscreen();
   if (bootHandler) return bootHandler(action);
+  if (vkb.isOpen()) return vkb.handle(action);
   if (menu.isOpen()) return menu.handle(action);
 
   if (current && current.view.onAction && current.view.onAction(action, { ...info, focused: focus.current })) return;
@@ -352,7 +363,7 @@ function scrollerFor(axis) {
 }
 
 function handleScroll(x, y, dt) {
-  if (bootHandler) return;
+  if (bootHandler || vkb.isOpen()) return;
   const axis = Math.abs(y) >= Math.abs(x) ? 'y' : 'x';
   const v = axis === 'y' ? y : x;
   const el = scrollerFor(axis);

@@ -48,7 +48,22 @@ export default {
     // Campo de texto: A começa a digitar, Enter salva, Esc cancela.
     const text = (key, label, desc, { secret = false, placeholder = '' } = {}) => {
       const input = h('input', { id: `cfg-${key}`, type: secret ? 'password' : 'text', value: secret ? '' : cfg[key] || '', placeholder, spellcheck: 'false', autocomplete: 'off' });
-      const row = h('div', { class: 'opt', 'data-focus': true, 'data-key': key, 'data-input': key, role: 'button', onclick: () => input.focus() },
+      // Com o controle, abre o teclado na tela; com teclado e mouse, digita direto no campo.
+      const edit = () => {
+        if (ctx.state.device !== 'gamepad') return input.focus();
+        ctx.sfx.confirm();
+        ctx.keyboard({
+          title: label,
+          value: secret ? '' : cfg[key] || '',
+          placeholder: secret ? 'Cole ou digite a chave' : placeholder,
+          secret,
+          done: (raw) => {
+            const value = raw.trim();
+            if (secret ? value : value !== (cfg[key] || '')) save({ [key]: value }, 'Salvo.');
+          },
+        });
+      };
+      const row = h('div', { class: 'opt', 'data-focus': true, 'data-key': key, 'data-input': key, role: 'button', onclick: edit },
         h('span', { class: 'txt' }, label, desc ? h('small', {}, desc) : null), input);
       input.addEventListener('blur', () => {
         if (input.dataset.cancel) {
@@ -114,7 +129,7 @@ export default {
       volume,
 
       section('', 'Sobre'),
-      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.5.0', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
+      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.6.0', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
       updateRow(ctx));
 
     const el = h('div', { class: 'set-wrap' }, list);

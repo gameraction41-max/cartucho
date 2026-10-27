@@ -1,9 +1,14 @@
-// Desligar e reiniciar o PC pelo menu rápido, informações do hardware e o preset gráfico que combina com ele.
+// Desligar, reiniciar e suspender o PC pelo menu rápido, informações do hardware e o preset gráfico que combina com ele.
 const { spawn } = require('node:child_process');
 
 const COMMANDS = {
-  win32: { shutdown: ['shutdown', ['/s', '/t', '0']], restart: ['shutdown', ['/r', '/t', '0']] },
-  linux: { shutdown: ['systemctl', ['poweroff']], restart: ['systemctl', ['reboot']] },
+  win32: {
+    shutdown: ['shutdown', ['/s', '/t', '0']],
+    restart: ['shutdown', ['/r', '/t', '0']],
+    // Suspensão de verdade (não hibernação), pelo mesmo caminho que o menu Iniciar usa.
+    sleep: ['powershell', ['-NoProfile', '-WindowStyle', 'Hidden', '-Command', 'Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Application]::SetSuspendState([System.Windows.Forms.PowerState]::Suspend, $false, $false)']],
+  },
+  linux: { shutdown: ['systemctl', ['poweroff']], restart: ['systemctl', ['reboot']], sleep: ['systemctl', ['suspend']] },
   darwin: { shutdown: ['osascript', ['-e', 'tell app "System Events" to shut down']], restart: ['osascript', ['-e', 'tell app "System Events" to restart']] },
 };
 
