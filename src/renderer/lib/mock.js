@@ -20,6 +20,9 @@ const games = [
 ].map((g) => (g.source === 'steam' ? { ...g, art: steamArt(g.appid), installed: true, size: 18.4 * 1024 ** 3 } : g));
 // Na demo, Silksong está baixando, Celeste e Stardew não estão no PC e o Terraria tem atualização na fila.
 for (const g of games) if ([1030300, 504230, 413150].includes(g.appid)) Object.assign(g, { installed: false, size: 0 });
+// Na demo, o Hades II tem presets e começa com as opções do jogo.
+for (const g of games) if (g.appid === 1145350) g.presets = true;
+const gamePresets = {};
 let downloads = [
   { key: 'steam:1030300', appid: 1030300, title: 'Hollow Knight: Silksong', state: 'downloading', percent: 37, bytes: 0, total: 0, update: false },
   { key: 'steam:105600', appid: 105600, title: 'Terraria', state: 'queued', percent: 0, bytes: 0, total: 0, update: true },
@@ -90,6 +93,9 @@ export const mock = {
   },
   launch: async () => ({ ok: true }),
   steamDownloads: async () => downloads,
+  getGamePreset: async (appid) => ({ found: true, preset: gamePresets[appid] || null, canRestore: !!gamePresets[appid] }),
+  setGamePreset: async (appid, id) => { gamePresets[appid] = id; return { ok: true }; },
+  restoreGamePreset: async (appid) => { delete gamePresets[appid]; return { ok: true }; },
   installGame: async () => ({ ok: true }),
   uninstallGame: async () => ({ ok: true }),
   openDownloads: async () => {},

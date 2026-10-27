@@ -104,7 +104,7 @@ function scanApps(root = steamDir()) {
       try {
         const m = parseVdf(fs.readFileSync(path.join(dir, f), 'utf8')).AppState;
         if (!m || !m.appid) continue;
-        apps.set(Number(m.appid), { appid: Number(m.appid), name: m.name || '', size: num(m.SizeOnDisk), library: lib, ...appState(m) });
+        apps.set(Number(m.appid), { appid: Number(m.appid), name: m.name || '', size: num(m.SizeOnDisk), library: lib, dir: m.installdir ? path.join(dir, 'common', m.installdir) : null, ...appState(m) });
       } catch {}
     }
   }

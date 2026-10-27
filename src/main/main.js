@@ -15,6 +15,7 @@ const { forceForeground } = require('./foreground');
 const overlay = require('./overlay');
 const updater = require('./updater');
 const downloads = require('./downloads');
+const gamepresets = require('./gamepresets');
 
 const windowed = process.argv.includes('--windowed');
 let win = null;
@@ -30,6 +31,8 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', bringToFront);
   app.whenReady().then(() => {
     registerIpc();
+    gamepresets.setBackupDir(() => path.join(app.getPath('userData'), 'backups'));
+    gamepresets.setInstallDir(downloads.installDir);
     createWindow();
     overlay.prepare();
     watchGuideButton(onGuide);
@@ -247,10 +250,34 @@ function registerIpc() {
         skipped++;
       }
     }
+    // Jogos da Steam que o Cartucho sabe ajustar (gamepresets.js) entram junto.
+    for (const appid of library.steamNames().keys()) {
+      if (!gamepresets.supported(appid)) continue;
+      if (running && running.key === `steam:${appid}`) { skipped++; continue; }
+      try {
+        gamepresets.write(appid, presetId);
+        applied++;
+      } catch {
+        skipped++;
+      }
+    }
     return { applied, skipped };
   });
   ipcMain.handle('friends:get', () => library.friends());
   ipcMain.handle('history:week', () => library.playWeek());
+  // Presets dos jogos da Steam: com o jogo aberto não dá, porque ele regrava o arquivo ao fechar.
+  const steamPreset = (fn, { changes = true } = {}) => (_e, appid, ...rest) => {
+    if (!Number.isInteger(appid)) return { error: 'Jogo inválido.' };
+    if (changes && running && running.key === `steam:${appid}`) return { error: 'Feche o jogo antes de trocar o preset. Ele regrava as opções ao sair.' };
+    try {
+      return fn(appid, ...rest) ?? { ok: true };
+    } catch (err) {
+      return { error: err.message };
+    }
+  };
+  ipcMain.handle('steam:preset-get', steamPreset(gamepresets.read, { changes: false }));
+  ipcMain.handle('steam:preset-set', steamPreset(gamepresets.write));
+  ipcMain.handle('steam:preset-restore', steamPreset(gamepresets.restore));
   ipcMain.handle('steam:downloads', () => downloads.list(library.steamNames()));
   ipcMain.handle('steam:install', async (_e, appid) => {
     if (!Number.isInteger(appid) || appid <= 0) return { error: 'Jogo inválido.' };

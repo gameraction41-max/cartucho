@@ -42,17 +42,24 @@ export default {
     const presetsBox = h('div', { class: 'plans' }, h('p', { class: 'muted' }, 'Carregando…'));
     const intro = h('p', { class: 'muted', style: { margin: '0 0 1rem' } }, 'Vendo o seu hardware…');
     const instances = ctx.state.games.filter((g) => g.source === 'prism');
+    const steamGames = ctx.state.games.filter((g) => g.source === 'steam' && g.presets);
+    const total = instances.length + steamGames.length;
+    const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+    const coverage = [instances.length ? plural(instances.length, 'instância do Minecraft', 'instâncias do Minecraft') : null, steamGames.length ? plural(steamGames.length, 'jogo da Steam', 'jogos da Steam') : null].filter(Boolean).join(' e ');
     const presetsPanel = h('section', { class: 'panel pc-plans' },
       h('h2', { class: 'panel-title' }, 'Presets gráficos'),
       intro,
       presetsBox,
-      h('p', { class: 'muted note' }, instances.length
-        ? `Vale para as ${instances.length} instâncias do Minecraft. Dá para trocar uma a uma na página de cada instância.`
-        : 'Os presets valem para as instâncias do Minecraft, e nenhuma foi encontrada ainda.'));
+      h('p', { class: 'muted note' }, total
+        ? `Vale para ${coverage}. Dá para trocar um a um na página de cada jogo.`
+        : 'Os presets valem para as instâncias do Minecraft e os jogos da Steam em Unreal Engine, e nenhum foi encontrado ainda.'));
 
     // Preset em uso: só aparece marcado quando todas as instâncias estão com o mesmo.
     async function currentPreset() {
-      const ids = await Promise.all(instances.map((g) => ctx.api.getMcPreset(g.instanceId)));
+      const ids = await Promise.all([
+        ...instances.map((g) => ctx.api.getMcPreset(g.instanceId)),
+        ...steamGames.map((g) => ctx.api.getGamePreset(g.appid).then((r) => r && r.preset)),
+      ]);
       return ids.length && ids.every((id) => id && id === ids[0]) ? ids[0] : null;
     }
 
@@ -64,11 +71,11 @@ export default {
       presetsBox.replaceChildren(...list.map((p) => h('button', {
         class: `opt plan ${p.id === current ? 'active' : ''}`, 'data-focus': true, 'data-key': `preset:${p.id}`,
         'data-autofocus': rec && p.id === rec.id ? true : undefined,
-        disabled: !instances.length,
+        disabled: !total,
         onclick: async () => {
           const r = await ctx.api.setMcPresetAll(p.id);
           ctx.sfx.confirm();
-          ctx.toast(r.skipped ? `${p.label} aplicado em ${r.applied} instâncias. ${r.skipped} ficou de fora porque está aberta.` : `${p.label} aplicado em ${r.applied} ${r.applied === 1 ? 'instância' : 'instâncias'}.`);
+          ctx.toast(r.skipped ? `${p.label} aplicado em ${plural(r.applied, 'jogo', 'jogos')}. ${r.skipped} ficou de fora (aberto agora ou sem o arquivo de opções).` : `${p.label} aplicado em ${plural(r.applied, 'jogo', 'jogos')}.`);
           loadPresets(p.id);
         },
       },
