@@ -1,5 +1,5 @@
 // Capturas: prints e vídeos feitos pelo Cartucho e prints da Steam, separados por jogo.
-// A abre em tela cheia; nela, esquerda e direita passam as fotos, A dá play no clipe e B volta para a grade.
+// A abre em tela cheia; nela, esquerda e direita passam as fotos, A dá play no clipe, X apaga (com confirmação) e B volta para a grade.
 import { h, when } from '../lib/ui.js';
 
 const CACHE_MS = 15 * 1000;
@@ -7,6 +7,7 @@ const SOURCE = { cartucho: 'Cartucho', steam: 'Steam' };
 let cache = null; // { at, groups }
 let filterKey = 'all';
 let kind = 'prints'; // 'prints' ou 'videos'
+let reopenAt = -1; // depois de apagar, a tela cheia volta aberta na captura seguinte
 const KINDS = [{ id: 'prints', label: 'Prints', test: (s) => !s.video }, { id: 'videos', label: 'Vídeos', test: (s) => s.video }];
 
 const fullDate = (ms) => new Date(ms).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
@@ -62,6 +63,9 @@ export default {
     // ===== tela cheia =====
     const viewer = h('div', { class: 'shot-viewer', hidden: true, onclick: (e) => { if (e.target === viewer) close(); } });
     let index = -1;
+    let confirming = false;
+    let busy = false;
+    let error = '';
 
     function paint() {
       const s = shots[index];
@@ -77,12 +81,52 @@ export default {
         h('button', { class: 'sv-nav next', onclick: () => step(1), disabled: index === shots.length - 1 }, '›'),
         h('div', { class: 'sv-bottom' },
           h('span', { class: 'mono' }, `${index + 1} / ${shots.length}`),
-          h('div', { class: 'hints' }, ctx.hints([['lr', 'Passar'], ...(s.video ? [['confirm', 'Play/Pausa']] : []), ['back', 'Voltar']]))));
+          h('div', { class: 'hints' }, ctx.hints([['lr', 'Passar'], ...(s.video ? [['confirm', 'Play/Pausa']] : []), ['x', 'Apagar'], ['back', 'Voltar']]))),
+        confirming ? h('div', { class: 'sv-confirm' },
+          h('div', { class: 'sv-box' },
+            h('h3', {}, s.video ? 'Apagar este vídeo?' : 'Apagar este print?'),
+            h('p', {}, error || 'Ele vai para a Lixeira do Windows, então dá para recuperar depois.'),
+            h('div', { class: 'hints' }, ctx.hints(busy ? [] : [['confirm', 'Apagar'], ['back', 'Cancelar']])))) : null);
     }
 
-    function open(i) {
-      index = i;
+    function askRemove() {
+      confirming = true;
+      error = '';
+      viewer.querySelectorAll('video').forEach((v) => v.pause());
+      ctx.sfx.move();
+      paint();
+    }
+
+    function cancelRemove() {
+      confirming = false;
+      ctx.sfx.back();
+      paint();
+    }
+
+    async function remove() {
+      const s = shots[index];
+      busy = true;
+      paint();
+      const res = await ctx.api.removeScreenshot(s.url).catch((err) => ({ error: err.message }));
+      busy = false;
+      if (res && res.error) {
+        error = res.error;
+        paint();
+        return;
+      }
       ctx.sfx.confirm();
+      // Tira a captura da lista guardada e monta a tela de novo, com os números certos.
+      if (cache) for (const g of cache.groups) g.shots = g.shots.filter((x) => x.url !== s.url);
+      if (cache) cache.groups = cache.groups.filter((g) => g.shots.length);
+      reopenAt = shots.length > 1 ? Math.min(index, shots.length - 2) : -1;
+      index = -1;
+      ctx.rerender();
+    }
+
+    function open(i, quiet = false) {
+      index = i;
+      confirming = false;
+      if (!quiet) ctx.sfx.confirm();
       viewer.hidden = false;
       paint();
     }
@@ -115,13 +159,23 @@ export default {
         : 'Nenhum print ainda.')));
     // Fica no body, por cima da barra de abas e das dicas.
     document.body.append(viewer);
+    if (reopenAt >= 0 && shots.length) open(Math.min(reopenAt, shots.length - 1), true);
+    else if (reopenAt >= 0) ctx.refocus();
+    reopenAt = -1;
 
     return {
       el,
       hints: [['confirm', 'Ver'], ['y', kind === 'prints' ? 'Ver vídeos' : 'Ver prints'], ['x', 'Trocar jogo'], ['menu', 'Menu']],
       onAction(action) {
+        if (index >= 0 && confirming) {
+          if (busy) return true;
+          if (action === 'confirm') remove();
+          else if (action === 'back') cancelRemove();
+          return action !== 'menu' && action !== 'fullscreen';
+        }
         if (index >= 0) {
-          if (action === 'left' || action === 'up') step(-1);
+          if (action === 'x') askRemove();
+          else if (action === 'left' || action === 'up') step(-1);
           else if (action === 'right' || action === 'down') step(1);
           else if (action === 'back') close();
           else if (action === 'confirm') {
