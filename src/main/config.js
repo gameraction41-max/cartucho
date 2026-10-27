@@ -17,6 +17,7 @@ const DEFAULTS = {
   music: true,
   musicFile: '',
   volume: 0.5,
+  captureBuffer: true,
 };
 
 let store;

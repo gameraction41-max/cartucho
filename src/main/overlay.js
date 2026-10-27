@@ -27,6 +27,8 @@ function create() {
     },
   });
   win.setAlwaysOnTop(true, 'screen-saver');
+  // O menu não aparece nos prints e vídeos do Cartucho.
+  win.setContentProtection(true);
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.on('closed', () => { win = null; });

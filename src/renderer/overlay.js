@@ -5,13 +5,14 @@ import { createFocus } from './lib/focus.js';
 import { sfx, configureSound } from './lib/sound.js';
 import { createMenu } from './views/menu.js';
 
-const state = { games: [], profile: null, running: null, device: 'gamepad' };
+const state = { games: [], profile: null, running: null, device: 'gamepad', capture: null };
 const focus = createFocus();
 const root = document.getElementById('overlay');
 
 // Fechar o menu volta para o jogo. Escolher uma tela leva para a janela principal do Cartucho.
 const navigate = (target) => api.overlayNavigate(target);
 const ctx = {
+  overlay: true,
   state,
   api,
   sfx,
@@ -31,7 +32,8 @@ createInput({
 });
 
 api.on('overlay:open', async ({ running }) => {
-  const [cfg, lib] = await Promise.all([api.getConfig(), api.getLibrary()]);
+  const [cfg, lib, cap] = await Promise.all([api.getConfig(), api.getLibrary(), api.captureStatus()]);
+  state.capture = cap;
   // Sem música aqui: o som do jogo continua tocando.
   configureSound({ sounds: cfg.sounds, music: false, volume: cfg.volume });
   state.games = lib.games || [];
@@ -41,6 +43,8 @@ api.on('overlay:open', async ({ running }) => {
   menu.open();
   sfx.tab();
 });
+
+api.on('capture:status', (s) => { state.capture = s; });
 
 api.on('input:guide', () => {
   if (menu.isOpen()) menu.handle('menu');

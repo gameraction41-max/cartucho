@@ -3,6 +3,8 @@
 // Como funciona fora da janela, o botão também traz o Cartucho de volta quando um jogo está aberto.
 
 const GUIDE = 0x0400;
+// Botões que, apertados com o Xbox segurado, viram atalho em vez de abrir o menu.
+const COMBOS = { y: 0x8000, x: 0x4000, rb: 0x0200 };
 const SLOTS = 4;
 const POLL_MS = 50;
 const RESCAN_MS = 2000; // controles desconectados são caros de consultar, então são verificados com menos frequência
@@ -40,11 +42,14 @@ function loadXInput() {
   return null;
 }
 
-function watchGuideButton(onPress) {
+// O menu abre quando o botão Xbox é solto, para dar tempo de saber se ele virou atalho (Xbox + Y, por exemplo).
+function watchGuideButton(onPress, onCombo = () => {}) {
   const getState = loadXInput();
   if (!getState) return () => {};
   const connected = new Array(SLOTS).fill(false);
-  const pressed = new Array(SLOTS).fill(false);
+  const held = new Array(SLOTS).fill(false);
+  const comboUsed = new Array(SLOTS).fill(false);
+  const prevButtons = new Array(SLOTS).fill(0);
   let lastScan = 0;
 
   const timer = setInterval(() => {
@@ -55,9 +60,21 @@ function watchGuideButton(onPress) {
       if (!connected[slot] && !rescan) continue;
       const state = getState(slot);
       connected[slot] = !!state;
-      const down = !!state && (state.buttons & GUIDE) !== 0;
-      if (down && !pressed[slot]) onPress();
-      pressed[slot] = down;
+      const buttons = state ? state.buttons : 0;
+      const down = (buttons & GUIDE) !== 0;
+      if (down) {
+        if (!held[slot]) comboUsed[slot] = false;
+        for (const [name, mask] of Object.entries(COMBOS)) {
+          if ((buttons & mask) && !(prevButtons[slot] & mask)) {
+            comboUsed[slot] = true;
+            onCombo(name);
+          }
+        }
+      } else if (held[slot] && !comboUsed[slot]) {
+        onPress();
+      }
+      held[slot] = down;
+      prevButtons[slot] = buttons;
     }
   }, POLL_MS);
   return () => clearInterval(timer);

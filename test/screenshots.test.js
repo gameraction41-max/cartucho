@@ -11,42 +11,41 @@ const touch = (file, at) => {
   fs.utimesSync(file, at / 1000, at / 1000);
 };
 
-test('tira a data do nome das capturas da Barra de Jogo', () => {
-  assert.strictEqual(ss.gamebarTitle('Hades II 2026-10-27 22-08-55.png'), 'Hades II');
-  assert.strictEqual(ss.gamebarTitle('Hollow Knight 1_5_2024 7_23_41 PM.mp4'), 'Hollow Knight');
-  assert.strictEqual(ss.gamebarTitle('qualquer coisa.png'), null);
+test('nome do jogo vira um nome de pasta que o Windows aceita', () => {
+  assert.strictEqual(ss.safeName('ELDEN RING™: Nightreign?'), 'ELDEN RING™ Nightreign');
+  assert.strictEqual(ss.safeName('  ...  '), 'Jogo');
 });
 
-test('junta Steam, Barra de Jogo e Minecraft por jogo, sem área de trabalho nem outros programas, do mais recente para o mais antigo', () => {
+test('junta as capturas do Cartucho e da Steam por jogo, do mais recente para o mais antigo', () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-'));
   const t = Date.UTC(2026, 9, 27, 12);
   const steamRoot = path.join(home, 'Steam');
   const steamDir = path.join(steamRoot, 'userdata', '123', '760', 'remote', '1245620', 'screenshots');
   touch(path.join(steamDir, '2026_a.jpg'), t - 5000);
   touch(path.join(steamDir, 'thumbnails', '2026_a.jpg'), t - 5000);
-  touch(path.join(steamDir, '2026_b.jpg'), t - 1000);
-  const gamebarDir = path.join(home, 'Captures');
-  touch(path.join(gamebarDir, 'ELDEN RING™ 2026-10-27 12-00-00.png'), t);
-  touch(path.join(gamebarDir, 'Jogo Novo 2026-10-27 11-00-00.mp4'), t - 3600000);
-  touch(path.join(gamebarDir, 'leiame.txt'), t);
-  touch(path.join(gamebarDir, 'Explorador de Arquivos 2026-10-27 10-00-00.png'), t);
-  touch(path.join(gamebarDir, 'Minecraft 1.21.1 - Singleplayer 2026-10-27 09-00-00.png'), t - 3 * 3600000);
-  const inst = { id: 'FO', name: 'Fabulously Optimized', dir: path.join(home, 'FO') };
-  touch(path.join(inst.dir, '.minecraft', 'screenshots', '2026-10-26_10.00.00.png'), t - 7200000);
+  const pictures = path.join(home, 'Imagens', 'Cartucho');
+  const videos = path.join(home, 'Videos', 'Cartucho');
+  touch(path.join(pictures, 'ELDEN RING™', 'ELDEN RING™ 2026-10-27 12-00-00.png'), t);
+  touch(path.join(videos, 'ELDEN RING™', 'ELDEN RING™ 2026-10-27 11-59-00.mp4'), t - 60000);
+  touch(path.join(videos, 'ELDEN RING™', 'leiame.txt'), t);
+  touch(path.join(pictures, 'Fabulously Optimized', 'Fabulously Optimized 2026-10-27 10-00-00.png'), t - 7200000);
+  touch(path.join(pictures, 'Jogo Removido', 'Jogo Removido 2026-10-20 10-00-00.png'), t - 86400000);
 
-  const groups = ss.scan({ gamebarDir, steamRoot, instances: [inst], games: [{ key: 'steam:1245620', title: 'ELDEN RING', appid: 1245620 }] });
+  const groups = ss.scan({
+    cartuchoDirs: [pictures, videos],
+    steamRoot,
+    games: [{ key: 'steam:1245620', title: 'ELDEN RING™', appid: 1245620 }, { key: 'prism:FO', title: 'Fabulously Optimized' }],
+  });
   assert.deepStrictEqual(groups.map((g) => [g.key, g.title, g.shots.length]), [
-    ['steam:1245620', 'ELDEN RING', 3],
+    ['steam:1245620', 'ELDEN RING™', 3],
     ['prism:FO', 'Fabulously Optimized', 1],
-    ['minecraft', 'Minecraft', 1],
+    ['pasta:jogoremovido', 'Jogo Removido', 1],
   ]);
   const elden = groups[0].shots;
-  assert.deepStrictEqual(elden.map((s) => s.source), ['windows', 'steam', 'steam']);
-  assert.ok(elden[2].thumb && elden[2].thumb.startsWith('file:'));
-  assert.strictEqual(elden[1].thumb, null);
-  assert.ok(!groups.some((g) => /Jogo Novo|Explorador/.test(g.title)));
+  assert.deepStrictEqual(elden.map((s) => [s.source, s.video]), [['cartucho', false], ['steam', false], ['cartucho', true]]);
+  assert.ok(elden[1].thumb && elden[1].thumb.startsWith('file:'));
 });
 
 test('sem pastas, devolve lista vazia', () => {
-  assert.deepStrictEqual(ss.scan({ gamebarDir: '/nao/existe', steamRoot: '/nao/existe' }), []);
+  assert.deepStrictEqual(ss.scan({ cartuchoDirs: ['/nao/existe'], steamRoot: '/nao/existe' }), []);
 });
