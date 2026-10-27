@@ -1,7 +1,22 @@
 // Início: fileira com os jogos jogados recentemente e o fundo trocando para a arte do jogo selecionado.
-import { h, cover, hours, when, sortRecent, SOURCE_NAME } from '../lib/ui.js';
+import { h, cover, hours, when, sortRecent, dlBar, SOURCE_NAME } from '../lib/ui.js';
 
 const ROW_SIZE = 12;
+const DL_SHOWN = 3;
+
+// Rótulo do botão principal: jogo da Steam fora do PC instala, e durante o download abre a fila da Steam.
+export function playLabel(g) {
+  if (g.source !== 'steam' || g.installed !== false) return 'Jogar';
+  return g.download ? 'Ver download' : 'Instalar';
+}
+
+function downloadsPanel(ctx) {
+  const list = ctx.state.downloads;
+  if (!list.length) return null;
+  return h('div', { class: 'dl-list' },
+    h('h3', {}, list.length === 1 ? 'Baixando' : `Baixando · ${list.length}`),
+    list.slice(0, DL_SHOWN).map((d) => dlBar(d, d.update ? `${d.title} · atualização` : d.title)));
+}
 
 export function metaFor(g) {
   const parts = [h('span', {}, h('b', {}, hours(g.minutes)), ' jogadas')];
@@ -36,12 +51,14 @@ export default {
     const src = h('span', { class: 'src' });
     const title = h('h1', { class: 'big-title' });
     const meta = h('div', { class: 'meta' });
+    const playBtn = h('button', { class: 'btn primary', onclick: () => ctx.launch(selected) }, 'Jogar');
     const showInfo = (g) => {
       selected = g;
       src.className = `src ${g.source}`;
       src.replaceChildren(h('i'), SOURCE_NAME[g.source]);
       title.textContent = g.title;
       meta.replaceChildren(...metaFor(g));
+      playBtn.textContent = playLabel(g);
       ctx.setBackground(g);
     };
 
@@ -58,16 +75,16 @@ export default {
 
     showInfo(selected);
     const el = h('div', { style: { display: 'contents' } },
-      h('section', { class: 'home-info' }, src, title, meta,
+      h('section', { class: 'home-info' }, downloadsPanel(ctx), src, title, meta,
         h('div', { class: 'actions' },
-          h('button', { class: 'btn primary', onclick: () => ctx.launch(selected) }, 'Jogar'),
+          playBtn,
           h('button', { class: 'btn', onclick: () => ctx.go('game', { key: selected.key }) }, 'Detalhes'))),
       h('div', { class: 'row' }, tiles, more));
 
     return {
       el,
       keepBackground: true,
-      hints: [['confirm', 'Jogar'], ['y', 'Detalhes'], ['menu', 'Menu']],
+      hints: [['confirm', 'Jogar / Instalar'], ['y', 'Detalhes'], ['menu', 'Menu']],
       onAction(action, { focused }) {
         if (action === 'y' && focused && focused.dataset.key !== 'more') {
           ctx.sfx.confirm();

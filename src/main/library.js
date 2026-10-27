@@ -10,6 +10,7 @@ const prism = require('./prism');
 const { computeLevel } = require('./level');
 const art = require('./art');
 const history = require('./history');
+const downloads = require('./downloads');
 
 const ACH_CONCURRENCY = 4;
 
@@ -54,6 +55,7 @@ function steamGames() {
     lastPlayed: g.lastPlayed,
     art: steam.art(g.appid),
     ach: achCounts(g.appid),
+    ...downloads.info(g.appid),
   }));
 }
 
@@ -281,6 +283,11 @@ async function friends() {
   }
 }
 
+// Nomes dos jogos da Steam, para a lista de downloads mostrar o nome certo mesmo antes do manifest ter um.
+function steamNames() {
+  return new Map(stores().cache.get('owned').map((g) => [g.appid, g.name]));
+}
+
 function playWeek() {
   const { history: store } = stores();
   return history.week(store.data);
@@ -292,4 +299,4 @@ function addHytaleTime(ms) {
   playtime.set('hytale', { seconds: t.seconds + Math.round(ms / 1000), lastPlayed: Date.now() });
 }
 
-module.exports = { playWeek, friends, newUnlocks, getLibrary, syncSteam, syncAchievements, achievementSummary, gameAchievements, refreshSteamGame, addHytaleTime, prismDir };
+module.exports = { steamNames, playWeek, friends, newUnlocks, getLibrary, syncSteam, syncAchievements, achievementSummary, gameAchievements, refreshSteamGame, addHytaleTime, prismDir };

@@ -1,7 +1,13 @@
 // Página do jogo: arte em tela cheia, botão de jogar, tempo jogado e lista de conquistas.
-import { h, hours, when, SOURCE_NAME } from '../lib/ui.js';
+import { h, hours, when, dlBar, SOURCE_NAME } from '../lib/ui.js';
+import { playLabel } from './home.js';
 
 const OPEN_LABEL = { steam: 'Abrir na Steam', prism: 'Abrir no Prism', hytale: 'Mostrar pasta do Hytale' };
+
+function gb(bytes) {
+  const v = bytes / 1024 ** 3;
+  return v >= 1 ? `${v.toFixed(1).replace('.', ',')} GB` : `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`;
+}
 
 function chip(label, value) {
   return h('span', { class: 'chip' }, h('small', {}, label), h('b', {}, value));
@@ -129,13 +135,16 @@ export default {
     if (g.source === 'steam') chips.push(chip('Últimas 2 semanas', hours(g.minutes2w || 0)));
     if (g.source === 'prism') chips.push(chip('Versão', g.mcVersion || '?'), chip('Loader', g.loader), chip('Mods', String(g.mods)));
     chips.push(chip('Última sessão', when(g.lastPlayed)));
+    if (g.size) chips.push(chip('No disco', gb(g.size)));
+    const steamOnPc = g.source === 'steam' && g.installed === true;
 
     const el = h('div', { class: 'game' },
       h('div', { class: 'game-left' },
         h('span', { class: `src ${g.source}` }, h('i'), SOURCE_NAME[g.source], g.appid ? ` · ${g.appid}` : ''),
         h('h1', { class: 'big-title' }, g.title),
         h('div', { class: 'menu-v' },
-          h('button', { class: 'btn primary', 'data-focus': true, 'data-autofocus': true, 'data-key': 'play', onclick: () => ctx.launch(g) }, 'Jogar'),
+          g.download ? dlBar(g.download, g.download.update ? 'Atualizando' : 'Baixando') : null,
+          h('button', { class: 'btn primary', 'data-focus': true, 'data-autofocus': true, 'data-key': 'play', onclick: () => ctx.launch(g) }, playLabel(g)),
           g.source === 'prism' ? presetButton(ctx, g) : null,
           h('button', { class: 'btn', 'data-focus': true, 'data-key': 'open', onclick: () => ctx.api.openInSource(g) }, OPEN_LABEL[g.source]),
           h('div', { class: 'art-btns' },
@@ -143,7 +152,8 @@ export default {
             h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'art-hero', onclick: () => changeArt(ctx, g, 'hero') }, 'Trocar fundo'),
             g.customArt && g.customArt.length ? h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'art-reset', onclick: () => resetArt(ctx, g) }, 'Restaurar') : null),
           h('button', { class: `btn small music-btn ${g.music ? 'on' : ''}`, 'data-focus': true, 'data-key': 'music', onclick: () => changeMusic(ctx, g) },
-            g.music ? `♪ ${g.musicName} · tirar` : '♪ Escolher música do jogo')),
+            g.music ? `♪ ${g.musicName} · tirar` : '♪ Escolher música do jogo'),
+          steamOnPc ? h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'uninstall', onclick: () => ctx.uninstall(g) }, 'Desinstalar') : null),
         h('div', { class: 'chips' }, chips)),
       sidePanel(ctx, g));
 
