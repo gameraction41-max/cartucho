@@ -14,13 +14,25 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm test
+      # A Release precisa de uma tag. Rodando na mão pela aba Actions, a tag sai da versão do package.json (v0.2.0).
+      - name: Criar a tag da versão
+        if: github.ref_type != 'tag'
+        shell: bash
+        run: |
+          TAG="v$(node -p "require('./package.json').version")"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
+            echo "A tag $TAG já existe"
+          else
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
       - name: Gerar e publicar o instalador
         run: npx electron-builder --win --publish always
         env:
