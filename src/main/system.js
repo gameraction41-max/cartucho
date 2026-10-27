@@ -1,5 +1,5 @@
-// Desligar e reiniciar o PC pelo menu rápido, informações do hardware e plano de energia do Windows.
-const { spawn, execFile } = require('node:child_process');
+// Desligar e reiniciar o PC pelo menu rápido, informações do hardware e o preset gráfico que combina com ele.
+const { spawn } = require('node:child_process');
 
 const COMMANDS = {
   win32: { shutdown: ['shutdown', ['/s', '/t', '0']], restart: ['shutdown', ['/r', '/t', '0']] },
@@ -14,35 +14,19 @@ function power(action) {
   return true;
 }
 
-function run(cmd, args) {
-  return new Promise((resolve, reject) => {
-    execFile(cmd, args, { windowsHide: true, timeout: 8000 }, (err, stdout) => (err ? reject(err) : resolve(stdout)));
-  });
-}
+// Placas integradas (a parte de vídeo do processador) aparecem com pouca memória. Abaixo de 2 GB não conta como placa de vídeo dedicada.
+const DEDICATED_VRAM_MB = 2048;
 
-// Saída do "powercfg /list". O texto muda com o idioma do Windows, então só confiamos no GUID, no nome entre parênteses e no * do plano ativo.
-function parsePowerPlans(text) {
-  const plans = [];
-  for (const line of String(text).split(/\r?\n/)) {
-    const m = line.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\((.+)\)\s*(\*)?\s*$/i);
-    if (m) plans.push({ guid: m[1].toLowerCase(), name: m[2].trim(), active: !!m[3] });
-  }
-  return plans;
-}
-
-async function powerPlans() {
-  if (process.platform !== 'win32') return [];
-  try {
-    return parsePowerPlans(await run('powercfg', ['/list']));
-  } catch {
-    return [];
-  }
-}
-
-async function setPowerPlan(guid) {
-  if (process.platform !== 'win32' || !/^[0-9a-f-]{36}$/i.test(guid)) return false;
-  await run('powercfg', ['/setactive', guid]);
-  return true;
+// Escolhe o preset gráfico pelo hardware: memória da placa de vídeo, memória do PC e quantidade de threads do processador.
+// As margens são um pouco abaixo de 8 e 4 GB porque as placas informam um pouco menos (uma RTX 4060 aparece com 8188 MB).
+function recommendPreset({ gpu = [], memTotal = 0, threads = 0 }) {
+  const vram = Math.max(0, ...gpu.map((g) => g.vram || 0));
+  const ramGb = memTotal / 1024 ** 3;
+  const best = gpu.reduce((a, g) => ((g.vram || 0) > (a ? a.vram || 0 : -1) ? g : a), null);
+  const what = [best && vram >= DEDICATED_VRAM_MB ? best.model : 'vídeo integrado', `${Math.round(ramGb)} GB de memória`].join(', ');
+  if (vram >= 7.5 * 1024 && ramGb >= 15 && threads >= 8) return { id: 'qualidade', reason: what };
+  if (vram >= 3.5 * 1024 && ramGb >= 11) return { id: 'equilibrado', reason: what };
+  return { id: 'desempenho', reason: what };
 }
 
 // O hardware não muda enquanto o app está aberto, então ele é lido uma vez só. Uso e temperatura são lidos a cada pedido.
@@ -85,4 +69,4 @@ async function stats() {
   };
 }
 
-module.exports = { power, stats, powerPlans, setPowerPlan, parsePowerPlans };
+module.exports = { power, stats, recommendPreset };

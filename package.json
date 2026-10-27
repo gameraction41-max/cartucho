@@ -1,6 +1,6 @@
 {
   "name": "cartucho",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Launcher em tela cheia, no estilo console, para Steam, Minecraft (Prism Launcher) e Hytale",
   "main": "src/main/main.js",
   "author": "Filipi",

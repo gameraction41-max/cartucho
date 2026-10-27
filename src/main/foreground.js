@@ -20,6 +20,8 @@ function load() {
       keybd_event: lib.func('void __stdcall keybd_event(uint8_t bVk, uint8_t bScan, uint32_t dwFlags, uintptr_t dwExtraInfo)'),
       SetForegroundWindow: lib.func('int __stdcall SetForegroundWindow(intptr_t hWnd)'),
       ShowWindow: lib.func('int __stdcall ShowWindow(intptr_t hWnd, int nCmdShow)'),
+      GetForegroundWindow: lib.func('intptr_t __stdcall GetForegroundWindow()'),
+      IsWindow: lib.func('int __stdcall IsWindow(intptr_t hWnd)'),
     };
   } catch {
     user32 = null;
@@ -32,12 +34,12 @@ function hwndOf(win) {
   return buf.length >= 8 ? buf.readBigInt64LE(0) : BigInt(buf.readInt32LE(0));
 }
 
-function forceForeground(win) {
+function focusHandle(hwnd, { restore = true } = {}) {
   const api = load();
-  if (!api) return false;
+  if (!api || !hwnd) return false;
   try {
-    const hwnd = hwndOf(win);
-    api.ShowWindow(hwnd, SW_RESTORE);
+    if (!api.IsWindow(hwnd)) return false;
+    if (restore) api.ShowWindow(hwnd, SW_RESTORE);
     api.keybd_event(VK_MENU, 0, 0, 0);
     api.SetForegroundWindow(hwnd);
     api.keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
@@ -47,4 +49,19 @@ function forceForeground(win) {
   }
 }
 
-module.exports = { forceForeground };
+function forceForeground(win) {
+  return focusHandle(hwndOf(win));
+}
+
+// A janela que está na frente agora (o jogo), para devolver o foco a ela quando o menu fechar.
+function currentForeground() {
+  const api = load();
+  if (!api) return null;
+  try {
+    return api.GetForegroundWindow() || null;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { forceForeground, focusHandle, currentForeground };

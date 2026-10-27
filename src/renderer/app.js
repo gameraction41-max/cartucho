@@ -160,6 +160,7 @@ const ctx = {
   goTab,
   launch,
   sync,
+  resume: () => api.minimize(),
   rerender: () => show({ keepFocus: true }),
   // Para telas que ganham itens depois de abrir (dados que chegam depois): coloca a seleção de volta.
   refocus: (key) => { if (!menu.isOpen()) focus.setScope($('view'), key || focus.key, { scroll: false }); },
@@ -329,6 +330,12 @@ async function start() {
   api.on('library:changed', async () => { await loadLibrary(await api.getLibrary()); refreshLive(); });
   api.on('achievements:changed', () => refreshLive());
   api.on('achievements:unlocked', notifyAchievements);
+  // Item escolhido no menu que abriu por cima do jogo: a janela principal vem para a frente e vai para a tela pedida.
+  api.on('menu:navigate', (target) => {
+    if (menu.isOpen()) menu.close('navigate');
+    if (target.tab) goTab(target.tab);
+    if (target.sync) sync({ force: true, quiet: false });
+  });
   api.on('game:started', (r) => { state.running = r; });
   api.on('game:ended', () => { state.running = null; });
   api.on('window:blur', () => setMusicPaused(true));

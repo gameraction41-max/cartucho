@@ -6,14 +6,17 @@ const path = require('node:path');
 const PRESETS = {
   desempenho: {
     label: 'Desempenho',
+    desc: 'Mais FPS: distância 8, gráficos rápidos, sem sombras nem nuvens',
     values: { renderDistance: '8', simulationDistance: '6', graphicsMode: '0', particles: '2', renderClouds: '"false"', entityShadows: 'false', ao: 'false', biomeBlendRadius: '0', mipmapLevels: '0', maxFps: '260', enableVsync: 'false', entityDistanceScaling: '0.75' },
   },
   equilibrado: {
     label: 'Equilibrado',
+    desc: 'Distância 12, gráficos bonitos, até 144 FPS',
     values: { renderDistance: '12', simulationDistance: '10', graphicsMode: '1', particles: '1', renderClouds: '"fast"', entityShadows: 'true', ao: 'true', biomeBlendRadius: '2', mipmapLevels: '2', maxFps: '144', enableVsync: 'false', entityDistanceScaling: '1.0' },
   },
   qualidade: {
     label: 'Qualidade',
+    desc: 'Distância 20, gráficos fabulosos, sombras e transições suaves de bioma',
     values: { renderDistance: '20', simulationDistance: '12', graphicsMode: '2', particles: '0', renderClouds: '"true"', entityShadows: 'true', ao: 'true', biomeBlendRadius: '4', mipmapLevels: '4', maxFps: '260', enableVsync: 'true', entityDistanceScaling: '1.25' },
   },
 };
@@ -93,6 +96,6 @@ function writePreset(instDir, presetId) {
   return presetId;
 }
 
-const PRESET_LIST = Object.entries(PRESETS).map(([id, p]) => ({ id, label: p.label }));
+const PRESET_LIST = Object.entries(PRESETS).map(([id, p]) => ({ id, label: p.label, desc: p.desc }));
 
 module.exports = { PRESET_LIST, applyPreset, detectPreset, readPreset, writePreset, optionsFile };

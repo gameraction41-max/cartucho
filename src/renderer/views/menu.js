@@ -1,5 +1,30 @@
 // Menu rápido: abre com Start/Guide ou M, por cima de qualquer tela. Desligar e reiniciar pedem confirmação.
-import { h, hours } from '../lib/ui.js';
+// O mesmo menu aparece por cima de um jogo aberto (overlay.js), com o jogo em destaque no topo.
+import { h, loadFirst } from '../lib/ui.js';
+
+function since(ms) {
+  const min = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (min < 1) return 'agora há pouco';
+  if (min < 60) return `há ${min} min`;
+  const hh = Math.floor(min / 60);
+  return `há ${hh} h ${String(min % 60).padStart(2, '0')}`;
+}
+
+// Cartão grande do jogo aberto, com a arte dele. Apertar volta para o jogo.
+function nowPlaying(ctx, running, onResume) {
+  const g = ctx.state.games.find((x) => x.key === running.key);
+  const art = h('span', { class: 'art' });
+  const urls = g && g.art ? [...(g.art.hero || []), ...(g.art.cover || [])] : [];
+  if (urls.length) loadFirst(urls).then((url) => { if (url) art.style.backgroundImage = `url("${url}")`; });
+  const el = h('button', { class: 'qnow', 'data-focus': true, 'data-key': 'resume' },
+    art,
+    h('span', { class: 'info' },
+      h('small', {}, `Jogando agora · ${since(running.since)}`),
+      h('b', {}, running.title),
+      h('span', { class: 'cta' }, 'Voltar para o jogo')));
+  el.addEventListener('click', () => { ctx.sfx.confirm(); onResume(); });
+  return el;
+}
 
 export function createMenu({ ctx, focus, root, onClose }) {
   let open = false;
@@ -44,8 +69,7 @@ export function createMenu({ ctx, focus, root, onClose }) {
 
     const panel = h('div', { class: 'qmenu', onclick: (e) => e.stopPropagation() },
       h('div', { class: 'qhead' }, h('div', { class: 'me' }, avatar, (ctx.state.profile && ctx.state.profile.name) || 'Jogador'), clock),
-      running ? h('div', { class: 'qlabel' }, 'Jogando agora') : null,
-      running ? h('div', { class: 'qlist' }, item('resume', `Voltar para ${running.title}`, go(() => ctx.api.minimize()), { small: hours(Math.round((Date.now() - running.since) / 60000)) })) : null,
+      running ? nowPlaying(ctx, running, go(() => ctx.resume())) : null,
       h('div', { class: 'qlist' },
         item('close', 'Fechar menu', () => close()),
         item('home', 'Início', go(() => ctx.goTab('home'))),
@@ -66,6 +90,7 @@ export function createMenu({ ctx, focus, root, onClose }) {
 
   return {
     isOpen: () => open,
+    close,
     open() {
       open = true;
       root.hidden = false;

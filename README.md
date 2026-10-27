@@ -53,7 +53,8 @@ Abra a aba **Configurações** (aperte E ou RB algumas vezes).
 
 - **Página do jogo:** jogar, abrir na loja, ver conquistas e trocar a capa e o fundo por imagens suas ("Restaurar" volta a arte original).
 - **Minecraft:** na página de cada instância, "Preset gráfico" alterna entre Desempenho, Equilibrado e Qualidade. O Cartucho muda só as opções de vídeo do `options.txt` da instância e guarda uma cópia do original em `options.txt.cartucho-backup`. Troque com o jogo fechado.
-- **PC:** uso do processador e da memória, placa de vídeo, espaço nos discos e troca do plano de energia do Windows.
+- **PC:** uso do processador e da memória, placa de vídeo e espaço nos discos. Com base nesse hardware, o Cartucho recomenda um preset gráfico e aplica em todas as instâncias do Minecraft de uma vez.
+- **Menu por cima do jogo:** com um jogo aberto, o botão do Xbox abre só o menu lateral, com o jogo em destaque no topo e o jogo continuando visível atrás. Fechar o menu volta para o jogo.
 - **Conquistas:** quando você desbloqueia uma conquista na Steam, o Cartucho mostra um aviso na tela ao voltar do jogo.
 
 ## Controles
@@ -83,7 +84,8 @@ src/
     library.js   junta Steam, Prism e Hytale e guarda cache em disco
     art.js       capas e fundos personalizados
     mcoptions.js presets gráficos do Minecraft
-    system.js    desligar/reiniciar, hardware e plano de energia
+    system.js    desligar/reiniciar, hardware e preset recomendado
+    overlay.js   janela transparente do menu por cima do jogo
     prism.js     lê as instâncias do Prism (instance.cfg e mmc-pack.json)
     watch.js     percebe quando o jogo abriu e fechou
     config.js    configurações (chave da Steam criptografada)
@@ -102,6 +104,6 @@ A música tema é gerada na hora pelo próprio app. Você pode trocar por um arq
 
 ### Botão do Xbox
 
-O navegador não enxerga o botão do Xbox, então o Cartucho lê esse botão direto do driver do controle (XInput). Com isso ele abre o menu rápido e, se um jogo estiver aberto, traz o Cartucho de volta para a frente.
+O navegador não enxerga o botão do Xbox, então o Cartucho lê esse botão direto do driver do controle (XInput). Com isso ele abre o menu rápido. Se um jogo estiver aberto, o menu aparece sozinho por cima do jogo, numa janela transparente. Jogos em tela cheia exclusiva podem minimizar quando o menu abre; nesses, use o modo "tela cheia sem bordas" nas opções de vídeo do jogo.
 
 Para o Windows não abrir a Game Bar junto, vá em Configurações do Windows > Jogos > Game Bar e desligue "Abrir a Game Bar usando este botão em um controle". Se a Steam estiver aberta, ela também pode reagir ao botão. Para evitar isso, na Steam vá em Configurações > Controle e desative a opção do botão Guia.
