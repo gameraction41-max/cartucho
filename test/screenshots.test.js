@@ -3,6 +3,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { pathToFileURL } = require('node:url');
 const ss = require('../src/main/screenshots');
 
 const touch = (file, at) => {
@@ -48,4 +49,23 @@ test('junta as capturas do Cartucho e da Steam por jogo, do mais recente para o 
 
 test('sem pastas, devolve lista vazia', () => {
   assert.deepStrictEqual(ss.scan({ cartuchoDirs: ['/nao/existe'], steamRoot: '/nao/existe' }), []);
+});
+
+test('só apaga capturas das pastas do Cartucho e da Steam', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-'));
+  const pictures = path.join(home, 'Imagens', 'Cartucho');
+  const steamRoot = path.join(home, 'Steam');
+  const opts = { cartuchoDirs: [pictures], steamRoot };
+  const u = (...p) => pathToFileURL(path.join(...p)).href;
+
+  assert.deepStrictEqual(ss.target(u(pictures, 'Hades II', 'Hades II 1.png'), opts), { file: path.join(pictures, 'Hades II', 'Hades II 1.png'), thumb: null });
+  const shots = path.join(steamRoot, 'userdata', '123', '760', 'remote', '105600', 'screenshots');
+  assert.deepStrictEqual(ss.target(u(shots, 'a.jpg'), opts), { file: path.join(shots, 'a.jpg'), thumb: path.join(shots, 'thumbnails', 'a.jpg') });
+
+  assert.strictEqual(ss.target(u(pictures, 'solto.png'), opts), null);
+  assert.strictEqual(ss.target(u(pictures, 'Hades II', 'save.dat'), opts), null);
+  assert.strictEqual(ss.target(u(pictures, 'Hades II', '..', '..', 'x', 'y.png'), opts), null);
+  assert.strictEqual(ss.target(u(home, 'Documentos', 'Jogo', 'foto.png'), opts), null);
+  assert.strictEqual(ss.target(u(steamRoot, 'userdata', '123', 'config', 'screenshots', 'a.jpg'), opts), null);
+  assert.strictEqual(ss.target('https://exemplo.com/a.png', opts), null);
 });

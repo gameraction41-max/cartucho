@@ -335,6 +335,18 @@ function registerIpc() {
       steamNames: (() => { try { return library.steamNames(); } catch { return new Map(); } })(),
     });
   });
+  // Apagar uma captura: vai para a Lixeira do Windows, então dá para recuperar se foi engano.
+  ipcMain.handle('screenshots:remove', async (_e, fileUrl) => {
+    const t = screenshots.target(fileUrl, { cartuchoDirs: Object.values(capture.roots()), steamRoot: steamlocal.steamDir() });
+    if (!t) return { error: 'Essa captura não está numa pasta que o Cartucho conhece.' };
+    try {
+      await shell.trashItem(t.file);
+    } catch (err) {
+      return { error: fs.existsSync(t.file) ? `Não consegui apagar: ${err.message}` : null };
+    }
+    if (t.thumb && fs.existsSync(t.thumb)) { try { await shell.trashItem(t.thumb); } catch {} }
+    return { error: null };
+  });
   ipcMain.handle('steam:downloads', () => downloads.list(library.steamNames()));
   ipcMain.handle('steam:install', async (_e, appid) => {
     if (!Number.isInteger(appid) || appid <= 0) return { error: 'Jogo inválido.' };

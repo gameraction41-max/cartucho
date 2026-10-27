@@ -151,6 +151,10 @@ export const mock = {
   },
   getFriends: async () => ({ configured: true, friends }),
   screenshots: async () => shotGroups,
+  removeScreenshot: async (url) => {
+    for (const g of shotGroups) g.shots = g.shots.filter((s) => s.url !== url);
+    return { error: null };
+  },
   capture: async () => {},
   captureStatus: async () => ({ game: 'Hades II', buffer: true, recording: null }),
   sendAudio: () => {},

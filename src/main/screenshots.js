@@ -2,7 +2,7 @@
 // Tudo é agrupado por jogo, do mais recente para o mais antigo.
 const fs = require('node:fs');
 const path = require('node:path');
-const { pathToFileURL } = require('node:url');
+const { pathToFileURL, fileURLToPath } = require('node:url');
 
 const IMAGE = /\.(png|jpe?g|webp|bmp|gif)$/i;
 const VIDEO = /\.(mp4|webm)$/i;
@@ -94,4 +94,26 @@ function scan({ cartuchoDirs = [], steamRoot, games = [], steamNames = new Map()
   return list.sort((a, b) => b.shots[0].at - a.shots[0].at);
 }
 
-module.exports = { scan, safeName };
+// Para apagar: só aceita uma captura que a galeria mostra, dentro das pastas do Cartucho
+// (<pasta>\<jogo>\arquivo) ou da Steam (userdata\<conta>\760\remote\<appid>\screenshots\arquivo).
+// Devolve o arquivo e, na Steam, a miniatura dele; ou null se o endereço não for de uma captura.
+function target(fileUrl, { cartuchoDirs = [], steamRoot } = {}) {
+  let file;
+  try { file = path.resolve(fileURLToPath(String(fileUrl))); } catch { return null; }
+  if (!MEDIA.test(file)) return null;
+  const dir = path.dirname(file);
+  const same = (a, b) => path.relative(path.resolve(a), path.resolve(b)) === '';
+  if (cartuchoDirs.some((root) => same(path.dirname(dir), root))) return { file, thumb: null };
+  if (steamRoot && IMAGE.test(file) && path.basename(dir) === 'screenshots') {
+    const app = path.dirname(dir);
+    const remote = path.dirname(app);
+    const account = path.dirname(path.dirname(remote));
+    if (/^\d+$/.test(path.basename(app)) && path.basename(remote) === 'remote' && path.basename(path.dirname(remote)) === '760'
+      && same(path.dirname(account), path.join(steamRoot, 'userdata'))) {
+      return { file, thumb: path.join(dir, 'thumbnails', path.basename(file)) };
+    }
+  }
+  return null;
+}
+
+module.exports = { scan, safeName, target };
