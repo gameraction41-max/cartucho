@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('cartucho', {
   openProfile: invoke('steam:profile'),
   updateStatus: invoke('update:status'),
   installUpdate: invoke('update:install'),
+  checkUpdate: invoke('update:check'),
   overlayClose: invoke('overlay:close'),
   overlayNavigate: invoke('overlay:navigate'),
   pickFile: invoke('dialog:file'),

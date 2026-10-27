@@ -17,12 +17,15 @@ const REPEATABLE = new Set(['up', 'down', 'left', 'right']);
 const REPEAT_DELAY = 380;
 const REPEAT_RATE = 110;
 const STICK = 0.55;
+// Analógico direito rola a tela. Abaixo disso é folga do próprio controle.
+const SCROLL_DEADZONE = 0.2;
 
-export function createInput({ onAction, onDevice, nativeGuide = false }) {
+export function createInput({ onAction, onDevice, onScroll, nativeGuide = false }) {
   const buttons = { ...BUTTONS };
   if (nativeGuide) delete buttons[16];
   let device = 'keyboard';
   const held = new Map(); // ação -> { next }
+  let last = 0;
 
   const setDevice = (d) => {
     if (d !== device) {
@@ -52,11 +55,15 @@ export function createInput({ onAction, onDevice, nativeGuide = false }) {
 
   const poll = (now) => {
     requestAnimationFrame(poll);
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
     if (!document.hasFocus()) {
       held.clear();
       return;
     }
     const active = new Set();
+    let sx = 0;
+    let sy = 0;
     for (const pad of navigator.getGamepads()) {
       if (!pad) continue;
       pad.buttons.forEach((b, i) => {
@@ -67,6 +74,16 @@ export function createInput({ onAction, onDevice, nativeGuide = false }) {
       if (x > STICK) active.add('right');
       if (y < -STICK) active.add('up');
       if (y > STICK) active.add('down');
+      const [, , rx = 0, ry = 0] = pad.axes;
+      if (Math.abs(rx) > Math.abs(sx)) sx = rx;
+      if (Math.abs(ry) > Math.abs(sy)) sy = ry;
+    }
+    const dead = (v) => (Math.abs(v) < SCROLL_DEADZONE ? 0 : v);
+    sx = dead(sx);
+    sy = dead(sy);
+    if (onScroll && (sx || sy)) {
+      setDevice('gamepad');
+      onScroll(sx, sy, dt);
     }
     for (const action of held.keys()) if (!active.has(action)) held.delete(action);
     for (const action of active) {

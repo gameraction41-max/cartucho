@@ -292,6 +292,7 @@ img { max-width: 100%; }
 .opt small { display: block; color: var(--muted); font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .opt .val { font-family: var(--f-mono); font-size: 1rem; color: var(--prism); white-space: nowrap; }
 .opt .val.warn { color: var(--accent); }
+.opt.warn small { color: var(--accent); }
 .opt input { background: rgba(0,0,0,.35); border: 1px solid var(--glass-line); border-radius: .5rem; padding: .5rem .8rem; font-family: var(--f-mono); font-size: 1rem; width: 24rem; outline: none; }
 .opt input:focus { border-color: var(--ink); }
 .sw { width: 3.4rem; height: 1.8rem; border-radius: 2rem; background: var(--glass-line); position: relative; flex: none; transition: background .15s; }

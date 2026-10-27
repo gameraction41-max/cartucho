@@ -243,6 +243,7 @@ function registerIpc() {
   ipcMain.handle('steam:profile', (_e, steamId) => /^\d{17}$/.test(String(steamId)) && shell.openExternal(`steam://url/SteamIDPage/${steamId}`));
   ipcMain.handle('update:status', () => updater.getStatus());
   ipcMain.handle('update:install', () => updater.installNow());
+  ipcMain.handle('update:check', () => updater.checkNow());
   ipcMain.handle('overlay:close', () => overlay.close());
   ipcMain.handle('overlay:navigate', (_e, target) => {
     overlay.close({ backToGame: false });

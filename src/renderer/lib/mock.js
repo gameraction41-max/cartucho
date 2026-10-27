@@ -106,7 +106,13 @@ export const mock = {
   },
   getFriends: async () => ({ configured: true, friends }),
   openProfile: async () => {},
-  updateStatus: async () => ({ state: 'ready', version: '0.3.1' }),
+  updateStatus: async () => ({ state: 'current', version: null }),
+  checkUpdate: async () => {
+    const emit = (st) => window.mockEmit('update:status', st);
+    emit({ state: 'checking' });
+    setTimeout(() => emit({ state: 'downloading', version: '0.4.2', percent: 37 }), 600);
+    return { state: 'checking' };
+  },
   installUpdate: async () => {},
   overlayClose: async () => {},
   overlayNavigate: async () => {},
