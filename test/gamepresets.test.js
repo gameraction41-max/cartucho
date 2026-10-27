@@ -72,7 +72,7 @@ test('reconhece sozinho um jogo em Unreal Engine pela pasta de instalação', ()
   assert.strictEqual(gp.ini.get(fs.readFileSync(ini, 'utf8'), 'ScalabilityGroups', 'sg.ShadowQuality'), '2');
 });
 
-// ===== jogos do CATALOG (0.10.1) =====
+// ===== jogos do CATALOG (0.10.3) =====
 
 function fakeGame(rel, text, { install = false } = {}) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'gp-cat-'));

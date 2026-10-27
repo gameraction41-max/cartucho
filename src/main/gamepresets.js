@@ -1,7 +1,7 @@
 // Presets gráficos dos jogos da Steam. Cada jogo guarda as opções de vídeo num arquivo próprio, então cada jogo
 // suportado tem uma receita: onde fica o arquivo, o formato e os valores de cada preset. Jogos em Unreal Engine são
 // reconhecidos sozinhos pela pasta de instalação; os outros entram à mão no CATALOG (RDR2, Euro Truck 2, No Man's Sky,
-// Cyberpunk 2077 e Death Stranding Director's Cut, desde a 0.10.1).
+// Cyberpunk 2077 e Death Stranding Director's Cut, desde a 0.10.3).
 // Antes da primeira mudança, o arquivo original é copiado para a pasta do Cartucho e pode ser restaurado.
 const fs = require('node:fs');
 const os = require('node:os');
