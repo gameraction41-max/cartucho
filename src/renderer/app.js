@@ -283,6 +283,64 @@ function handleAction(action, info = {}) {
   }
 }
 
+// ===== analógico direito: rola a lista em que o foco está =====
+
+const SCROLL_SPEED = 1600; // px por segundo com o analógico no máximo
+let scrollSettle = null;
+
+function canScroll(el, axis) {
+  const style = getComputedStyle(el);
+  const overflow = axis === 'y' ? style.overflowY : style.overflowX;
+  if (overflow !== 'auto' && overflow !== 'scroll') return false;
+  return axis === 'y' ? el.scrollHeight > el.clientHeight + 1 : el.scrollWidth > el.clientWidth + 1;
+}
+
+function scrollerFor(axis) {
+  const root = menu.isOpen() ? $('overlay') : $('view');
+  for (let el = focus.current; el && el !== root.parentElement; el = el.parentElement) {
+    if (root.contains(el) && canScroll(el, axis)) return el;
+  }
+  // Sem foco numa lista: rola a maior que existir na tela.
+  let best = null;
+  for (const el of root.querySelectorAll('*')) {
+    if (canScroll(el, axis) && (!best || el.clientHeight * el.clientWidth > best.clientHeight * best.clientWidth)) best = el;
+  }
+  return best;
+}
+
+function handleScroll(x, y, dt) {
+  if (bootHandler) return;
+  const axis = Math.abs(y) >= Math.abs(x) ? 'y' : 'x';
+  const v = axis === 'y' ? y : x;
+  const el = scrollerFor(axis);
+  if (!el) return;
+  const delta = Math.sign(v) * v * v * SCROLL_SPEED * dt;
+  el.style.scrollBehavior = 'auto';
+  if (axis === 'y') el.scrollTop += delta;
+  else el.scrollLeft += delta;
+  el.style.scrollBehavior = '';
+  // Quando o analógico para, o foco vai para o item visível mais perto, para o direcional continuar dali.
+  clearTimeout(scrollSettle);
+  scrollSettle = setTimeout(() => refocusVisible(el), 180);
+}
+
+function refocusVisible(scroller) {
+  const view = scroller.getBoundingClientRect();
+  const inView = (r) => r.top >= view.top - 1 && r.bottom <= view.bottom + 1 && r.left >= view.left - 1 && r.right <= view.right + 1;
+  if (focus.current && scroller.contains(focus.current) && inView(focus.current.getBoundingClientRect())) return;
+  const items = [...scroller.querySelectorAll('[data-focus]')].filter((el) => el.offsetParent !== null && !el.disabled);
+  const from = focus.current ? focus.current.getBoundingClientRect() : view;
+  let best = null;
+  let bestDist = Infinity;
+  for (const el of items) {
+    const r = el.getBoundingClientRect();
+    if (!inView(r)) continue;
+    const d = Math.abs(r.top - from.top) + Math.abs(r.left - from.left);
+    if (d < bestDist) { bestDist = d; best = el; }
+  }
+  if (best) focus.set(best, { scroll: false });
+}
+
 function openMenu() {
   focusBeforeMenu = focus.key;
   sfx.tab();
@@ -327,6 +385,7 @@ async function start() {
 
   const input = createInput({
     onAction: handleAction,
+    onScroll: handleScroll,
     onDevice: (d) => { state.device = d; renderDevice(); },
     nativeGuide: api.platform === 'win32',
   });
@@ -341,6 +400,9 @@ async function start() {
     const wasReady = state.update && state.update.state === 'ready';
     state.update = status;
     if (status.state === 'ready' && !wasReady) toast(`Versão ${status.version} baixada. Ela é instalada quando você fechar o Cartucho, ou agora pelo menu.`);
+    // A linha de atualização em Configurações acompanha o estado (procurando, baixando, erro…).
+    const typing = document.activeElement instanceof HTMLInputElement;
+    if (current && current.id === 'settings' && !menu.isOpen() && !typing) show({ keepFocus: true });
   };
   api.on('update:status', onUpdate);
   api.updateStatus().then(onUpdate).catch(() => {});
