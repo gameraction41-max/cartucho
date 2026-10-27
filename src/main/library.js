@@ -113,13 +113,20 @@ async function syncSteam() {
 }
 
 // Busca conquistas só dos jogos que mudaram desde a última vez, para não fazer centenas de chamadas.
-async function syncAchievements({ force = false } = {}) {
+// Na primeira vez podem ser centenas de jogos, então o progresso é salvo aos poucos: fechar o app no meio não perde o que já veio.
+const SAVE_EVERY = 10;
+let achStatus = { running: false, done: 0, total: 0, failed: 0, error: null };
+
+async function syncAchievements({ force = false, onProgress = () => {} } = {}) {
   const creds = steamCreds();
-  if (!creds) return;
+  if (!creds || achStatus.running) return [];
   const { cache } = stores();
   const ach = cache.get('ach');
   const unlocked = [];
-  const queue = cache.get('owned').filter((g) => g.hasStats && g.minutes > 0 && (force || g.changed || g.minutes2w > 0 || !ach[g.appid]));
+  // Jogo guardado "sem conquistas" é conferido de novo uma vez por dia, porque a resposta pode ter vindo de um perfil privado.
+  const stale = (e) => !e || (!e.list && Date.now() - (e.fetchedAt || 0) > 24 * 3600 * 1000);
+  const queue = cache.get('owned').filter((g) => g.hasStats && g.minutes > 0 && (force || g.changed || g.minutes2w > 0 || stale(ach[g.appid])));
+  achStatus = { running: true, done: 0, total: queue.length, failed: 0, error: null };
   const worker = async () => {
     while (queue.length) {
       const g = queue.shift();
@@ -127,14 +134,31 @@ async function syncAchievements({ force = false } = {}) {
         const list = await steam.getPlayerAchievements(creds.key, creds.steamId, g.appid);
         unlocked.push(...newUnlocks(g.appid, ach[g.appid], list));
         ach[g.appid] = { list, fetchedAt: Date.now() };
-      } catch {
+      } catch (err) {
         // Um jogo com erro não impede os outros; tenta de novo na próxima sincronização.
+        achStatus.failed++;
+        achStatus.error = err.status === 401 || err.status === 403
+          ? 'A Steam não liberou suas conquistas. Em Perfil > Editar perfil > Privacidade, deixe "Detalhes de jogo" como Público.'
+          : err.message;
+      }
+      achStatus.done++;
+      if (achStatus.done % SAVE_EVERY === 0) {
+        cache.set('ach', ach);
+        onProgress();
       }
     }
   };
-  await Promise.all(Array.from({ length: ACH_CONCURRENCY }, worker));
-  cache.set('ach', ach);
+  try {
+    await Promise.all(Array.from({ length: ACH_CONCURRENCY }, worker));
+  } finally {
+    cache.set('ach', ach);
+    achStatus.running = false;
+  }
   return describeUnlocks(unlocked);
+}
+
+function achievementStatus() {
+  return achStatus;
 }
 
 // Conquistas que estavam bloqueadas na última leitura e agora estão desbloqueadas.
@@ -190,7 +214,7 @@ function achievementSummary() {
     }
     games.push({ key: `steam:${appid}`, appid: Number(appid), title: names.get(appid) || appid, unlocked: got.length, total: entry.list.length });
   }
-  return { unlocked, total, perfect, month, latest, games, ...computeLevel(unlocked, perfect) };
+  return { unlocked, total, perfect, month, latest, games, status: achStatus, ...computeLevel(unlocked, perfect) };
 }
 
 // Detalhes de um jogo: nomes, ícones e raridade de cada conquista.
