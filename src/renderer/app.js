@@ -11,11 +11,12 @@ import minecraft from './views/minecraft.js';
 import library from './views/library.js';
 import settings from './views/settings.js';
 import pc from './views/pc.js';
+import friends from './views/friends.js';
 import { showBoot } from './views/boot.js';
 import { createMenu } from './views/menu.js';
 
-const VIEWS = { home, game, achievements, minecraft, library, pc, settings };
-const TABS = ['home', 'minecraft', 'achievements', 'library', 'pc', 'settings'];
+const VIEWS = { home, game, achievements, minecraft, friends, library, pc, settings };
+const TABS = ['home', 'minecraft', 'achievements', 'friends', 'library', 'pc', 'settings'];
 const SCROLLERS = '.set-list, .glist, .grid, .row, .mc-row, .ach-list';
 
 const GLYPHS = {
@@ -29,7 +30,7 @@ const ICONS = {
 };
 const DEVICE_NAME = { gamepad: 'Controle', keyboard: 'Teclado', mouse: 'Mouse' };
 
-const state = { config: {}, games: [], profile: null, steamConfigured: false, syncedAt: 0, running: null, device: 'keyboard' };
+const state = { update: null, config: {}, games: [], profile: null, steamConfigured: false, syncedAt: 0, running: null, device: 'keyboard' };
 const stack = []; // [{ id, params }]
 let current = null; // { id, params, view: resultado do render }
 let menu = null;
@@ -330,6 +331,13 @@ async function start() {
   api.on('library:changed', async () => { await loadLibrary(await api.getLibrary()); refreshLive(); });
   api.on('achievements:changed', () => refreshLive());
   api.on('achievements:unlocked', notifyAchievements);
+  const onUpdate = (status) => {
+    const wasReady = state.update && state.update.state === 'ready';
+    state.update = status;
+    if (status.state === 'ready' && !wasReady) toast(`Versão ${status.version} baixada. Ela é instalada quando você fechar o Cartucho, ou agora pelo menu.`);
+  };
+  api.on('update:status', onUpdate);
+  api.updateStatus().then(onUpdate).catch(() => {});
   // Item escolhido no menu que abriu por cima do jogo: a janela principal vem para a frente e vai para a tela pedida.
   api.on('menu:navigate', (target) => {
     if (menu.isOpen()) menu.close('navigate');

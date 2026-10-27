@@ -75,7 +75,10 @@ export function createMenu({ ctx, focus, root, onClose }) {
         item('home', 'Início', go(() => ctx.goTab('home'))),
         item('library', 'Biblioteca', go(() => ctx.goTab('library'))),
         item('settings', 'Configurações', go(() => ctx.goTab('settings'))),
-        item('sync', 'Sincronizar com a Steam', go(() => ctx.sync({ force: true, quiet: false })))),
+        item('sync', 'Sincronizar com a Steam', go(() => ctx.sync({ force: true, quiet: false }))),
+        ctx.state.update && ctx.state.update.state === 'ready'
+          ? item('update', `Atualizar para a ${ctx.state.update.version}`, () => ctx.api.installUpdate(), { small: 'reinicia o app' })
+          : null),
       h('div', { class: 'qsep' }),
       h('div', { class: 'qlist' },
         item('quit', 'Sair para o Windows', () => ctx.api.power('quit')),

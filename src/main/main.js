@@ -13,6 +13,7 @@ const mcoptions = require('./mcoptions');
 const { watchGuideButton } = require('./guide');
 const { forceForeground } = require('./foreground');
 const overlay = require('./overlay');
+const updater = require('./updater');
 
 const windowed = process.argv.includes('--windowed');
 let win = null;
@@ -31,6 +32,7 @@ if (!app.requestSingleInstanceLock()) {
     createWindow();
     overlay.prepare();
     watchGuideButton(onGuide);
+    updater.watchUpdates((status) => send('update:status', status));
   });
   app.on('window-all-closed', () => app.quit());
 }
@@ -234,6 +236,10 @@ function registerIpc() {
     }
     return { applied, skipped };
   });
+  ipcMain.handle('friends:get', () => library.friends());
+  ipcMain.handle('steam:profile', (_e, steamId) => /^\d{17}$/.test(String(steamId)) && shell.openExternal(`steam://url/SteamIDPage/${steamId}`));
+  ipcMain.handle('update:status', () => updater.getStatus());
+  ipcMain.handle('update:install', () => updater.installNow());
   ipcMain.handle('overlay:close', () => overlay.close());
   ipcMain.handle('overlay:navigate', (_e, target) => {
     overlay.close({ backToGame: false });

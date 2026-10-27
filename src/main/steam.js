@@ -13,7 +13,11 @@ async function call(pathname, params) {
   } catch {
     throw new SteamError('Sem conexão com a Steam. Confira sua internet.');
   }
-  if (res.status === 401 || res.status === 403) throw new SteamError('A Steam recusou a chave da API. Confira a chave nas configurações.');
+  if (res.status === 401 || res.status === 403) {
+    const err = new SteamError('A Steam recusou a chave da API. Confira a chave nas configurações.');
+    err.status = res.status;
+    throw err;
+  }
   if (res.status === 429) throw new SteamError('A Steam pediu para esperar um pouco antes de sincronizar de novo.');
   if (!res.ok) {
     const err = new SteamError(`A Steam respondeu com erro ${res.status}.`);
@@ -50,6 +54,40 @@ async function getPlayerSummary(key, steamId) {
   const p = data.response && data.response.players && data.response.players[0];
   if (!p) return null;
   return { name: p.personaname, avatar: p.avatarfull || p.avatarmedium || '' };
+}
+
+const PERSONA = { 0: 'offline', 1: 'online', 2: 'busy', 3: 'away', 4: 'away', 5: 'online', 6: 'online' };
+
+// Amigos com status e o jogo que estão jogando. Precisa da lista de amigos pública no perfil da Steam.
+async function getFriends(key, steamId) {
+  let data;
+  try {
+    data = await call('/ISteamUser/GetFriendList/v1/', { key, steamid: steamId, relationship: 'friend' });
+  } catch (err) {
+    // Com a chave certa, um 401 aqui quer dizer que a lista de amigos não é pública.
+    if (err.status === 401) {
+      throw new SteamError('Sua lista de amigos está privada. Em Perfil > Editar perfil > Privacidade, deixe "Lista de amigos" como Pública.');
+    }
+    throw err;
+  }
+  const ids = ((data.friendslist && data.friendslist.friends) || []).map((f) => f.steamid);
+  const out = [];
+  // A Steam aceita até 100 perfis por chamada.
+  for (let i = 0; i < ids.length; i += 100) {
+    const res = await call('/ISteamUser/GetPlayerSummaries/v2/', { key, steamids: ids.slice(i, i + 100).join(',') });
+    for (const p of (res.response && res.response.players) || []) {
+      out.push({
+        steamId: p.steamid,
+        name: p.personaname,
+        avatar: p.avatarfull || p.avatarmedium || '',
+        status: p.gameid ? 'playing' : PERSONA[p.personastate] || 'offline',
+        appid: p.gameid ? Number(p.gameid) : null,
+        game: p.gameextrainfo || '',
+        lastOnline: (p.lastlogoff || 0) * 1000,
+      });
+    }
+  }
+  return out;
 }
 
 // Retorna null quando o jogo não tem conquistas (a Steam responde 400 nesse caso).
@@ -102,4 +140,4 @@ function art(appid) {
   };
 }
 
-module.exports = { SteamError, getOwnedGames, getPlayerSummary, getPlayerAchievements, getSchema, getGlobalPercentages, art };
+module.exports = { SteamError, getOwnedGames, getPlayerSummary, getFriends, getPlayerAchievements, getSchema, getGlobalPercentages, art };

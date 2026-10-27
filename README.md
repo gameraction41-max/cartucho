@@ -55,6 +55,8 @@ Abra a aba **Configurações** (aperte E ou RB algumas vezes).
 - **Minecraft:** na página de cada instância, "Preset gráfico" alterna entre Desempenho, Equilibrado e Qualidade. O Cartucho muda só as opções de vídeo do `options.txt` da instância e guarda uma cópia do original em `options.txt.cartucho-backup`. Troque com o jogo fechado.
 - **PC:** uso do processador e da memória, placa de vídeo e espaço nos discos. Com base nesse hardware, o Cartucho recomenda um preset gráfico e aplica em todas as instâncias do Minecraft de uma vez.
 - **Menu por cima do jogo:** com um jogo aberto, o botão do Xbox abre só o menu lateral, com o jogo em destaque no topo e o jogo continuando visível atrás. Fechar o menu volta para o jogo.
+- **Amigos:** quem dos seus amigos da Steam está jogando agora (e o quê), quem está online e quando os outros foram vistos. Precisa da lista de amigos pública no perfil da Steam.
+- **Atualização automática:** o Cartucho instalado procura versões novas nas Releases do GitHub, baixa sozinho e instala quando você fecha o app (ou na hora, pelo menu rápido).
 - **Conquistas:** quando você desbloqueia uma conquista na Steam, o Cartucho mostra um aviso na tela ao voltar do jogo.
 
 ## Controles
