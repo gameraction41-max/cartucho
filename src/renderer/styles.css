@@ -77,6 +77,15 @@ img { max-width: 100%; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast.error { border-color: var(--danger); }
 
+/* aviso de conquista */
+#notice { position: fixed; top: 6.5rem; right: var(--gutter); z-index: 25; display: flex; gap: 1.1rem; align-items: center; width: 30rem; padding: 1rem 1.3rem; border-radius: 1rem; background: rgba(14, 18, 32, .96); border: 1px solid rgba(232, 196, 90, .55); box-shadow: 0 0 2.4rem rgba(232, 196, 90, .22); opacity: 0; transform: translateX(2rem); pointer-events: none; transition: opacity .35s, transform .35s; }
+#notice.show { opacity: 1; transform: none; }
+#notice .ico { width: 3.8rem; height: 3.8rem; border-radius: .6rem; flex: none; background: var(--gold) center / cover; }
+#notice .txt { display: grid; gap: .1rem; min-width: 0; }
+#notice small { color: var(--gold); font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#notice b { font-family: var(--f-display); font-size: 1.25rem; }
+#notice span { color: var(--muted); font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ===== peças comuns ===== */
 .src { display: inline-flex; align-items: center; gap: .6rem; font-family: var(--f-mono); font-size: .9rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .src i { width: .75rem; height: .75rem; border-radius: 50%; background: currentColor; }
@@ -141,6 +150,8 @@ img { max-width: 100%; }
 .menu-v .btn { justify-content: flex-start; }
 .menu-v .btn.primary { justify-content: center; }
 .chips { display: flex; gap: 1rem; flex-wrap: wrap; }
+.art-btns { display: flex; gap: .7rem; }
+.art-btns .btn { flex: 1; padding-left: .8rem; padding-right: .8rem; }
 .ach-panel { max-height: calc(100vh - 16rem); display: flex; flex-direction: column; min-height: 0; }
 .ach-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: .8rem; }
 .ach-list { overflow-y: auto; display: grid; gap: .5rem; padding: 1rem; margin: -1rem; scroll-padding: 1rem; scrollbar-width: none; min-height: 0; }
@@ -197,6 +208,24 @@ img { max-width: 100%; }
 .card .cover { aspect-ratio: 2 / 3; width: 100%; font-size: 1.05rem; }
 .card .cover.icon, .card .cover.blocks { aspect-ratio: 2 / 3; }
 .card .info { display: flex; justify-content: space-between; color: var(--muted); font-size: .9rem; padding: 0 .2rem .2rem; }
+
+/* ===== painel do PC ===== */
+.pc { margin-top: auto; display: grid; min-height: 0; }
+.pc-grid { display: grid; grid-template-columns: minmax(0, 1fr) 30rem; gap: 2rem; align-items: start; }
+.pc-hw { display: grid; grid-template-columns: 1fr 1fr; gap: 1.8rem 2.4rem; }
+.pc-block { display: grid; gap: .5rem; align-content: start; }
+.hw { margin: 0; font-size: 1rem; white-space: pre-line; }
+.meter { display: grid; gap: .45rem; }
+.meter-head { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--f-display); font-weight: 600; font-size: 1.1rem; }
+.meter-head b { font-size: 1.2rem; }
+.meter .bar { height: .55rem; }
+.meter .bar i { background: var(--steam); transition: width .6s ease; }
+.meter .bar i.hot { background: var(--danger); }
+.meter small { color: var(--muted); font-size: .9rem; min-height: 1.2em; }
+.disks { display: grid; gap: .9rem; }
+.disks .meter-head { font-size: 1rem; }
+.plans { display: grid; gap: .5rem; }
+.plan.active { color: var(--ink); }
 
 /* ===== configurações ===== */
 .set-wrap { margin-top: 1rem; display: grid; grid-template-columns: minmax(0, 64rem); flex: 1; min-height: 0; }

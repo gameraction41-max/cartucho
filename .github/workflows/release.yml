@@ -1,0 +1,27 @@
+# Gera o instalador do Windows e publica numa Release do GitHub.
+# Roda sozinho ao criar uma tag (v0.2.0, v0.3.0...) ou na mão pela aba Actions > Release > Run workflow.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Gerar e publicar o instalador
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

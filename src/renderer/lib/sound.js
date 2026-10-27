@@ -51,6 +51,7 @@ export const sfx = {
   confirm: () => { blip(660, { dur: 0.08, gain: 0.2 }); setTimeout(() => blip(990, { dur: 0.12, gain: 0.18 }), 60); },
   back: () => blip(520, { dur: 0.1, gain: 0.18, slide: 0.6 }),
   tab: () => blip(740, { dur: 0.06, type: 'triangle', gain: 0.14 }),
+  achievement: () => { [784, 988, 1319].forEach((f, i) => setTimeout(() => blip(f, { dur: 0.22, gain: 0.14, type: 'triangle' }), i * 110)); },
   error: () => blip(180, { dur: 0.2, type: 'square', gain: 0.08 }),
   boot: () => { [330, 494, 659, 988].forEach((f, i) => setTimeout(() => blip(f, { dur: 0.5, gain: 0.12, type: 'triangle' }), i * 140)); },
 };

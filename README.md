@@ -8,7 +8,13 @@ Ele junta num lugar só:
 - **Minecraft:** cada instância do Prism Launcher aparece como um jogo próprio e abre direto, sem passar pela janela do Prism.
 - **Hytale:** abre o executável e conta o tempo de jogo sozinho.
 
-## Como rodar
+## Instalar
+
+Baixe o `Cartucho-Setup-x.y.z.exe` mais novo em [Releases](https://github.com/gameraction41-max/cartucho/releases) e instale. Não precisa de Node.js nem de comandos.
+
+Para gerar uma versão nova do instalador, vá em **Actions > Release > Run workflow** aqui no GitHub (ou crie uma tag como `v0.2.0`). Em alguns minutos o `.exe` aparece em Releases.
+
+## Rodar pelo código
 
 Você precisa do [Node.js](https://nodejs.org) 20 ou mais novo.
 
@@ -43,6 +49,13 @@ Abra a aba **Configurações** (aperte E ou RB algumas vezes).
 4. **Prism Launcher:** normalmente é achado sozinho em `%APPDATA%\PrismLauncher`. Se você usa a versão portátil, indique a pasta.
 5. **Hytale:** escolha o `.exe` que abre o jogo. Se esse `.exe` for só o launcher, preencha também o nome do processo do jogo para o tempo ser contado direito.
 
+## O que dá para fazer
+
+- **Página do jogo:** jogar, abrir na loja, ver conquistas e trocar a capa e o fundo por imagens suas ("Restaurar" volta a arte original).
+- **Minecraft:** na página de cada instância, "Preset gráfico" alterna entre Desempenho, Equilibrado e Qualidade. O Cartucho muda só as opções de vídeo do `options.txt` da instância e guarda uma cópia do original em `options.txt.cartucho-backup`. Troque com o jogo fechado.
+- **PC:** uso do processador e da memória, placa de vídeo, espaço nos discos e troca do plano de energia do Windows.
+- **Conquistas:** quando você desbloqueia uma conquista na Steam, o Cartucho mostra um aviso na tela ao voltar do jogo.
+
 ## Controles
 
 | Ação | Controle | Teclado |
@@ -68,6 +81,9 @@ src/
     main.js      janela em tela cheia e comunicação com a interface
     steam.js     chamadas à Steam Web API
     library.js   junta Steam, Prism e Hytale e guarda cache em disco
+    art.js       capas e fundos personalizados
+    mcoptions.js presets gráficos do Minecraft
+    system.js    desligar/reiniciar, hardware e plano de energia
     prism.js     lê as instâncias do Prism (instance.cfg e mmc-pack.json)
     watch.js     percebe quando o jogo abriu e fechou
     config.js    configurações (chave da Steam criptografada)
@@ -78,7 +94,7 @@ src/
 test/          testes (npm test)
 ```
 
-Os dados ficam em `%APPDATA%\Cartucho`: `config.json`, `steam-cache.json` (biblioteca e conquistas, para abrir rápido e funcionar offline) e `playtime.json` (tempo do Hytale).
+Os dados ficam em `%APPDATA%\Cartucho`: `config.json`, `steam-cache.json` (biblioteca e conquistas, para abrir rápido e funcionar offline) `playtime.json` (tempo do Hytale), `custom-art.json` e a pasta `art` (capas e fundos personalizados).
 
 Quando um jogo fecha, o Cartucho volta para a frente sozinho. Na Steam ele percebe isso pelo registro do Windows (`RunningAppID`). No Minecraft, pelo processo do Java, e no Hytale pelo processo do jogo.
 

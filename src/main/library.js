@@ -8,6 +8,7 @@ const config = require('./config');
 const steam = require('./steam');
 const prism = require('./prism');
 const { computeLevel } = require('./level');
+const art = require('./art');
 
 const ACH_CONCURRENCY = 4;
 
@@ -86,7 +87,7 @@ function hytaleGame() {
 function getLibrary() {
   const { cache } = stores();
   return {
-    games: [...steamGames(), ...prismGames(), ...hytaleGame()],
+    games: [...steamGames(), ...prismGames(), ...hytaleGame()].map(art.apply),
     profile: cache.get('profile'),
     syncedAt: cache.get('syncedAt'),
     steamConfigured: !!steamCreds(),
@@ -117,12 +118,14 @@ async function syncAchievements({ force = false } = {}) {
   if (!creds) return;
   const { cache } = stores();
   const ach = cache.get('ach');
+  const unlocked = [];
   const queue = cache.get('owned').filter((g) => g.hasStats && g.minutes > 0 && (force || g.changed || g.minutes2w > 0 || !ach[g.appid]));
   const worker = async () => {
     while (queue.length) {
       const g = queue.shift();
       try {
         const list = await steam.getPlayerAchievements(creds.key, creds.steamId, g.appid);
+        unlocked.push(...newUnlocks(g.appid, ach[g.appid], list));
         ach[g.appid] = { list, fetchedAt: Date.now() };
       } catch {
         // Um jogo com erro não impede os outros; tenta de novo na próxima sincronização.
@@ -131,6 +134,37 @@ async function syncAchievements({ force = false } = {}) {
   };
   await Promise.all(Array.from({ length: ACH_CONCURRENCY }, worker));
   cache.set('ach', ach);
+  return describeUnlocks(unlocked);
+}
+
+// Conquistas que estavam bloqueadas na última leitura e agora estão desbloqueadas.
+// Na primeira leitura de um jogo não há com o que comparar, então nada conta como novo.
+function newUnlocks(appid, before, list) {
+  if (!before || !before.list) return [];
+  const had = new Set(before.list.filter((a) => a.achieved).map((a) => a.api));
+  return list.filter((a) => a.achieved && !had.has(a.api)).map((a) => ({ appid, api: a.api, name: a.name, unlocktime: a.unlocktime }));
+}
+
+// Completa as conquistas novas com nome traduzido e ícone (do schema, que fica em cache) para o aviso na tela.
+async function describeUnlocks(list) {
+  if (!list.length) return [];
+  const creds = steamCreds();
+  const { cache } = stores();
+  const schemas = cache.get('schema');
+  const names = new Map(cache.get('owned').map((g) => [g.appid, g.name]));
+  for (const appid of new Set(list.map((a) => a.appid))) {
+    if (schemas[appid] || !creds) continue;
+    try {
+      schemas[appid] = await steam.getSchema(creds.key, appid);
+    } catch {}
+  }
+  cache.set('schema', schemas);
+  return list
+    .sort((a, b) => a.unlocktime - b.unlocktime)
+    .map((a) => {
+      const s = (schemas[a.appid] || []).find((x) => x.api === a.api) || {};
+      return { appid: a.appid, game: names.get(a.appid) || String(a.appid), name: s.name || a.name || a.api, description: s.description || '', icon: s.icon || '' };
+    });
 }
 
 function achievementSummary() {
@@ -185,14 +219,19 @@ async function gameAchievements(appid) {
 // Atualiza um jogo da Steam depois que ele fecha, para as horas e conquistas novas aparecerem na hora.
 async function refreshSteamGame(appid) {
   const creds = steamCreds();
-  if (!creds) return;
+  if (!creds) return [];
   await syncSteam().catch(() => {});
   const { cache } = stores();
   const ach = cache.get('ach');
   try {
-    ach[appid] = { list: await steam.getPlayerAchievements(creds.key, creds.steamId, appid), fetchedAt: Date.now() };
+    const list = await steam.getPlayerAchievements(creds.key, creds.steamId, appid);
+    const unlocked = newUnlocks(appid, ach[appid], list);
+    ach[appid] = { list, fetchedAt: Date.now() };
     cache.set('ach', ach);
-  } catch {}
+    return describeUnlocks(unlocked);
+  } catch {
+    return [];
+  }
 }
 
 function addHytaleTime(ms) {
@@ -201,4 +240,4 @@ function addHytaleTime(ms) {
   playtime.set('hytale', { seconds: t.seconds + Math.round(ms / 1000), lastPlayed: Date.now() });
 }
 
-module.exports = { getLibrary, syncSteam, syncAchievements, achievementSummary, gameAchievements, refreshSteamGame, addHytaleTime, prismDir };
+module.exports = { newUnlocks, getLibrary, syncSteam, syncAchievements, achievementSummary, gameAchievements, refreshSteamGame, addHytaleTime, prismDir };

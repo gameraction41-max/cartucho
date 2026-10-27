@@ -8,6 +8,8 @@ const library = require('./library');
 const prism = require('./prism');
 const watch = require('./watch');
 const system = require('./system');
+const art = require('./art');
+const mcoptions = require('./mcoptions');
 const { watchGuideButton } = require('./guide');
 const { forceForeground } = require('./foreground');
 
@@ -104,13 +106,24 @@ function gameEnded(game) {
   if (config.get('returnAfterGame')) bringToFront();
 }
 
+// Conquistas novas aparecem como aviso na tela do Cartucho. Com um jogo aberto, a própria Steam já avisa por cima dele.
+function notifyUnlocks(list) {
+  if (list && list.length) send('achievements:unlocked', list);
+}
+
+function instanceDir(instanceId) {
+  const inst = prism.listInstances(library.prismDir()).find((i) => i.id === instanceId);
+  return inst ? inst.dir : null;
+}
+
 async function launchGame(game) {
   if (game.source === 'steam') {
     await shell.openExternal(`steam://rungameid/${game.appid}`);
     watch.watchSteam(game.appid, {
       onEnd: async () => {
-        await library.refreshSteamGame(game.appid);
+        const unlocked = await library.refreshSteamGame(game.appid);
         gameEnded(game);
+        notifyUnlocks(unlocked);
       },
     });
   } else if (game.source === 'prism') {
@@ -155,7 +168,10 @@ function registerIpc() {
   ipcMain.handle('library:sync', async (_e, opts = {}) => {
     try {
       const lib = await library.syncSteam();
-      library.syncAchievements(opts).then(() => send('achievements:changed')).catch(() => {});
+      library.syncAchievements(opts).then((unlocked) => {
+        send('achievements:changed');
+        notifyUnlocks(unlocked);
+      }).catch(() => {});
       return lib;
     } catch (err) {
       return { ...library.getLibrary(), error: err.message };
@@ -165,6 +181,41 @@ function registerIpc() {
   ipcMain.handle('achievements:game', (_e, appid) => library.gameAchievements(appid));
   ipcMain.handle('game:launch', (_e, game) => launchGame(game));
   ipcMain.handle('game:open-source', (_e, game) => openInSource(game));
+  ipcMain.handle('art:pick', async (_e, key, kind) => {
+    const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'Imagens', extensions: art.IMAGE_EXT.map((e) => e.slice(1)) }] });
+    if (r.canceled) return { canceled: true };
+    try {
+      art.set(key, kind, r.filePaths[0]);
+      return { ok: true };
+    } catch (err) {
+      return { error: err.message };
+    }
+  });
+  ipcMain.handle('art:reset', (_e, key) => art.reset(key));
+  ipcMain.handle('prism:presets', () => mcoptions.PRESET_LIST);
+  ipcMain.handle('prism:preset-get', (_e, instanceId) => {
+    const dir = instanceDir(instanceId);
+    return dir ? mcoptions.readPreset(dir) : null;
+  });
+  ipcMain.handle('prism:preset-set', (_e, instanceId, presetId) => {
+    const dir = instanceDir(instanceId);
+    if (!dir) return { error: 'Não encontrei a pasta desta instância.' };
+    if (running && running.key === `prism:${instanceId}`) return { error: 'Feche o jogo antes de trocar o preset. O Minecraft regrava o options.txt ao sair.' };
+    try {
+      return { ok: true, preset: mcoptions.writePreset(dir, presetId) };
+    } catch (err) {
+      return { error: err.message };
+    }
+  });
+  ipcMain.handle('system:stats', () => system.stats());
+  ipcMain.handle('system:power-plans', () => system.powerPlans());
+  ipcMain.handle('system:set-power-plan', async (_e, guid) => {
+    try {
+      return { ok: await system.setPowerPlan(guid) };
+    } catch (err) {
+      return { error: err.message };
+    }
+  });
   ipcMain.handle('dialog:file', async (_e, opts = {}) => {
     const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: opts.filters, defaultPath: opts.defaultPath });
     return r.canceled ? null : r.filePaths[0];
