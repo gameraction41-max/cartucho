@@ -2,7 +2,7 @@
 import { api, isDemo } from './lib/api.js';
 import { createInput } from './lib/input.js';
 import { createFocus } from './lib/focus.js';
-import { sfx, configureSound, setMusicPaused } from './lib/sound.js';
+import { sfx, configureSound, setMusicPaused, setGameTrack } from './lib/sound.js';
 import { h, hue, loadFirst } from './lib/ui.js';
 import home from './views/home.js';
 import game from './views/game.js';
@@ -95,7 +95,13 @@ function tickClock() {
 // Fundo da tela: arte do jogo selecionado, ou um degradê com a cor do nome dele.
 let bgFront = 0;
 let bgWanted = null;
+// A música do jogo só entra depois de a seleção parar um instante nele, para não trocar a cada capa ao passar pela lista.
+const TRACK_DELAY = 700;
+let trackTimer = null;
+
 async function setBackground(g) {
+  clearTimeout(trackTimer);
+  trackTimer = setTimeout(() => setGameTrack(g && g.music), g && g.music ? TRACK_DELAY : 0);
   // A arte entra na comparação para o fundo mudar na hora quando a pessoa troca a imagem do jogo.
   const key = g ? `${g.key}|${JSON.stringify(g.art)}` : null;
   if (key === bgWanted) return;

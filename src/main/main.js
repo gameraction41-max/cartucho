@@ -191,7 +191,9 @@ function registerIpc() {
   ipcMain.handle('game:launch', (_e, game) => launchGame(game));
   ipcMain.handle('game:open-source', (_e, game) => openInSource(game));
   ipcMain.handle('art:pick', async (_e, key, kind) => {
-    const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'Imagens', extensions: art.IMAGE_EXT.map((e) => e.slice(1)) }] });
+    if (!art.EXT[kind]) return { error: 'Tipo de arquivo desconhecido.' };
+    const name = kind === 'music' ? 'Músicas' : 'Imagens';
+    const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name, extensions: art.EXT[kind].map((e) => e.slice(1)) }] });
     if (r.canceled) return { canceled: true };
     try {
       art.set(key, kind, r.filePaths[0]);
@@ -200,7 +202,7 @@ function registerIpc() {
       return { error: err.message };
     }
   });
-  ipcMain.handle('art:reset', (_e, key) => art.reset(key));
+  ipcMain.handle('art:reset', (_e, key, kind) => art.reset(key, kind));
   ipcMain.handle('prism:presets', () => mcoptions.PRESET_LIST);
   ipcMain.handle('prism:preset-get', (_e, instanceId) => {
     const dir = instanceDir(instanceId);
@@ -237,6 +239,7 @@ function registerIpc() {
     return { applied, skipped };
   });
   ipcMain.handle('friends:get', () => library.friends());
+  ipcMain.handle('history:week', () => library.playWeek());
   ipcMain.handle('steam:profile', (_e, steamId) => /^\d{17}$/.test(String(steamId)) && shell.openExternal(`steam://url/SteamIDPage/${steamId}`));
   ipcMain.handle('update:status', () => updater.getStatus());
   ipcMain.handle('update:install', () => updater.installNow());

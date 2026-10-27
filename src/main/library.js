@@ -9,19 +9,22 @@ const steam = require('./steam');
 const prism = require('./prism');
 const { computeLevel } = require('./level');
 const art = require('./art');
+const history = require('./history');
 
 const ACH_CONCURRENCY = 4;
 
 let cache;
 let playtime;
+let historyStore;
 
 function stores() {
   if (!cache) {
     const dir = app.getPath('userData');
     cache = new JsonStore(path.join(dir, 'steam-cache.json'), { owned: [], syncedAt: 0, profile: null, ach: {}, schema: {} });
     playtime = new JsonStore(path.join(dir, 'playtime.json'), { hytale: { seconds: 0, lastPlayed: 0 } });
+    historyStore = new JsonStore(path.join(dir, 'history.json'), { snapshot: {}, days: {} });
   }
-  return { cache, playtime };
+  return { cache, playtime, history: historyStore };
 }
 
 function steamCreds() {
@@ -86,8 +89,11 @@ function hytaleGame() {
 
 function getLibrary() {
   const { cache } = stores();
+  const games = [...steamGames(), ...prismGames(), ...hytaleGame()].map(art.apply);
+  // Toda vez que a biblioteca é montada, os totais novos viram tempo jogado no dia (history.js).
+  if (history.record(historyStore.data, games)) historyStore.save();
   return {
-    games: [...steamGames(), ...prismGames(), ...hytaleGame()].map(art.apply),
+    games,
     profile: cache.get('profile'),
     syncedAt: cache.get('syncedAt'),
     steamConfigured: !!steamCreds(),
@@ -275,10 +281,15 @@ async function friends() {
   }
 }
 
+function playWeek() {
+  const { history: store } = stores();
+  return history.week(store.data);
+}
+
 function addHytaleTime(ms) {
   const { playtime } = stores();
   const t = playtime.get('hytale');
   playtime.set('hytale', { seconds: t.seconds + Math.round(ms / 1000), lastPlayed: Date.now() });
 }
 
-module.exports = { friends, newUnlocks, getLibrary, syncSteam, syncAchievements, achievementSummary, gameAchievements, refreshSteamGame, addHytaleTime, prismDir };
+module.exports = { playWeek, friends, newUnlocks, getLibrary, syncSteam, syncAchievements, achievementSummary, gameAchievements, refreshSteamGame, addHytaleTime, prismDir };

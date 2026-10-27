@@ -64,6 +64,21 @@ async function changeArt(ctx, g, kind) {
   ctx.toast(kind === 'cover' ? 'Capa trocada.' : 'Fundo trocado.');
 }
 
+async function changeMusic(ctx, g) {
+  if (g.music) {
+    await ctx.api.resetArt(g.key, 'music');
+    await ctx.reloadLibrary();
+    ctx.sfx.back();
+    return ctx.toast('Música do jogo removida. Volta a tocar a música tema.');
+  }
+  const r = await ctx.api.pickArt(g.key, 'music');
+  if (!r || r.canceled) return;
+  if (r.error) return ctx.toast(r.error, { error: true });
+  ctx.sfx.confirm();
+  await ctx.reloadLibrary();
+  ctx.toast('Música do jogo definida. Ela toca quando o jogo estiver selecionado.');
+}
+
 async function resetArt(ctx, g) {
   await ctx.api.resetArt(g.key);
   await ctx.reloadLibrary();
@@ -126,7 +141,9 @@ export default {
           h('div', { class: 'art-btns' },
             h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'art-cover', onclick: () => changeArt(ctx, g, 'cover') }, 'Trocar capa'),
             h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'art-hero', onclick: () => changeArt(ctx, g, 'hero') }, 'Trocar fundo'),
-            g.customArt && g.customArt.length ? h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'art-reset', onclick: () => resetArt(ctx, g) }, 'Restaurar') : null)),
+            g.customArt && g.customArt.length ? h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'art-reset', onclick: () => resetArt(ctx, g) }, 'Restaurar') : null),
+          h('button', { class: `btn small music-btn ${g.music ? 'on' : ''}`, 'data-focus': true, 'data-key': 'music', onclick: () => changeMusic(ctx, g) },
+            g.music ? `♪ ${g.musicName} · tirar` : '♪ Escolher música do jogo')),
         h('div', { class: 'chips' }, chips)),
       sidePanel(ctx, g));
 
