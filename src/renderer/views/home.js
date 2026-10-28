@@ -1,13 +1,8 @@
 // Início: fileira com os jogos jogados recentemente e o fundo trocando para a arte do jogo selecionado.
 import { h, cover, hours, when, sortRecent, dlBar, SOURCE_NAME } from '../lib/ui.js';
-import { collectionsOf, gamesIn } from '../lib/collections.js';
-import { showCollection } from './library.js';
 
 const ROW_SIZE = 12;
 const DL_SHOWN = 3;
-// Prateleira da tela inicial: 'recent' ou o id de uma coleção. X passa para a próxima.
-let shelfId = 'recent';
-let firstKey = null;
 
 // Rótulo do botão principal: jogo da Steam fora do PC instala, e durante o download abre a fila da Steam.
 export function playLabel(g) {
@@ -41,13 +36,7 @@ export function emptyState(ctx, { title, text }) {
 export default {
   label: 'Jogos',
   render(ctx) {
-    // Só coleções com jogo viram prateleira.
-    const shelves = [{ id: 'recent', label: 'Jogados recentemente' },
-      ...collectionsOf(ctx).map((c) => ({ id: c.id, label: c.name, games: gamesIn(ctx, c) })).filter((s) => s.games.length)];
-    const shelf = shelves.find((s) => s.id === shelfId) || shelves[0];
-    shelfId = shelf.id;
-    const games = shelf.games || sortRecent(ctx.state.games).slice(0, ROW_SIZE);
-    firstKey = games[0] && games[0].key;
+    const games = sortRecent(ctx.state.games).slice(0, ROW_SIZE);
     if (!games.length) {
       return {
         el: h('div', { style: { display: 'contents' } }, emptyState(ctx, {
@@ -87,11 +76,7 @@ export default {
       });
       return t;
     });
-    const openLibrary = () => {
-      if (shelf.games) showCollection(shelf.id);
-      ctx.goTab('library');
-    };
-    const more = h('div', { class: 'cover tile more', 'data-focus': true, 'data-key': 'more', role: 'button', onclick: openLibrary }, shelf.games ? 'Ver coleção na Biblioteca' : 'Biblioteca completa');
+    const more = h('div', { class: 'cover tile more', 'data-focus': true, 'data-key': 'more', role: 'button', onclick: () => ctx.goTab('library') }, 'Biblioteca completa');
     more.addEventListener('focusin-nav', () => { ctx.setBackground(null); tileName.remove(); });
 
     showInfo(selected);
@@ -100,28 +85,14 @@ export default {
         h('div', { class: 'actions' },
           playBtn,
           h('button', { class: 'btn', onclick: () => ctx.go('game', { key: selected.key }) }, 'Detalhes'))),
-      h('h3', { class: `row-label ${shelves.length > 1 ? 'shelves' : ''}` }, shelves.map((s) => h('span', {
-        class: s.id === shelf.id ? 'on' : '',
-        onclick: () => { shelfId = s.id; ctx.sfx.tab(); ctx.rerender(); },
-      }, s.label))),
+      h('h3', { class: 'row-label' }, 'Jogados recentemente'),
       h('div', { class: 'row' }, tiles, more));
 
     return {
       el,
       keepBackground: true,
-      hints: [['confirm', 'Jogar / Instalar'], ['y', 'Detalhes'], ...(shelves.length > 1 ? [['x', 'Trocar coleção']] : []), ['menu', 'Menu']],
+      hints: [['confirm', 'Jogar / Instalar'], ['y', 'Detalhes'], ['menu', 'Menu']],
       onAction(action, { focused }) {
-        if (action === 'x' && shelves.length > 1) {
-          shelfId = shelves[(shelves.indexOf(shelf) + 1) % shelves.length].id;
-          ctx.sfx.tab();
-          // A fileira é outra: volta para o começo dela, no primeiro jogo.
-          ctx.rerender().then(() => {
-            const row = document.querySelector('#view .row');
-            if (row) { row.style.scrollBehavior = 'auto'; row.scrollLeft = 0; row.style.scrollBehavior = ''; }
-            ctx.refocus(firstKey);
-          });
-          return true;
-        }
         if (action === 'y' && focused && focused.dataset.key !== 'more') {
           ctx.sfx.confirm();
           ctx.go('game', { key: focused.dataset.key });

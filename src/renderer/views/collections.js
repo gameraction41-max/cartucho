@@ -1,86 +1,71 @@
-// Coleções: com um jogo (vindo da página dele), A põe ou tira o jogo de cada coleção. Sem jogo (vindo da Biblioteca), A renomeia.
-// X renomeia, Y apaga (apertando de novo para confirmar) e a última linha cria uma coleção nova.
-import { h, cover } from '../lib/ui.js';
-import { collectionsOf, gamesIn, askName, createCollection, renameCollection, removeCollection, toggleGame } from '../lib/collections.js';
-
-let confirmDel = null;
+// Aba Coleções: uma prateleira de capas para cada coleção, na ordem em que os jogos foram postos.
+// A abre a página do jogo, Y joga e X renomeia a coleção da prateleira em foco.
+import { h, cover, hours } from '../lib/ui.js';
+import { collectionsOf, gamesIn, askName, createCollection, renameCollection } from '../lib/collections.js';
 
 export default {
   label: 'Coleções',
-  render(ctx, { key } = {}) {
-    const g = key && ctx.state.games.find((x) => x.key === key);
+  render(ctx) {
     const list = collectionsOf(ctx);
-    confirmDel = list.some((c) => c.id === confirmDel) ? confirmDel : null;
+    const byKey = new Map(ctx.state.games.map((g) => [g.key, g]));
 
+    const create = () => askName(ctx, {
+      title: 'Nova coleção',
+      done: async (name) => {
+        const c = await createCollection(ctx, name);
+        ctx.sfx.confirm();
+        ctx.toast(`Coleção ${name} criada. Para pôr jogos nela, abra a página do jogo.`);
+        await ctx.rerender();
+        ctx.refocus(`empty:${c.id}`);
+        const box = document.querySelector(`[data-key="empty:${c.id}"]`);
+        if (box) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      },
+    });
     const rename = (c) => askName(ctx, {
       title: `Renomear "${c.name}"`,
       value: c.name,
       done: async (name) => { await renameCollection(ctx, c.id, name); ctx.toast(`Agora se chama ${name}.`); ctx.rerender(); },
     });
-    const remove = async (c) => {
-      if (confirmDel !== c.id) { confirmDel = c.id; ctx.sfx.tab(); return ctx.rerender(); }
-      confirmDel = null;
-      await removeCollection(ctx, c.id);
-      ctx.sfx.back();
-      ctx.toast(`Coleção ${c.name} apagada. Os jogos continuam na biblioteca.`);
-      ctx.rerender();
-    };
-    const create = () => askName(ctx, {
-      title: g ? `Nova coleção com ${g.title}` : 'Nova coleção',
-      done: async (name) => {
-        const c = await createCollection(ctx, name, g ? [g.key] : []);
-        ctx.sfx.confirm();
-        ctx.toast(g ? `${g.title} entrou em ${name}.` : `Coleção ${name} criada.`);
-        ctx.rerender();
-        ctx.refocus(`col:${c.id}`);
-      },
-    });
-    const toggle = async (c) => {
-      const inside = await toggleGame(ctx, c.id, g.key);
-      ctx.sfx[inside ? 'confirm' : 'back']();
-      ctx.rerender();
+
+    const shelf = (c) => {
+      const games = gamesIn(ctx, c);
+      const total = games.reduce((s, g) => s + (g.minutes || 0), 0);
+      const tiles = games.map((g) => {
+        const t = h('div', { class: 'shelf-item', 'data-focus': true, 'data-key': `${c.id}|${g.key}`, 'data-col': c.id, 'data-select-first': true, role: 'button', onclick: () => ctx.go('game', { key: g.key }) },
+          cover(g));
+        t.addEventListener('focusin-nav', () => ctx.setBackground(g));
+        return t;
+      });
+      const empty = h('div', { class: 'shelf-empty', 'data-focus': true, 'data-key': `empty:${c.id}`, 'data-col': c.id, role: 'button', onclick: () => ctx.goTab('library') },
+        h('b', {}, 'Coleção vazia'), h('span', {}, 'Abra um jogo e escolha "Pôr numa coleção". Aperte para ir à Biblioteca.'));
+      empty.addEventListener('focusin-nav', () => ctx.setBackground(null));
+      return h('section', { class: 'shelf' },
+        h('h3', { class: 'shelf-head' }, c.name, h('small', {}, games.length ? `${games.length} ${games.length === 1 ? 'jogo' : 'jogos'} · ${hours(total)}` : '')),
+        h('div', { class: 'shelf-row' }, tiles.length ? tiles : empty));
     };
 
-    const rows = list.map((c) => {
-      const count = gamesIn(ctx, c).length;
-      const deleting = confirmDel === c.id;
-      const inside = g && c.keys.includes(g.key);
-      return h('button', { class: `opt col-row ${deleting ? 'warn' : ''}`, 'data-focus': true, 'data-key': `col:${c.id}`, onclick: () => (g ? toggle(c) : rename(c)) },
-        h('span', { class: 'txt' }, c.name,
-          h('small', {}, deleting ? 'Aperte Y de novo para apagar a coleção' : `${count} ${count === 1 ? 'jogo' : 'jogos'}`)),
-        g ? h('i', { class: `sw ${inside ? 'on' : ''}` }) : h('span', { class: 'val' }, 'renomear'));
-    });
-    const add = h('button', { class: 'opt col-new', 'data-focus': true, 'data-key': 'col:new', onclick: create },
-      h('span', { class: 'txt' }, '+ Nova coleção', h('small', {}, g ? `Já entra com ${g.title}` : 'Dê um nome, como "Jogando agora" ou "Para zerar"')));
+    const el = h('div', { class: 'cols' },
+      h('div', { class: 'lib-head' }, h('h2', {}, 'Coleções'),
+        h('button', { class: 'pill', 'data-focus': true, 'data-key': 'new', onclick: create }, '+ Nova coleção'),
+        list.length ? h('button', { class: 'pill', 'data-focus': true, 'data-key': 'manage', onclick: () => { ctx.sfx.confirm(); ctx.go('collectionpick'); } }, '✎ Gerenciar') : null),
+      h('div', { class: 'shelves' }, list.length ? list.map(shelf)
+        : h('p', { class: 'muted' }, 'Nenhuma coleção ainda. Crie uma, como "Jogando agora" ou "Para zerar".')));
 
-    const side = g
-      ? h('div', { class: 'col-game' }, cover(g, 'col-cover'), h('h2', {}, g.title))
-      : h('div', { class: 'col-game' }, h('h2', {}, 'Suas coleções'), h('p', { class: 'muted' }, 'Para pôr um jogo numa coleção, abra a página dele e escolha Coleções.'));
+    // Começa no primeiro jogo da primeira coleção, não nos botões de cima.
+    const first = el.querySelector('.shelves [data-focus]');
+    if (first) first.setAttribute('data-autofocus', '');
 
-    const el = h('div', { class: 'col-wrap' }, side,
-      h('div', { class: 'set-list' }, list.length ? null : h('p', { class: 'muted' }, 'Nenhuma coleção ainda.'), rows, add));
-    if (g) ctx.setBackground(g);
-
-    const byKey = (k) => list.find((c) => `col:${c.id}` === k);
+    const focusedCol = (focused) => focused && list.find((c) => c.id === focused.dataset.col);
     return {
       el,
-      keepBackground: !!g,
-      hints: [['confirm', g ? 'Pôr / Tirar' : 'Renomear'], ...(g ? [['x', 'Renomear']] : []), ['y', 'Apagar'], ['back', 'Voltar']],
-      onAction(act, { focused }) {
-        const c = focused && byKey(focused.dataset.key);
-        if (act === 'x' && c && g) { ctx.sfx.confirm(); rename(c); return true; }
-        if (act === 'y' && c) { remove(c); return true; }
-        // Saiu da linha (ou apertou B): desiste de apagar, sem redesenhar a tela.
-        if (confirmDel && ['up', 'down', 'left', 'right', 'back'].includes(act)) {
-          const row = el.querySelector(`[data-key="col:${confirmDel}"]`);
-          const was = byKey(`col:${confirmDel}`);
-          confirmDel = null;
-          if (row && was) {
-            row.classList.remove('warn');
-            const n = gamesIn(ctx, was).length;
-            row.querySelector('small').textContent = `${n} ${n === 1 ? 'jogo' : 'jogos'}`;
-          }
-          if (act === 'back') { ctx.sfx.back(); return true; }
+      keepBackground: true,
+      hints: [['confirm', 'Detalhes'], ['y', 'Jogar'], ['x', 'Renomear coleção'], ['menu', 'Menu']],
+      onAction(action, { focused }) {
+        const c = focusedCol(focused);
+        if (action === 'x' && c) { ctx.sfx.confirm(); rename(c); return true; }
+        if (action === 'y' && c) {
+          const g = byKey.get(focused.dataset.key.split('|')[1]);
+          if (g) { ctx.launch(g); return true; }
         }
         return false;
       },

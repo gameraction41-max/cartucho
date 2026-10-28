@@ -20,11 +20,6 @@ const MY_ORDER = { label: 'Do meu jeito', fn: (l) => l };
 let filterId = 'all';
 let sortIndex = 0;
 
-// A tela inicial usa para abrir a Biblioteca já na coleção da prateleira.
-export function showCollection(id) {
-  filterId = `col:${id}`;
-}
-
 function filtersFor(ctx) {
   const cols = collectionsOf(ctx).map((c) => {
     const keys = new Set(c.keys);
@@ -62,7 +57,7 @@ export default {
     };
     const pills = filters.map((f, i) => h('button', { class: `pill ${f.collection ? 'col' : ''} ${i === filterIndex ? 'on' : ''}`, 'data-focus': true, 'data-key': `filter:${f.id}`, onclick: () => setFilter(i) }, f.label));
     const sortPill = h('button', { class: 'pill', 'data-focus': true, 'data-key': 'sort', onclick: () => { sortIndex = (sortIndex + 1) % sorts.length; ctx.sfx.tab(); ctx.rerender(); } }, `Ordenar: ${sorts[sortIndex].label}`);
-    const manage = h('button', { class: 'pill', 'data-focus': true, 'data-key': 'collections', onclick: () => { ctx.sfx.confirm(); ctx.go('collections'); } }, '✎ Coleções');
+    const manage = h('button', { class: 'pill', 'data-focus': true, 'data-key': 'collections', onclick: () => { ctx.sfx.confirm(); ctx.go('collectionpick'); } }, '✎ Coleções');
 
     const cards = games.map((g) => h('div', { class: 'card', 'data-focus': true, 'data-key': g.key, 'data-select-first': true, role: 'button', onclick: () => ctx.go('game', { key: g.key }) },
       cover(g),

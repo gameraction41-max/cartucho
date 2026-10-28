@@ -167,7 +167,7 @@ function presetButton(ctx, g) {
 function collectionsButton(ctx, g) {
   const names = collectionsOf(ctx).filter((c) => c.keys.includes(g.key)).map((c) => c.name);
   const label = names.length ? `Coleções: ${names.join(', ')}` : 'Pôr numa coleção';
-  return h('button', { class: `btn col-btn ${names.length ? 'on' : ''}`, 'data-focus': true, 'data-key': 'collections', onclick: () => { ctx.sfx.confirm(); ctx.go('collections', { key: g.key }); } }, label);
+  return h('button', { class: `btn col-btn ${names.length ? 'on' : ''}`, 'data-focus': true, 'data-key': 'collections', onclick: () => { ctx.sfx.confirm(); ctx.go('collectionpick', { key: g.key }); } }, label);
 }
 
 export default {
