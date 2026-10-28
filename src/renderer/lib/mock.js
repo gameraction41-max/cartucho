@@ -69,6 +69,7 @@ let config = {
   openAtLogin: true, returnAfterGame: true, captureBuffer: true, showBoot: true, sounds: true, music: true, musicFile: '', volume: 0.5,
   // Na demo dá para abrir já com um tema: index.html?tema=ps5
   theme: new URLSearchParams(location.search).get('tema') || 'cartucho',
+  sofaAction: 'off', sofaMinutes: 30,
   defaultPrismDir: 'C:\\Users\\Filipi\\AppData\\Roaming\\PrismLauncher', running: null,
 };
 
@@ -210,6 +211,7 @@ export const mock = {
   pickFile: async () => null,
   pickFolder: async () => null,
   power: async () => true,
+  sofaActivity: async () => {},
   readClipboard: async () => 'A91F3C0D5E7B2468ACE13579BDF02468',
   minimize: async () => {},
   releaseTop: async () => {},

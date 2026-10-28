@@ -2,6 +2,7 @@
 const path = require('node:path');
 const { app, safeStorage } = require('electron');
 const { JsonStore } = require('./store');
+const { normalize } = require('./sofa');
 
 const DEFAULTS = {
   steamId: '',
@@ -20,6 +21,8 @@ const DEFAULTS = {
   volume: 0.5,
   captureBuffer: true,
   theme: 'cartucho',
+  sofaAction: 'off',
+  sofaMinutes: 30,
 };
 
 let store;
@@ -73,6 +76,11 @@ function update(patch) {
     if (!(key in DEFAULTS)) delete next[key];
   }
   if (typeof next.steamId === 'string') next.steamId = next.steamId.trim();
+  if ('sofaAction' in next || 'sofaMinutes' in next) {
+    const sofa = normalize({ action: next.sofaAction ?? s.get('sofaAction'), minutes: next.sofaMinutes ?? s.get('sofaMinutes') });
+    next.sofaAction = sofa.action;
+    next.sofaMinutes = sofa.minutes;
+  }
   s.patch(next);
   if ('openAtLogin' in next) applyLoginItem(next.openAtLogin);
   return getPublic();

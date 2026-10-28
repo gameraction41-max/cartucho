@@ -1,6 +1,7 @@
 // Configurações em lista grande, para dar para mexer com o controle. Campos de texto pedem o teclado.
 import { h, when } from '../lib/ui.js';
 import { THEMES, themeOf } from '../lib/themes.js';
+import { SOFA_ACTIONS, SOFA_MINUTES, minutesText } from '../lib/sofa.js';
 
 const VOLUME_STEP = 0.1;
 
@@ -106,9 +107,32 @@ export default {
       ctx.sfx.tab();
       save({ theme: next.id }, `Tema ${next.label}.`);
     };
-    const themeRow = h('button', { class: 'opt', 'data-focus': true, 'data-key': 'theme', 'data-choice': true, onclick: () => stepTheme(1) },
-      h('span', { class: 'txt' }, 'Tema', h('small', {}, theme.desc)),
-      h('span', { class: 'choice' }, h('i', {}, '◀'), h('span', { class: 'val' }, theme.label), h('i', {}, '▶')));
+    // Linha de escolha: A ou → passa para a próxima opção, ← volta.
+    const steps = {};
+    const choice = (key, label, desc, value, step) => {
+      steps[key] = step;
+      return h('button', { class: 'opt', 'data-focus': true, 'data-key': key, 'data-choice': key, onclick: () => step(1) },
+        h('span', { class: 'txt' }, label, h('small', {}, desc)),
+        h('span', { class: 'choice' }, h('i', {}, '◀'), h('span', { class: 'val' }, value), h('i', {}, '▶')));
+    };
+    const cycle = (list, value, delta) => list[(list.indexOf(value) + delta + list.length) % list.length];
+    const themeRow = choice('theme', 'Tema', theme.desc, theme.label, stepTheme);
+
+    // Modo sofá: o que fazer e depois de quanto tempo parado.
+    const sofaKeys = Object.keys(SOFA_ACTIONS);
+    const sofaAction = SOFA_ACTIONS[cfg.sofaAction] ? cfg.sofaAction : 'off';
+    const sofaMinutes = SOFA_MINUTES.includes(cfg.sofaMinutes) ? cfg.sofaMinutes : 30;
+    const sofaRows = [
+      choice('sofaAction', 'Quando o Cartucho ficar parado', SOFA_ACTIONS[sofaAction].desc, SOFA_ACTIONS[sofaAction].label, (delta) => {
+        ctx.sfx.tab();
+        save({ sofaAction: cycle(sofaKeys, sofaAction, delta) });
+      }),
+      choice('sofaMinutes', 'Depois de', sofaAction === 'off' ? 'Escolha o que fazer na linha de cima' : `Sem mexer em nada por ${minutesText(sofaMinutes)}. Antes, aparece uma contagem de 30 s`, minutesText(sofaMinutes), (delta) => {
+        ctx.sfx.tab();
+        save({ sofaMinutes: cycle(SOFA_MINUTES, sofaMinutes, delta) });
+      }),
+      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Quando ele não age', h('small', {}, 'Com um jogo aberto, um download da Steam, uma gravação, ou com outro programa na frente'))),
+    ];
 
     const steamStatus = !ctx.state.steamConfigured ? 'falta a chave ou o SteamID' : ctx.state.syncedAt ? `sincronizado ${when(ctx.state.syncedAt)}` : 'ainda não sincronizado';
 
@@ -118,6 +142,9 @@ export default {
       toggle('returnAfterGame', 'Voltar para o Cartucho ao fechar um jogo'),
       toggle('showBoot', 'Mostrar a tela de abertura'),
       action('fullscreen', 'Tela cheia', 'Também funciona com F11', () => ctx.api.toggleFullscreen()),
+
+      section('', 'Modo sofá'),
+      ...sofaRows,
 
       section('', 'Aparência'),
       themeRow,
@@ -172,8 +199,8 @@ export default {
           return true;
         }
         if (!focused) return false;
-        if ('choice' in focused.dataset && (act === 'left' || act === 'right')) {
-          stepTheme(act === 'right' ? 1 : -1);
+        if (steps[focused.dataset.choice] && (act === 'left' || act === 'right')) {
+          steps[focused.dataset.choice](act === 'right' ? 1 : -1);
           return true;
         }
         if ('slider' in focused.dataset && (act === 'left' || act === 'right')) {

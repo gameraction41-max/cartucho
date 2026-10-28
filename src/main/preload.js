@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('cartucho', {
   pickFolder: invoke('dialog:folder'),
   power: invoke('system:power'),
   readClipboard: invoke('clipboard:read'),
+  sofaActivity: invoke('sofa:activity'),
   capture: invoke('capture:do'),
   captureStatus: invoke('capture:status'),
   sendAudio: (data) => ipcRenderer.send('capture:audio', data),

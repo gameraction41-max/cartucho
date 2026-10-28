@@ -2,7 +2,7 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const { spawn } = require('node:child_process');
-const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, globalShortcut, powerMonitor } = require('electron');
 const config = require('./config');
 const library = require('./library');
 const prism = require('./prism');
@@ -20,11 +20,13 @@ const gamepresets = require('./gamepresets');
 const screenshots = require('./screenshots');
 const capture = require('./capture');
 const steamlocal = require('./steamlocal');
+const sofa = require('./sofa');
 
 const windowed = process.argv.includes('--windowed');
 let win = null;
 let running = null;
 let recommended = null; // preset gráfico que combina com o hardware, calculado uma vez
+let couch = null; // modo sofá (sofa.js)
 
 // Música e sons tocam sem precisar de um clique antes, como num console.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -46,7 +48,7 @@ if (!app.requestSingleInstanceLock()) {
         try { fs.appendFileSync(path.join(app.getPath('userData'), 'capture.log'), `${new Date().toISOString()} ${line}\n`); } catch {}
       },
     });
-    watchGuideButton(onGuide, onGuideCombo);
+    watchGuideButton(onGuide, onGuideCombo, () => couch && couch.activity());
     updater.watchUpdates((status) => send('update:status', status));
     downloads.start({
       names: library.steamNames,
@@ -58,6 +60,7 @@ if (!app.requestSingleInstanceLock()) {
         send('steam:install-started', { appid });
       },
     });
+    startSofa();
   });
   app.on('window-all-closed', () => app.quit());
   app.on('will-quit', () => {
@@ -159,6 +162,33 @@ function gameEnded(game) {
   send('game:ended', { key: game.key });
   send('library:changed');
   if (config.get('returnAfterGame')) bringToFront();
+}
+
+// O que impede o modo sofá de agir. Download na fila ou pausado não conta, só o que está baixando.
+function sofaBusy() {
+  if (running) return 'jogo';
+  if (downloads.list().some((d) => d.state === 'downloading')) return 'download';
+  if (capture.status().recording) return 'gravação';
+  if (updater.getStatus().state === 'downloading') return 'atualização';
+  return null;
+}
+
+function startSofa() {
+  couch = sofa.start({
+    settings: () => ({ action: config.get('sofaAction'), minutes: config.get('sofaMinutes') }),
+    busy: sofaBusy,
+    inFront: () => !!win && !win.isDestroyed() && win.isFocused() && !win.isMinimized() && !overlay.isOpen(),
+    systemIdleMs: () => powerMonitor.getSystemIdleTime() * 1000,
+    onWarn: (w) => send('sofa:warn', w),
+    onCancel: () => send('sofa:cancel'),
+    onScreen: (off) => send('sofa:screen', { off }),
+    act: (action) => {
+      if (action === 'screen') return system.screen(false);
+      if (action === 'wake') return system.screen(true);
+      return system.power(action);
+    },
+  });
+  powerMonitor.on('resume', () => couch.resumed());
 }
 
 // Conquistas novas aparecem como aviso na tela do Cartucho. Com um jogo aberto, a própria Steam já avisa por cima dele.
@@ -416,6 +446,7 @@ function registerIpc() {
     const r = await dialog.showOpenDialog(win, { properties: ['openDirectory'], defaultPath: opts.defaultPath });
     return r.canceled ? null : r.filePaths[0];
   });
+  ipcMain.handle('sofa:activity', () => couch && couch.activity());
   ipcMain.handle('clipboard:read', () => clipboard.readText().slice(0, 500));
   ipcMain.handle('system:power', (_e, action) => {
     if (action === 'quit') return app.quit();

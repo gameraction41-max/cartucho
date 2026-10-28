@@ -86,6 +86,20 @@ img { max-width: 100%; }
 #notice b { font-family: var(--f-display); font-size: 1.25rem; }
 #notice span { color: var(--muted); font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Modo sofá: contagem antes de desligar a tela ou o PC. Fica por cima de tudo, até do teclado na tela. */
+#sofa { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(4, 6, 12, .72); backdrop-filter: blur(14px); opacity: 0; transition: opacity .3s; }
+#sofa.show { opacity: 1; }
+.sofa-box { display: grid; justify-items: center; gap: .5rem; text-align: center; max-width: 50rem; transform: translateY(1rem); transition: transform .3s; }
+#sofa.show .sofa-box { transform: none; }
+.sofa-ring { --p: 1; width: 11rem; height: 11rem; position: relative; margin-bottom: 1.4rem; }
+.sofa-ring::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--accent) calc(var(--p) * 360deg), var(--glass-line) 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - .55rem), #000 calc(100% - .5rem)); mask: radial-gradient(farthest-side, transparent calc(100% - .55rem), #000 calc(100% - .5rem)); }
+.sofa-num { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--f-display); font-weight: 800; font-size: 4.4rem; }
+.sofa-box small { color: var(--accent); font-size: .9rem; letter-spacing: .14em; text-transform: uppercase; }
+.sofa-box b { font-family: var(--f-display); font-size: 2.8rem; line-height: 1.1; }
+.sofa-box p { margin: .3rem 0 1.4rem; color: var(--muted); font-size: 1.25rem; }
+.sofa-hint { display: flex; gap: 1.2rem; font-size: 1.1rem; }
+.sofa-hint span { display: inline-flex; align-items: center; gap: .6rem; }
+
 /* ===== peças comuns ===== */
 .src { display: inline-flex; align-items: center; gap: .6rem; font-family: var(--f-mono); font-size: .9rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .src i { width: .75rem; height: .75rem; border-radius: 50%; background: currentColor; }

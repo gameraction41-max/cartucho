@@ -42,14 +42,27 @@ function loadXInput() {
   return null;
 }
 
+// Abaixo disso é folga do analógico e dos gatilhos, que não conta como uso (modo sofá).
+const STICK_DEAD = 9000;
+const TRIGGER_DEAD = 40;
+
+// Resumo do que está apertado, para saber se alguém mexeu no controle mesmo com o Cartucho atrás de outra janela.
+function inputKey(s) {
+  if (!s) return '';
+  const stick = (v) => (v > STICK_DEAD ? 1 : v < -STICK_DEAD ? -1 : 0);
+  return [s.buttons, s.leftTrigger > TRIGGER_DEAD, s.rightTrigger > TRIGGER_DEAD, stick(s.thumbLX), stick(s.thumbLY), stick(s.thumbRX), stick(s.thumbRY)].join();
+}
+
 // O menu abre quando o botão Xbox é solto, para dar tempo de saber se ele virou atalho (Xbox + Y, por exemplo).
-function watchGuideButton(onPress, onCombo = () => {}) {
+// onActivity() é chamado sempre que algo muda no controle.
+function watchGuideButton(onPress, onCombo = () => {}, onActivity = () => {}) {
   const getState = loadXInput();
   if (!getState) return () => {};
   const connected = new Array(SLOTS).fill(false);
   const held = new Array(SLOTS).fill(false);
   const comboUsed = new Array(SLOTS).fill(false);
   const prevButtons = new Array(SLOTS).fill(0);
+  const prevInput = new Array(SLOTS).fill('');
   let lastScan = 0;
 
   const timer = setInterval(() => {
@@ -61,6 +74,11 @@ function watchGuideButton(onPress, onCombo = () => {}) {
       const state = getState(slot);
       connected[slot] = !!state;
       const buttons = state ? state.buttons : 0;
+      const key = inputKey(state);
+      if (key !== prevInput[slot]) {
+        if (prevInput[slot] && key) onActivity();
+        prevInput[slot] = key;
+      }
       const down = (buttons & GUIDE) !== 0;
       if (down) {
         if (!held[slot]) comboUsed[slot] = false;
