@@ -3,6 +3,7 @@ const path = require('node:path');
 const { app, safeStorage } = require('electron');
 const { JsonStore } = require('./store');
 const collections = require('./collections');
+const { normalize } = require('./sofa');
 
 const DEFAULTS = {
   steamId: '',
@@ -22,6 +23,8 @@ const DEFAULTS = {
   captureBuffer: true,
   theme: 'cartucho',
   collections: collections.DEFAULT_COLLECTIONS,
+  sofaAction: 'off',
+  sofaMinutes: 30,
 };
 
 let store;
@@ -76,6 +79,11 @@ function update(patch) {
   }
   if (typeof next.steamId === 'string') next.steamId = next.steamId.trim();
   if ('collections' in next) next.collections = collections.sanitize(next.collections);
+  if ('sofaAction' in next || 'sofaMinutes' in next) {
+    const sofa = normalize({ action: next.sofaAction ?? s.get('sofaAction'), minutes: next.sofaMinutes ?? s.get('sofaMinutes') });
+    next.sofaAction = sofa.action;
+    next.sofaMinutes = sofa.minutes;
+  }
   s.patch(next);
   if ('openAtLogin' in next) applyLoginItem(next.openAtLogin);
   return getPublic();

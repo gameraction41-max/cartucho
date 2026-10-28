@@ -3,6 +3,7 @@ import { api, isDemo } from './lib/api.js';
 import { createInput } from './lib/input.js';
 import { createFocus } from './lib/focus.js';
 import { createKeyboard } from './lib/keyboard.js';
+import { createSofa } from './lib/sofa.js';
 import { sfx, configureSound, setMusicPaused, setGameTrack } from './lib/sound.js';
 import { h, hue, loadFirst, downloadText } from './lib/ui.js';
 import { applyTheme } from './lib/themes.js';
@@ -48,6 +49,7 @@ let renderToken = 0;
 
 const $ = (id) => document.getElementById(id);
 const focus = createFocus();
+const sofa = createSofa({ api, root: document.getElementById('sofa'), saver: document.getElementById('saver'), sfx, hints: (list) => hintEls(list), setMusicPaused, games: () => state.games });
 const vkb = createKeyboard({ root: document.getElementById('vkb-root'), focus, sfx, hints: (list) => hintEls(list), readClipboard: () => api.readClipboard() });
 
 // ===== interface comum =====
@@ -332,6 +334,7 @@ async function applyConfig(cfg) {
 
 function handleAction(action, info = {}) {
   if (action === 'fullscreen') return api.toggleFullscreen();
+  if (sofa.input()) return;
   if (bootHandler) return bootHandler(action);
   if (vkb.isOpen()) return vkb.handle(action);
   if (menu.isOpen()) return menu.handle(action);
@@ -380,6 +383,7 @@ function scrollerFor(axis) {
 }
 
 function handleScroll(x, y, dt) {
+  if (sofa.input()) return;
   if (bootHandler || vkb.isOpen()) return;
   const axis = Math.abs(y) >= Math.abs(x) ? 'y' : 'x';
   const v = axis === 'y' ? y : x;
@@ -525,6 +529,7 @@ async function start() {
   if (isDemo) {
     document.title = 'Cartucho (demonstração)';
     window.demoNotice = notifyAchievements;
+    window.demoSofa = (action = 'screen', seconds = 30) => (action === 'covers' ? sofa.rest('covers') : sofa.warn({ action, seconds }));
   }
 }
 

@@ -74,6 +74,7 @@ let config = {
     { id: 'zerar', name: 'Para zerar', keys: ['steam:1245620', 'steam:1030300', 'steam:1091500', 'steam:504230', 'steam:1174180'] },
     { id: 'coop', name: 'Com a galera', keys: ['steam:105600', 'prism:CABE', 'steam:413150'] },
   ],
+  sofaAction: 'off', sofaMinutes: 30,
   defaultPrismDir: 'C:\\Users\\Filipi\\AppData\\Roaming\\PrismLauncher', running: null,
 };
 
@@ -306,6 +307,8 @@ export const mock = {
   pickFile: async () => null,
   pickFolder: async () => null,
   power: async () => true,
+  // Na demo, qualquer botão sai do descanso com capas, como o processo principal faria.
+  sofaActivity: async () => window.mockEmit('sofa:rest', { mode: null }),
   readClipboard: async () => 'A91F3C0D5E7B2468ACE13579BDF02468',
   minimize: async () => {},
   releaseTop: async () => {},

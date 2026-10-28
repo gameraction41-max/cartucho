@@ -74,4 +74,44 @@ async function stats() {
   };
 }
 
-module.exports = { power, stats, recommendPreset };
+// Desligar e ligar a tela (modo sofá). A tela desliga como no descanso do Windows e volta com teclado ou mouse.
+// O controle não conta como uso para o Windows, então para ligar com ele o Cartucho simula uma tecla que não existe no teclado (F15).
+const WM_SYSCOMMAND = 0x0112;
+const SC_MONITORPOWER = 0xf170;
+const HWND_BROADCAST = 0xffff;
+const VK_F15 = 0x7e;
+const KEYEVENTF_KEYUP = 0x0002;
+let user32 = null;
+
+function loadUser32() {
+  if (user32 !== null || process.platform !== 'win32') return user32;
+  try {
+    const lib = require('koffi').load('user32.dll');
+    user32 = {
+      PostMessageW: lib.func('int __stdcall PostMessageW(intptr_t hWnd, uint32_t msg, uintptr_t wParam, intptr_t lParam)'),
+      keybd_event: lib.func('void __stdcall keybd_event(uint8_t bVk, uint8_t bScan, uint32_t dwFlags, uintptr_t dwExtraInfo)'),
+    };
+  } catch {
+    user32 = false;
+  }
+  return user32;
+}
+
+function screen(on) {
+  const api = loadUser32();
+  if (!api) return false;
+  try {
+    if (on) {
+      api.keybd_event(VK_F15, 0, 0, 0);
+      api.keybd_event(VK_F15, 0, KEYEVENTF_KEYUP, 0);
+      api.PostMessageW(HWND_BROADCAST, WM_SYSCOMMAND, SC_MONITORPOWER, -1);
+    } else {
+      api.PostMessageW(HWND_BROADCAST, WM_SYSCOMMAND, SC_MONITORPOWER, 2);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+module.exports = { power, screen, stats, recommendPreset };
