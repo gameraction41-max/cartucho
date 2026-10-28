@@ -225,7 +225,8 @@ img { max-width: 100%; }
 .gstat b { font-family: var(--f-mono); font-size: 1.3rem; font-weight: 600; white-space: nowrap; }
 /* Minecraft: lista das instâncias no lugar das conquistas. */
 .inst-panel { max-height: calc(100vh - 16rem); display: flex; flex-direction: column; min-height: 0; }
-.inst-list { overflow-y: auto; display: grid; gap: .45rem; padding: 1rem; margin: -1rem; scroll-padding: 1rem; scrollbar-width: none; min-height: 0; }
+/* O brilho do foco passa 2rem da borda; o padding da lista tem que caber nele, senão a rolagem corta num retângulo. */
+.inst-list { overflow-y: auto; display: grid; gap: .45rem; padding: 2.2rem; margin: -2.2rem; scroll-padding: 2.2rem; scrollbar-width: none; min-height: 0; }
 .inst-list::-webkit-scrollbar { display: none; }
 .inst-line { display: grid; grid-template-columns: 3.2rem minmax(0, 1fr) auto 1.4rem; gap: 1rem; align-items: center; padding: .55rem .8rem .55rem .55rem; border-radius: .7rem; background: var(--glass); }
 .inst-line .cover { width: 3.2rem; padding: 0; font-size: 0; border-radius: .4rem; }
