@@ -1,4 +1,4 @@
-// Controle e teclado viram as mesmas ações: up, down, left, right, confirm, back, x, y, lb, rb, menu.
+// Controle e teclado viram as mesmas ações: up, down, left, right, confirm, back, x, y, lb, rb, lt, rt, menu.
 // Também avisa qual dispositivo foi usado por último, para o indicador no topo e as dicas de botões.
 
 const KEYS = {
@@ -8,11 +8,12 @@ const KEYS = {
   f: 'x', F: 'x', i: 'y', I: 'y',
   q: 'lb', Q: 'lb', e: 'rb', E: 'rb',
   m: 'menu', M: 'menu',
+  PageUp: 'lt', PageDown: 'rt',
 };
 
 // Mapeamento padrão do navegador para controles de Xbox, PlayStation e genéricos.
 // O botão 16 (Guide/Xbox) quase nunca chega por aqui no Windows; lá ele é lido pelo processo principal (main/guide.js).
-const BUTTONS = { 0: 'confirm', 1: 'back', 2: 'x', 3: 'y', 4: 'lb', 5: 'rb', 8: 'menu', 9: 'menu', 12: 'up', 13: 'down', 14: 'left', 15: 'right', 16: 'menu' };
+const BUTTONS = { 0: 'confirm', 1: 'back', 2: 'x', 3: 'y', 4: 'lb', 5: 'rb', 6: 'lt', 7: 'rt', 8: 'menu', 9: 'menu', 12: 'up', 13: 'down', 14: 'left', 15: 'right', 16: 'menu' };
 const REPEATABLE = new Set(['up', 'down', 'left', 'right']);
 const REPEAT_DELAY = 380;
 const REPEAT_RATE = 110;

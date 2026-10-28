@@ -34,6 +34,9 @@ export function createFocus() {
     const from = current.getBoundingClientRect();
     const fx = from.left + from.width / 2;
     const fy = from.top + from.height / 2;
+    // Distância entre as bordas no eixo de lado (0 quando os dois se sobrepõem). Assim, descendo de um botão largo,
+    // os dois botões menores logo abaixo dele ganham do botão largo que está mais longe.
+    const gap = (a1, a2, b1, b2) => Math.max(0, b1 - a2, a1 - b2);
     let best = null;
     let bestScore = Infinity;
     for (const el of list) {
@@ -43,14 +46,17 @@ export function createFocus() {
       const cy = r.top + r.height / 2;
       const dx = cx - fx;
       const dy = cy - fy;
+      const vertical = dir === 'up' || dir === 'down';
       let main;
-      let cross;
-      if (dir === 'left') { main = -dx; cross = Math.abs(dy); }
-      else if (dir === 'right') { main = dx; cross = Math.abs(dy); }
-      else if (dir === 'up') { main = -dy; cross = Math.abs(dx); }
-      else { main = dy; cross = Math.abs(dx); }
+      if (dir === 'left') main = -dx;
+      else if (dir === 'right') main = dx;
+      else if (dir === 'up') main = -dy;
+      else main = dy;
       if (main <= 1) continue;
-      const score = main + cross * 2.5;
+      const cross = vertical ? gap(from.left, from.right, r.left, r.right) : gap(from.top, from.bottom, r.top, r.bottom);
+      // Empate (dois botões lado a lado debaixo do atual): fica o que está mais perto do centro, e depois o da esquerda.
+      const center = Math.abs(vertical ? dx : dy);
+      const score = main + cross * 2.5 + center * 0.05;
       if (score < bestScore) {
         bestScore = score;
         best = el;
