@@ -46,7 +46,6 @@ if (!app.requestSingleInstanceLock()) {
     gamepresets.setInstallDir(downloads.installDir);
     mods.setTrash((file) => shell.trashItem(file));
     createWindow();
-    overlay.prepare();
     capture.setup({
       buffer: () => config.get('captureBuffer') !== false,
       onStatus: (s) => { send('capture:status', s); overlay.send('capture:status', s); },
@@ -93,7 +92,11 @@ function createWindow() {
     },
   });
   win.removeMenu();
-  win.once('ready-to-show', () => win.show());
+  // A janela do menu sobre o jogo fica pronta logo depois, para não disputar a abertura com a tela principal.
+  win.once('ready-to-show', () => {
+    win.show();
+    setTimeout(() => overlay.prepare(), 2000);
+  });
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.on('focus', () => send('window:focus'));
@@ -461,7 +464,6 @@ function registerIpc() {
   ipcMain.handle('mods:update', modding((dir, game, file) => mods.update(dir, game, file)));
   ipcMain.handle('mods:toggle', modding((dir, _game, file) => mods.toggle(dir, file)));
   ipcMain.handle('mods:remove', modding((dir, _game, file) => mods.remove(dir, file)));
-  ipcMain.handle('mods:folder', modding((dir) => shell.openPath(mods.modsDir(dir)), { changes: false }));
   ipcMain.handle('system:stats', () => system.stats());
   ipcMain.handle('system:recommended-preset', async () => {
     if (!recommended) recommended = system.stats().then(system.recommendPreset).catch(() => null);

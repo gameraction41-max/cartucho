@@ -130,9 +130,6 @@ body:has(#bg.scene) :is(.opt, .gline, .fline) { background: rgba(12, 14, 28, .74
 .btn:hover { background: var(--glass-strong); }
 .btn.primary { background: var(--ink); color: #0b0d14; border-color: transparent; font-weight: 700; font-size: 1.4rem; }
 .btn.small { font-size: 1rem; padding: .55rem 1.2rem; }
-.chip { background: var(--glass); border: 1px solid var(--glass-line); border-radius: .6rem; padding: .6rem 1.1rem; display: grid; gap: .1rem; }
-.chip small { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; }
-.chip b { font-family: var(--f-mono); font-size: 1.45rem; font-weight: 600; }
 .panel { background: var(--panel); backdrop-filter: blur(10px); border: 1px solid var(--glass-line); border-radius: 1rem; padding: 1.4rem 1.6rem; }
 .panel-title { font-family: var(--f-display); font-weight: 600; font-size: 1.25rem; margin: 0 0 1rem; }
 .bar { height: .4rem; background: var(--glass-line); border-radius: 1rem; overflow: hidden; }
@@ -539,11 +536,6 @@ body.overlay #overlay { background: linear-gradient(90deg, rgba(5, 6, 11, .55) 0
 /* ===== capturas ===== */
 .shots-head { min-width: 0; margin-bottom: 1rem; }
 .lib-bar { display: flex; min-width: 0; margin-bottom: .4rem; }
-.shots-kind { display: flex; flex: none; gap: .3rem; padding: .3rem; border-radius: 2rem; background: var(--glass); border: 1px solid var(--glass-line); }
-.shots-kind .pill { border-color: transparent; background: none; font-size: 1.1rem; padding: .55rem 1.3rem; }
-.shots-kind .pill.on { background: var(--ink); color: #0b0d14; }
-.shots-kind .pill small { margin-left: .5rem; opacity: .6; font-family: var(--f-mono, monospace); }
-.shots-kind .pill.on small { opacity: .7; }
 .shots-head .shots-filters { margin-left: auto; }
 .shots-filters { display: flex; gap: .6rem; overflow-x: auto; scrollbar-width: none; padding: .4rem; margin: -.4rem; min-width: 0; }
 .shots-filters::-webkit-scrollbar { display: none; }

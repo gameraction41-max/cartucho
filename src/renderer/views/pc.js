@@ -114,6 +114,7 @@ export default {
     }
 
     let timer = null;
+    let stopWait = () => {};
     let alive = true;
     async function tick() {
       let s;
@@ -137,7 +138,8 @@ export default {
         return m.el;
       }));
       osName.textContent = s.os;
-      timer = setTimeout(tick, REFRESH_MS);
+      // Com o Cartucho atrás do jogo, a leitura para e volta quando ele voltar para a frente.
+      timer = setTimeout(() => { stopWait = ctx.whenBack(tick); }, REFRESH_MS);
     }
     tick();
     loadPresets();
@@ -185,6 +187,7 @@ export default {
       destroy() {
         alive = false;
         clearTimeout(timer);
+        stopWait();
         bg.remove();
       },
     };

@@ -292,7 +292,6 @@ export const mock = {
     modsByInstance[id] = (modsByInstance[id] || []).filter((y) => y.file !== file);
     return { ok: true };
   },
-  modsFolder: async () => {},
   mcPresets: async () => [
     { id: 'desempenho', label: 'Desempenho', desc: 'Mais FPS: sombras, reflexos e efeitos mais leves' },
     { id: 'equilibrado', label: 'Equilibrado', desc: 'Bonito e fluido: o meio-termo de cada jogo' },

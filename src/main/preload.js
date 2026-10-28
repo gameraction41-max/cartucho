@@ -35,7 +35,6 @@ contextBridge.exposeInMainWorld('cartucho', {
   modsUpdate: invoke('mods:update'),
   modsToggle: invoke('mods:toggle'),
   modsRemove: invoke('mods:remove'),
-  modsFolder: invoke('mods:folder'),
   systemStats: invoke('system:stats'),
   recommendedPreset: invoke('system:recommended-preset'),
   setMcPresetAll: invoke('prism:preset-all'),
