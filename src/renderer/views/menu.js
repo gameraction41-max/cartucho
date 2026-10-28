@@ -6,6 +6,7 @@ import { h, loadFirst } from '../lib/ui.js';
 const svg = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const ICONS = {
   close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
+  profile: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
   home: svg('<path d="M3 11l9-7 9 7v9h-6v-6H9v6H3z"/>'),
   library: svg('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'),
   settings: svg('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>'),
@@ -106,6 +107,7 @@ export function createMenu({ ctx, focus, root, onClose }) {
       running ? nowPlaying(ctx, running, go(() => ctx.resume())) : null,
       h('div', { class: 'qlist qnav' },
         item('close', 'Fechar menu', () => close()),
+        item('profile', 'Perfil', go(() => ctx.openProfile())),
         item('home', 'Início', go(() => ctx.goTab('home'))),
         item('library', 'Biblioteca', go(() => ctx.goTab('library'))),
         item('settings', 'Configurações', go(() => ctx.goTab('settings'))),

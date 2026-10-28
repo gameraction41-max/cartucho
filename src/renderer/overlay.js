@@ -18,6 +18,7 @@ const ctx = {
   api,
   sfx,
   goTab: (tab) => navigate({ tab }),
+  openProfile: () => navigate({ profile: true }),
   sync: () => navigate({ sync: true }),
   resume: () => api.overlayClose(),
 };

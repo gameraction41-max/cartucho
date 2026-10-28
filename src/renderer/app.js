@@ -17,12 +17,16 @@ import pc from './views/pc.js';
 import friends from './views/friends.js';
 import screenshots from './views/screenshots.js';
 import artsearch from './views/artsearch.js';
+import profile from './views/profile.js';
+import collections from './views/collections.js';
+import collectionpick from './views/collectionpick.js';
+import mods from './views/mods.js';
 import { showBoot } from './views/boot.js';
 import { createMenu } from './views/menu.js';
 
-const VIEWS = { home, game, artsearch, achievements, minecraft, friends, library, screenshots, pc, settings };
-const TABS = ['home', 'minecraft', 'achievements', 'friends', 'library', 'screenshots', 'pc', 'settings'];
-const SCROLLERS = '.shots-filters, .set-list, .glist, .grid, .row, .mc-row, .ach-list';
+const VIEWS = { home, game, artsearch, mods, profile, collectionpick, collections, achievements, minecraft, friends, library, screenshots, pc, settings };
+const TABS = ['home', 'minecraft', 'achievements', 'friends', 'library', 'collections', 'screenshots', 'pc', 'settings'];
+const SCROLLERS = '.shelves, .shelf-row, .lib-pills, .shots-filters, .set-list, .glist, .grid, .row, .mc-row, .ach-list';
 
 const GLYPHS = {
   gamepad: { confirm: ['A', 'a'], back: ['B', 'b'], x: ['X', 'x'], y: ['Y', 'y'], lb: ['LB', ''], rb: ['RB', ''], menu: ['☰', ''], lr: ['◀ ▶', ''] },
@@ -175,6 +179,7 @@ const ctx = {
   },
   back,
   goTab,
+  openProfile,
   launch,
   install,
   uninstall,
@@ -234,6 +239,13 @@ function goTab(id) {
   stack.push({ id, params: {} });
   sfx.tab();
   show();
+}
+
+// O perfil não é uma aba: abre por cima da tela atual e o B volta para ela.
+function openProfile() {
+  if (current && current.id === 'profile') return;
+  sfx.confirm();
+  ctx.go('profile');
 }
 
 function cycleTab(delta) {
@@ -479,6 +491,7 @@ async function start() {
   api.on('menu:navigate', (target) => {
     if (menu.isOpen()) menu.close('navigate');
     if (target.tab) goTab(target.tab);
+    if (target.profile) openProfile();
     if (target.sync) sync({ force: true, quiet: false });
   });
   api.on('game:started', (r) => { state.running = r; });
@@ -497,6 +510,9 @@ async function start() {
       openMenu();
     }
   });
+
+  // Clicar no nome lá em cima abre o perfil.
+  document.querySelector('#topbar .me').addEventListener('click', openProfile);
 
   stack.push({ id: 'home', params: {} });
   const enter = async () => {

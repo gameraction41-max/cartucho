@@ -2,6 +2,7 @@
 const path = require('node:path');
 const { app, safeStorage } = require('electron');
 const { JsonStore } = require('./store');
+const collections = require('./collections');
 const { normalize } = require('./sofa');
 
 const DEFAULTS = {
@@ -21,6 +22,7 @@ const DEFAULTS = {
   volume: 0.5,
   captureBuffer: true,
   theme: 'cartucho',
+  collections: collections.DEFAULT_COLLECTIONS,
   sofaAction: 'off',
   sofaMinutes: 30,
 };
@@ -76,6 +78,7 @@ function update(patch) {
     if (!(key in DEFAULTS)) delete next[key];
   }
   if (typeof next.steamId === 'string') next.steamId = next.steamId.trim();
+  if ('collections' in next) next.collections = collections.sanitize(next.collections);
   if ('sofaAction' in next || 'sofaMinutes' in next) {
     const sofa = normalize({ action: next.sofaAction ?? s.get('sofaAction'), minutes: next.sofaMinutes ?? s.get('sofaMinutes') });
     next.sofaAction = sofa.action;

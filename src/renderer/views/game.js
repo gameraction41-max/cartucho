@@ -1,6 +1,7 @@
 // Página do jogo: arte em tela cheia, botão de jogar, tempo jogado e lista de conquistas.
 import { h, hours, when, dlBar, SOURCE_NAME } from '../lib/ui.js';
 import { playLabel } from './home.js';
+import { collectionsOf } from '../lib/collections.js';
 
 const OPEN_LABEL = { steam: 'Abrir na Steam', prism: 'Abrir no Prism', hytale: 'Mostrar pasta do Hytale' };
 
@@ -53,7 +54,7 @@ function sidePanel(ctx, g) {
   if (g.source === 'prism') {
     return h('section', { class: 'panel' },
       h('h2', { class: 'panel-title' }, 'Instância do Prism Launcher'),
-      h('p', { class: 'muted', style: { margin: 0 } }, 'O Cartucho abre esta instância direto, sem passar pela janela do Prism. Mods e versões continuam sendo gerenciados no Prism.'));
+      h('p', { class: 'muted', style: { margin: 0 } }, 'O Cartucho abre esta instância direto, sem passar pela janela do Prism. Em Mods dá para atualizar, desativar, remover e instalar mods do Modrinth. A versão do Minecraft e o loader continuam sendo trocados no Prism.'));
   }
   return h('section', { class: 'panel' },
     h('h2', { class: 'panel-title' }, 'Tempo de jogo'),
@@ -162,6 +163,13 @@ function presetButton(ctx, g) {
   return [btn, note, restoreBtn];
 }
 
+// Mostra em quais coleções o jogo está; abre a tela para pôr e tirar.
+function collectionsButton(ctx, g) {
+  const names = collectionsOf(ctx).filter((c) => c.keys.includes(g.key)).map((c) => c.name);
+  const label = names.length ? `Coleções: ${names.join(', ')}` : 'Pôr numa coleção';
+  return h('button', { class: `btn col-btn ${names.length ? 'on' : ''}`, 'data-focus': true, 'data-key': 'collections', onclick: () => { ctx.sfx.confirm(); ctx.go('collectionpick', { key: g.key }); } }, label);
+}
+
 export default {
   label: 'Jogo',
   render(ctx, { key }) {
@@ -185,8 +193,10 @@ export default {
         h('div', { class: 'menu-v' },
           g.download ? dlBar(g.download, g.download.update ? 'Atualizando' : 'Baixando') : null,
           h('button', { class: 'btn primary', 'data-focus': true, 'data-autofocus': true, 'data-key': 'play', onclick: () => ctx.launch(g) }, playLabel(g)),
+          g.source === 'prism' ? h('button', { class: 'btn', 'data-focus': true, 'data-key': 'mods', onclick: () => { ctx.sfx.confirm(); ctx.go('mods', { key: g.key }); } }, g.mods ? `Mods · ${g.mods}` : 'Mods') : null,
           g.source === 'prism' || g.presets ? presetButton(ctx, g) : null,
           h('button', { class: 'btn', 'data-focus': true, 'data-key': 'open', onclick: () => ctx.api.openInSource(g) }, OPEN_LABEL[g.source]),
+          collectionsButton(ctx, g),
           h('div', { class: 'art-btns' },
             h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'art-search', onclick: () => { ctx.sfx.confirm(); ctx.go('artsearch', { key: g.key, mode: 'images' }); } }, 'Buscar capa e fundo'),
             h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'music-search', onclick: () => { ctx.sfx.confirm(); ctx.go('artsearch', { key: g.key, mode: 'music' }); } }, '♪ Buscar música')),

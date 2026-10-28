@@ -69,11 +69,43 @@ let config = {
   openAtLogin: true, returnAfterGame: true, captureBuffer: true, showBoot: true, sounds: true, music: true, musicFile: '', volume: 0.5,
   // Na demo dá para abrir já com um tema: index.html?tema=ps5
   theme: new URLSearchParams(location.search).get('tema') || 'cartucho',
+  collections: [
+    { id: 'jogando', name: 'Jogando agora', keys: ['steam:1145350', 'steam:1174180', 'prism:FO', 'steam:227300'] },
+    { id: 'zerar', name: 'Para zerar', keys: ['steam:1245620', 'steam:1030300', 'steam:1091500', 'steam:504230', 'steam:1174180'] },
+    { id: 'coop', name: 'Com a galera', keys: ['steam:105600', 'prism:CABE', 'steam:413150'] },
+  ],
   sofaAction: 'off', sofaMinutes: 30,
   defaultPrismDir: 'C:\\Users\\Filipi\\AppData\\Roaming\\PrismLauncher', running: null,
 };
 
 const mcPresets = { FO: 'desempenho' };
+// Mods de exemplo: ícones em SVG no lugar dos do Modrinth.
+const modIcon = (hue, letter) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="hsl(${hue} 55% 42%)"/><rect x="10" y="10" width="44" height="44" rx="8" fill="hsl(${hue + 20} 70% 60%)" opacity=".35"/><text x="32" y="43" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="30" fill="#fff">${letter}</text></svg>`)}`;
+const mod = (name, version, hue, extra = {}) => ({
+  file: `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${version}.jar`, enabled: true, size: 400000 + name.length * 91000, name, icon: modIcon(hue, name[0]),
+  projectId: `p-${name}`, version, update: null, description: '', ...extra,
+});
+const modsByInstance = {
+  FO: [
+    mod('Sodium', '0.6.5+mc1.21.1', 150, { update: { number: '0.6.13+mc1.21.1' }, description: 'O mod de otimização de renderização mais rápido para o Minecraft.' }),
+    mod('Iris Shaders', '1.8.1+1.21.1', 280, { update: { number: '1.8.8+1.21.1' }, description: 'Mod de shaders moderno, compatível com OptiFine shaders.' }),
+    mod('Fabric API', '0.110.0+1.21.1', 30, { update: { number: '0.116.6+1.21.1' }, description: 'Biblioteca base para a maioria dos mods de Fabric.' }),
+    mod('Lithium', '0.15.0+mc1.21.1', 200, { description: 'Otimizações gerais para o jogo, sem mudar nada da jogabilidade.' }),
+    mod('Mod Menu', '11.0.3', 0, { description: 'Lista os mods instalados e abre as configurações de cada um.' }),
+    mod('Entity Culling', '1.7.2', 100, { description: 'Não desenha entidades que estão escondidas atrás de blocos.' }),
+    mod('Continuity', '3.0.0+1.21', 50, { description: 'Texturas conectadas, como no OptiFine.' }),
+    mod('Zoomify', '2.14.2', 320, { description: 'Zoom configurável, com animação suave.' }),
+    mod('ImmediatelyFast', '1.3.4+1.21.1', 15, { description: 'Acelera o desenho de interface, textos e entidades.' }),
+    mod('Xaeros Minimap', '24.6.1', 220, { enabled: false, file: 'xaeros-minimap-24.6.1.jar.disabled', description: 'Minimapa com waypoints.' }),
+    mod('cool-hud-1.0', '', 0, { icon: null, projectId: null, version: '', file: 'cool-hud-1.0.jar' }),
+  ],
+  CABE: [mod('Create', '0.3.2g', 40, { description: 'Engrenagens, esteiras e máquinas.' }), mod('JEI', '7.7.1.153', 210, { description: 'Mostra as receitas de todos os itens.' })],
+};
+const modResults = [
+  ['Sodium', 150, 92e6], ['Fabric API', 30, 110e6], ['Iris Shaders', 280, 75e6], ['Lithium', 200, 44e6], ['Mod Menu', 0, 61e6], ['Entity Culling', 100, 38e6],
+  ['Xaeros Minimap', 220, 29e6], ['Just Enough Items', 210, 120e6], ['AppleSkin', 120, 33e6], ['Jade', 260, 41e6], ['Waystones', 180, 25e6], ['Clumps', 90, 19e6],
+  ['FerriteCore', 20, 52e6], ['Simple Voice Chat', 340, 24e6], ['Distant Horizons', 240, 12e6],
+].map(([name, hue, dl]) => ({ projectId: `p-${name}`, slug: name.toLowerCase(), name, description: `Descrição de exemplo de ${name}, como aparece no Modrinth.`, icon: modIcon(hue, name[0]), downloads: dl, author: 'autor' }));
 const friend = (steamId, name, status, extra = {}) => ({ steamId, name, avatar: '', status, appid: null, game: '', lastOnline: now - 2 * day, ...extra });
 const friends = [
   friend('76561198000000001', 'Rafa', 'playing', { appid: 1245620, game: 'ELDEN RING' }),
@@ -123,6 +155,35 @@ export const mock = {
       level: Math.floor(xp / 250) + 1, progress: (xp % 250) / 250, xp,
     };
   },
+  getProfile: async () => {
+    const summary = await mock.achievementSummary();
+    const bySource = { steam: 0, prism: 0, hytale: 0 };
+    for (const g of games) bySource[g.source] += g.minutes;
+    // Ícones de exemplo: um troféu com a cor de cada jogo.
+    const icon = (hh) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="hsl(${hh} 45% 22%)"/><path d="M20 14h24v10a12 12 0 0 1-24 0z M28 36h8v8h6v6H22v-6h6z" fill="hsl(${hh} 70% 62%)"/></svg>`)}`;
+    const rare = [
+      ['ELDEN RING', 1245620, 'Elden Lord', 'Alcançou o final Era da Fratura', 3.8, 40],
+      ['Hades II', 1145350, 'Medo Absoluto', 'Venceu com 32 de Medo', 0.6, 350],
+      ['Celeste', 504230, 'Coração Dourado', 'Terminou o Capítulo 9', 1.4, 300],
+      ['Terraria', 105600, 'Fim de Jogo', 'Derrotou o Senhor da Lua', 4.9, 190],
+      ['Stardew Valley', 413150, 'Lenda', 'Ganhou 10.000.000 de ouro', 2.7, 100],
+      ['Euro Truck Simulator 2', 227300, 'Magnata', 'Comprou todas as garagens', 6.2, 210],
+      ['Cyberpunk 2077', 1091500, 'O Lendário', 'Atingiu reputação de rua máxima', 9.8, 55],
+      ['Hollow Knight: Silksong', 1030300, 'Rainha da Seda', 'Terminou o jogo em menos de 5 horas', 0.3, 280],
+    ].map(([game, appid, name, description, percent, hh], i) => ({ appid, api: `R${i}`, key: `steam:${appid}`, game, name, description, percent, icon: icon(hh), unlocktime: now - i * 9 * day }))
+      .sort((a, b) => a.percent - b.percent);
+    return {
+      player: { name: 'Filipi', avatar: '', steamLevel: 37, since: new Date(2014, 5, 2).getTime() },
+      steamConfigured: true,
+      summary,
+      playtime: {
+        minutes: games.reduce((s, g) => s + g.minutes, 0), bySource, games: games.length, played: games.filter((g) => g.minutes).length,
+        top: [...games].sort((a, b) => b.minutes - a.minutes).slice(0, 4).map((g) => ({ key: g.key, title: g.title, source: g.source, minutes: g.minutes })),
+      },
+      rare: new URLSearchParams(location.search).get('raras') === '0' ? [] : rare,
+      rarityStatus: { running: false, done: 0, total: 0 },
+    };
+  },
   gameAchievements: async (appid) => {
     const g = games.find((x) => x.appid === appid);
     if (!g || !g.ach) return null;
@@ -164,6 +225,41 @@ export const mock = {
   useTrack: async () => ({ ok: true }),
   searchDone: async () => {},
   resetArt: async () => {},
+  modsList: async (id) => {
+    await new Promise((r) => setTimeout(r, 500));
+    const g = games.find((x) => x.instanceId === id);
+    return { mods: [...(modsByInstance[id] || [])], offline: null, supported: !!g && g.loader !== 'Vanilla', dir: '' };
+  },
+  modsSearch: async (id, text) => {
+    await new Promise((r) => setTimeout(r, 400));
+    const t = String(text || '').toLowerCase();
+    const items = t ? modResults.filter((x) => x.name.toLowerCase().includes(t)) : modResults;
+    return { items, total: items.length, offset: 0 };
+  },
+  modsInstall: async (id, projectId) => {
+    await new Promise((r) => setTimeout(r, 700));
+    const x = modResults.find((y) => y.projectId === projectId);
+    (modsByInstance[id] ||= []).push(mod(x.name, '1.0.0', 60, { icon: x.icon, projectId, description: x.description }));
+    return { installed: [x.name] };
+  },
+  modsUpdate: async (id, file) => {
+    await new Promise((r) => setTimeout(r, 500));
+    const x = (modsByInstance[id] || []).find((y) => y.file === file);
+    const version = x.update.number;
+    Object.assign(x, { version, update: null });
+    return { updated: true, name: x.name, version };
+  },
+  modsToggle: async (id, file) => {
+    const x = (modsByInstance[id] || []).find((y) => y.file === file);
+    x.enabled = !x.enabled;
+    x.file = x.enabled ? x.file.replace(/\.disabled$/, '') : `${x.file}.disabled`;
+    return { file: x.file, enabled: x.enabled };
+  },
+  modsRemove: async (id, file) => {
+    modsByInstance[id] = (modsByInstance[id] || []).filter((y) => y.file !== file);
+    return { ok: true };
+  },
+  modsFolder: async () => {},
   mcPresets: async () => [
     { id: 'desempenho', label: 'Desempenho', desc: 'Mais FPS: sombras, reflexos e efeitos mais leves' },
     { id: 'equilibrado', label: 'Equilibrado', desc: 'Bonito e fluido: o meio-termo de cada jogo' },

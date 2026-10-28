@@ -8,6 +8,7 @@ const config = require('./config');
 const steam = require('./steam');
 const prism = require('./prism');
 const { computeLevel } = require('./level');
+const profileData = require('./profile');
 const art = require('./art');
 const history = require('./history');
 const downloads = require('./downloads');
@@ -22,7 +23,7 @@ let historyStore;
 function stores() {
   if (!cache) {
     const dir = app.getPath('userData');
-    cache = new JsonStore(path.join(dir, 'steam-cache.json'), { owned: [], syncedAt: 0, profile: null, ach: {}, schema: {} });
+    cache = new JsonStore(path.join(dir, 'steam-cache.json'), { owned: [], syncedAt: 0, profile: null, ach: {}, schema: {}, rarity: {} });
     playtime = new JsonStore(path.join(dir, 'playtime.json'), { hytale: { seconds: 0, lastPlayed: 0 } });
     historyStore = new JsonStore(path.join(dir, 'history.json'), { snapshot: {}, days: {} });
   }
@@ -109,10 +110,13 @@ async function syncSteam() {
   const creds = steamCreds();
   if (!creds) return getLibrary();
   const { cache } = stores();
-  const [owned, profile] = await Promise.all([
+  const [owned, summary, steamLevel] = await Promise.all([
     steam.getOwnedGames(creds.key, creds.steamId),
-    steam.getPlayerSummary(creds.key, creds.steamId).catch(() => cache.get('profile')),
+    steam.getPlayerSummary(creds.key, creds.steamId).catch(() => null),
+    steam.getSteamLevel(creds.key, creds.steamId).catch(() => null),
   ]);
+  const before = cache.get('profile') || {};
+  const profile = summary ? { ...summary, steamLevel: steamLevel ?? before.steamLevel ?? null } : cache.get('profile');
   const previous = new Map(cache.get('owned').map((g) => [g.appid, g]));
   for (const g of owned) {
     const before = previous.get(g.appid);
@@ -268,6 +272,84 @@ async function refreshSteamGame(appid) {
   }
 }
 
+// Raridade das conquistas (porcentagem de jogadores que têm cada uma), para a tela de perfil.
+// Só entra quem tem alguma conquista desbloqueada. A porcentagem muda devagar, então é lida de novo uma vez por semana.
+const RARITY_TTL = 7 * 24 * 3600 * 1000;
+const RETRY_AFTER = 24 * 3600 * 1000;
+let rarityStatus = { running: false, done: 0, total: 0 };
+
+async function syncRarity({ onProgress = () => {} } = {}) {
+  if (!steamCreds() || rarityStatus.running) return;
+  const { cache } = stores();
+  const ach = cache.get('ach');
+  const rarity = cache.get('rarity') || {};
+  const queue = Object.entries(ach)
+    .filter(([appid, e]) => e.list && e.list.some((a) => a.achieved) && !(rarity[appid] && Date.now() - rarity[appid].fetchedAt < RARITY_TTL))
+    .map(([appid]) => appid);
+  if (!queue.length) return;
+  rarityStatus = { running: true, done: 0, total: queue.length };
+  const worker = async () => {
+    while (queue.length) {
+      const appid = queue.shift();
+      try {
+        rarity[appid] = { pct: profileData.roundPercentages(await steam.getGlobalPercentages(appid)), fetchedAt: Date.now() };
+      } catch {
+        // Sem a porcentagem, tenta de novo no dia seguinte; senão cada abertura do perfil buscaria tudo outra vez.
+        rarity[appid] = { pct: (rarity[appid] && rarity[appid].pct) || null, fetchedAt: Date.now() - RARITY_TTL + RETRY_AFTER };
+      }
+      rarityStatus.done++;
+      if (rarityStatus.done % SAVE_EVERY === 0) {
+        cache.set('rarity', rarity);
+        onProgress();
+      }
+    }
+  };
+  try {
+    await Promise.all(Array.from({ length: ACH_CONCURRENCY }, worker));
+  } finally {
+    cache.set('rarity', rarity);
+    rarityStatus.running = false;
+  }
+  await rareIcons();
+  onProgress();
+}
+
+// Ícones das conquistas em destaque vêm do schema de cada jogo, buscado só para os jogos que aparecem no perfil.
+async function rareIcons() {
+  const creds = steamCreds();
+  const { cache } = stores();
+  const schemas = cache.get('schema');
+  const rare = profileData.rarest(cache.get('ach'), cache.get('rarity') || {});
+  let changed = false;
+  for (const appid of new Set(rare.map((a) => a.appid))) {
+    if (schemas[appid] || !creds) continue;
+    try {
+      schemas[appid] = await steam.getSchema(creds.key, appid);
+      changed = true;
+    } catch {}
+  }
+  if (changed) cache.set('schema', schemas);
+}
+
+function profile() {
+  const { cache } = stores();
+  const lib = getLibrary();
+  const schemas = cache.get('schema');
+  const names = new Map(cache.get('owned').map((g) => [String(g.appid), g.name]));
+  const rare = profileData.rarest(cache.get('ach'), cache.get('rarity') || {}).map((a) => {
+    const s = (schemas[a.appid] || []).find((x) => x.api === a.api) || {};
+    return { ...a, key: `steam:${a.appid}`, game: names.get(String(a.appid)) || String(a.appid), name: s.name || a.name, description: s.description || a.description, icon: s.icon || '' };
+  });
+  return {
+    player: lib.profile,
+    steamConfigured: lib.steamConfigured,
+    summary: achievementSummary(),
+    playtime: profileData.playtime(lib.games),
+    rare,
+    rarityStatus,
+  };
+}
+
 // Amigos mudam de status o tempo todo, então a lista fica guardada só por um minuto.
 const FRIENDS_TTL = 60 * 1000;
 let friendsCache = null;
@@ -301,4 +383,4 @@ function addHytaleTime(ms) {
   playtime.set('hytale', { seconds: t.seconds + Math.round(ms / 1000), lastPlayed: Date.now() });
 }
 
-module.exports = { steamNames, playWeek, friends, newUnlocks, getLibrary, syncSteam, syncAchievements, achievementSummary, gameAchievements, refreshSteamGame, addHytaleTime, prismDir };
+module.exports = { profile, syncRarity, steamNames, playWeek, friends, newUnlocks, getLibrary, syncSteam, syncAchievements, achievementSummary, gameAchievements, refreshSteamGame, addHytaleTime, prismDir };

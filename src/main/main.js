@@ -20,6 +20,7 @@ const gamepresets = require('./gamepresets');
 const screenshots = require('./screenshots');
 const capture = require('./capture');
 const steamlocal = require('./steamlocal');
+const mods = require('./mods');
 const sofa = require('./sofa');
 
 const windowed = process.argv.includes('--windowed');
@@ -39,6 +40,7 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc();
     gamepresets.setBackupDir(() => path.join(app.getPath('userData'), 'backups'));
     gamepresets.setInstallDir(downloads.installDir);
+    mods.setTrash((file) => shell.trashItem(file));
     createWindow();
     overlay.prepare();
     capture.setup({
@@ -192,6 +194,10 @@ function startSofa() {
   powerMonitor.on('resume', () => couch.resumed());
 }
 
+function syncRarity() {
+  return library.syncRarity({ onProgress: () => send('achievements:changed') });
+}
+
 // Conquistas novas aparecem como aviso na tela do Cartucho. Com um jogo aberto, a própria Steam já avisa por cima dele.
 function notifyUnlocks(list) {
   if (list && list.length) send('achievements:unlocked', list);
@@ -271,6 +277,7 @@ function registerIpc() {
       library.syncAchievements({ ...opts, onProgress: () => send('achievements:changed') }).then((unlocked) => {
         send('achievements:changed');
         notifyUnlocks(unlocked);
+        return syncRarity();
       }).catch(() => {});
       return lib;
     } catch (err) {
@@ -278,6 +285,11 @@ function registerIpc() {
     }
   });
   ipcMain.handle('achievements:summary', () => library.achievementSummary());
+  // Abrir o perfil já começa a ler a raridade que falta; a tela se atualiza com achievements:changed.
+  ipcMain.handle('profile:get', () => {
+    syncRarity().catch(() => {});
+    return library.profile();
+  });
   ipcMain.handle('achievements:game', (_e, appid) => library.gameAchievements(appid));
   ipcMain.handle('game:launch', (_e, game) => launchGame(game));
   ipcMain.handle('game:open-source', (_e, game) => openInSource(game));
@@ -345,6 +357,24 @@ function registerIpc() {
       return { error: err.message };
     }
   });
+  // Mods das instâncias do Prism. A instância vem pelo id, e a pasta é achada aqui, nunca pela tela.
+  const modding = (fn, { changes = true } = {}) => async (_e, instanceId, ...args) => {
+    const inst = prism.listInstances(library.prismDir()).find((i) => i.id === instanceId);
+    if (!inst) return { error: 'Não encontrei a pasta desta instância.' };
+    if (changes && running && running.key === `prism:${instanceId}`) return { error: 'Feche o Minecraft antes de mexer nos mods desta instância.' };
+    try {
+      return await fn(inst.dir, { loader: inst.loader, mcVersion: inst.mcVersion }, ...args);
+    } catch (err) {
+      return { error: err instanceof mods.ModError ? err.message : `Não deu certo: ${err.message}` };
+    }
+  };
+  ipcMain.handle('mods:list', modding((dir, game) => mods.list(dir, game), { changes: false }));
+  ipcMain.handle('mods:search', modding((_dir, game, text, offset) => mods.search(game, text, offset), { changes: false }));
+  ipcMain.handle('mods:install', modding((dir, game, projectId) => mods.install(dir, game, projectId)));
+  ipcMain.handle('mods:update', modding((dir, game, file) => mods.update(dir, game, file)));
+  ipcMain.handle('mods:toggle', modding((dir, _game, file) => mods.toggle(dir, file)));
+  ipcMain.handle('mods:remove', modding((dir, _game, file) => mods.remove(dir, file)));
+  ipcMain.handle('mods:folder', modding((dir) => shell.openPath(mods.modsDir(dir)), { changes: false }));
   ipcMain.handle('system:stats', () => system.stats());
   ipcMain.handle('system:recommended-preset', async () => {
     if (!recommended) recommended = system.stats().then(system.recommendPreset).catch(() => null);
