@@ -138,6 +138,12 @@ export default {
       path('hytaleExe', 'Executável do Hytale', 'Escolha o .exe que abre o jogo', { filters: [{ name: 'Programas', extensions: ['exe'] }] }),
       text('hytaleProcess', 'Nome do processo do jogo', 'Opcional. Usado para contar o tempo quando o .exe acima é só o launcher', { placeholder: 'HytaleClient.exe' }),
 
+      section('', 'Capas e músicas'),
+      text('sgdbApiKey', 'Chave do SteamGridDB', 'Para buscar capas e fundos. Grátis em steamgriddb.com › Preferências › API. Fica guardada só neste PC.', {
+        secret: true,
+        placeholder: cfg.hasSgdbApiKey ? `•••••••• ${cfg.sgdbApiKeyHint}` : 'cole a chave aqui',
+      }),
+
       section('', 'Capturas'),
       toggle('captureBuffer', 'Guardar os últimos 30 segundos enquanto joga', 'Grava em segundo plano pela placa de vídeo. Os arquivos vão para Imagens e Vídeos › Cartucho'),
       action('captureKeys', 'Atalhos durante o jogo', 'Xbox + Y print · Xbox + X últimos 30 s · Xbox + RB gravar · no teclado, Alt+Shift+P, G e R', () => {}),

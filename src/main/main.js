@@ -9,6 +9,7 @@ const prism = require('./prism');
 const watch = require('./watch');
 const system = require('./system');
 const art = require('./art');
+const artsearch = require('./artsearch');
 const mcoptions = require('./mcoptions');
 const { watchGuideButton } = require('./guide');
 const { forceForeground } = require('./foreground');
@@ -262,6 +263,42 @@ function registerIpc() {
     }
   });
   ipcMain.handle('art:reset', (_e, key, kind) => art.reset(key, kind));
+  // Busca de capa, fundo e música na internet. Erros voltam como { error } para a tela mostrar.
+  const searching = (fn) => async (_e, ...args) => {
+    try {
+      return await fn(...args);
+    } catch (err) {
+      return { error: err instanceof artsearch.SearchError ? err.message : 'Não deu para buscar agora. Tente de novo.' };
+    }
+  };
+  const previews = new Map(); // faixa → arquivo baixado para ouvir, reaproveitado se a pessoa escolher a faixa
+  const clearPreviews = () => {
+    for (const file of previews.values()) artsearch.cleanup(file);
+    previews.clear();
+  };
+  const trackFile = async (trackId) => {
+    if (!previews.has(trackId)) previews.set(trackId, await artsearch.downloadTrack(trackId));
+    return previews.get(trackId);
+  };
+  ipcMain.handle('artsearch:images', searching((game, kind, term) => artsearch.images(config.getSgdbApiKey(), game, kind, term)));
+  ipcMain.handle('artsearch:albums', searching((game, term) => artsearch.albums(game, term)));
+  ipcMain.handle('artsearch:tracks', searching((album) => artsearch.tracks(album)));
+  ipcMain.handle('artsearch:preview', searching(async (trackId) => ({ file: await trackFile(trackId) })));
+  ipcMain.handle('artsearch:use-image', searching(async (key, kind, url) => {
+    const file = await artsearch.downloadImage(url);
+    try {
+      art.set(key, kind, file);
+    } finally {
+      artsearch.cleanup(file);
+    }
+    return { ok: true };
+  }));
+  ipcMain.handle('artsearch:use-track', searching(async (key, trackId, name) => {
+    art.set(key, 'music', await trackFile(trackId), name);
+    return { ok: true };
+  }));
+  ipcMain.handle('artsearch:done', () => clearPreviews());
+  app.on('will-quit', clearPreviews);
   ipcMain.handle('prism:presets', () => mcoptions.PRESET_LIST);
   ipcMain.handle('prism:preset-get', (_e, instanceId) => {
     const dir = instanceDir(instanceId);

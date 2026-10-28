@@ -65,7 +65,7 @@ setInterval(() => {
 }, 1500);
 
 let config = {
-  steamId: '76561198000000000', hasSteamApiKey: true, steamApiKeyHint: 'A91F', prismDir: '', prismExe: '', hytaleExe: 'C:\\Program Files\\Hytale\\Hytale.exe', hytaleProcess: '',
+  steamId: '76561198000000000', hasSteamApiKey: true, steamApiKeyHint: 'A91F', hasSgdbApiKey: new URLSearchParams(location.search).get('sgdb') !== '0', sgdbApiKeyHint: '7C2E', prismDir: '', prismExe: '', hytaleExe: 'C:\\Program Files\\Hytale\\Hytale.exe', hytaleProcess: '',
   openAtLogin: true, returnAfterGame: true, captureBuffer: true, showBoot: true, sounds: true, music: true, musicFile: '', volume: 0.5,
   // Na demo dá para abrir já com um tema: index.html?tema=ps5
   theme: new URLSearchParams(location.search).get('tema') || 'cartucho',
@@ -99,6 +99,11 @@ export const mock = {
       config.hasSteamApiKey = !!patch.steamApiKey;
       config.steamApiKeyHint = String(patch.steamApiKey).slice(-4);
       delete patch.steamApiKey;
+    }
+    if ('sgdbApiKey' in patch) {
+      config.hasSgdbApiKey = !!patch.sgdbApiKey;
+      config.sgdbApiKeyHint = String(patch.sgdbApiKey).slice(-4);
+      delete patch.sgdbApiKey;
     }
     config = { ...config, ...patch };
     return { ...config };
@@ -135,6 +140,28 @@ export const mock = {
   openDownloads: async () => {},
   openInSource: async () => {},
   pickArt: async () => ({ canceled: true }),
+  // Busca na internet: imagens de exemplo no lugar do SteamGridDB e uma trilha de mentira no lugar do KHInsider.
+  searchImages: async (game, kind, term) => {
+    await new Promise((r) => setTimeout(r, 400));
+    const name = term || game.title;
+    const art = (i) => {
+      const [w, ht] = kind === 'cover' ? [600, 900] : [1920, 620];
+      const h1 = (name.length * 37 + i * 29) % 360;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${ht}"><defs><linearGradient id="g" x1="0" y1="0" x2="${i % 2}" y2="1"><stop offset="0" stop-color="hsl(${h1} 65% 55%)"/><stop offset="1" stop-color="hsl(${h1 + 60} 60% 12%)"/></linearGradient></defs><rect width="${w}" height="${ht}" fill="url(#g)"/><circle cx="${w * (0.25 + (i % 3) * 0.25)}" cy="${ht * 0.35}" r="${Math.min(w, ht) * 0.22}" fill="hsl(${h1 + 30} 90% 75%)" opacity=".5"/><text x="50%" y="${kind === 'cover' ? '82%' : '70%'}" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="${kind === 'cover' ? 64 : 120}" fill="#fff">${name.replace(/[<&]/g, '')}</text></svg>`;
+      return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+    };
+    return { term: name, name, items: Array.from({ length: kind === 'cover' ? 14 : 8 }, (_, i) => ({ id: i + 1, url: art(i), thumb: art(i), author: ['Kirito', 'gridmaster', 'neon_arts', 'Vash'][i % 4] })) };
+  },
+  searchAlbums: async (game, term) => {
+    await new Promise((r) => setTimeout(r, 400));
+    const name = term || (game.source === 'prism' ? 'Minecraft' : game.title);
+    return { term: name, items: [`${name} Original Soundtrack`, `${name} (Gamerip)`, `${name} - Volume Beta`, `${name} Deluxe Edition Soundtrack`].map((n, i) => ({ id: `album-${i}`, name: n })) };
+  },
+  albumTracks: async () => ['Main Theme', 'Title Screen', 'Into the Unknown', 'Boss Battle', 'Peaceful Village', 'Night Falls', 'Credits'].map((n, i) => ({ id: `/t/${i}`, name: n, duration: `${2 + (i % 3)}:${String(10 + i * 7).slice(-2)}` })),
+  previewTrack: async () => ({ error: 'Na demonstração não dá para ouvir.' }),
+  useImage: async () => ({ ok: true }),
+  useTrack: async () => ({ ok: true }),
+  searchDone: async () => {},
   resetArt: async () => {},
   mcPresets: async () => [
     { id: 'desempenho', label: 'Desempenho', desc: 'Mais FPS: sombras, reflexos e efeitos mais leves' },
