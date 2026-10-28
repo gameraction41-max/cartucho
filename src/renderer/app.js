@@ -27,6 +27,8 @@ import { playIntro } from './lib/intro.js';
 import { createMenu } from './views/menu.js';
 
 const VIEWS = { home, game, gameopts, addgame, artsearch, mods, profile, collectionpick, collections, achievements, friends, library, screenshots, pc, settings };
+// Desenhos de fundo de cada aba, em img/bg.
+const SCENES = { achievements: 'img/bg/achievements.svg', friends: 'img/bg/friends.svg', library: 'img/bg/library.svg', collections: 'img/bg/collections.svg', screenshots: 'img/bg/screenshots.svg', settings: 'img/bg/settings.svg' };
 const TABS = ['home', 'achievements', 'friends', 'library', 'collections', 'screenshots', 'pc', 'settings'];
 const SCROLLERS = '.shelves, .shelf-row, .lib-pills, .shots-filters, .set-list, .glist, .grid, .row, .ach-list, .inst-list, .opts-list, .add-list';
 
@@ -124,12 +126,14 @@ let trackTimer = null;
 async function setBackground(g) {
   clearTimeout(trackTimer);
   trackTimer = setTimeout(() => setGameTrack(g && g.music), g && g.music ? TRACK_DELAY : 0);
+  // Sem jogo, a aba mostra o desenho dela (o Início e a aba PC, que tem fundo próprio, ficam de fora).
+  const scene = !g && stack[0] ? SCENES[stack[0].id] : null;
   // A arte entra na comparação para o fundo mudar na hora quando a pessoa troca a imagem do jogo.
-  const key = g ? `${g.key}|${JSON.stringify(g.art)}` : null;
+  const key = g ? `${g.key}|${JSON.stringify(g.art)}` : scene;
   if (key === bgWanted) return;
   bgWanted = key;
   const urls = g && g.art ? [...(g.art.hero || []), ...(g.source === 'prism' ? [] : g.art.cover || [])] : [];
-  const url = urls.length ? await loadFirst(urls) : null;
+  const url = scene || (urls.length ? await loadFirst(urls) : null);
   if (bgWanted !== key) return;
   const layers = document.querySelectorAll('.bg-layer');
   const next = layers[1 - bgFront];
@@ -140,6 +144,8 @@ async function setBackground(g) {
   next.classList.add('on');
   layers[bgFront].classList.remove('on');
   bgFront = 1 - bgFront;
+  // O desenho é mais escuro que a arte dos jogos: a sombra por cima fica mais leve para ele aparecer.
+  $('bg').classList.toggle('scene', !!scene);
 }
 
 // Aviso de conquista desbloqueada, um de cada vez, no canto da tela, como nos consoles.

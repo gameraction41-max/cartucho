@@ -9,7 +9,7 @@ const ICONS = {
   mem: svg('<rect x="2" y="7" width="20" height="10" rx="1.5"/><path d="M6 10v4M10 10v4M14 10v4M18 10v4M5 17v3M19 17v3"/>'),
   disk: svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="12" cy="11" r="4"/><circle cx="12" cy="11" r=".8"/><path d="M7 17h2"/>'),
 };
-const DEFAULT_BG = 'img/setup.svg';
+const DEFAULT_BG = 'img/bg/pc.svg';
 const BG_KEY = 'cartucho:pc';
 
 const REFRESH_MS = 2000;
