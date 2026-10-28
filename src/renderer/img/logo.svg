@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Logo do Cartucho: um cartucho de videogame visto de frente, com as ranhuras de pegar em cima, a etiqueta laranja
+       com um C que também é o botão de play, e os contatos dourados embaixo. -->
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#323a66"/><stop offset="1" stop-color="#161a35"/>
+    </linearGradient>
+    <linearGradient id="label" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc35a"/><stop offset=".55" stop-color="#f2a541"/><stop offset="1" stop-color="#ff6a3d"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd27a"/><stop offset="1" stop-color="#c9822f"/>
+    </linearGradient>
+  </defs>
+  <!-- placa com os contatos, saindo por baixo -->
+  <rect x="150" y="380" width="212" height="76" rx="10" fill="#0d1022"/>
+  <g fill="url(#gold)">
+    <rect x="166" y="404" width="14" height="40" rx="3"/><rect x="190" y="404" width="14" height="40" rx="3"/><rect x="214" y="404" width="14" height="40" rx="3"/>
+    <rect x="238" y="404" width="14" height="40" rx="3"/><rect x="262" y="404" width="14" height="40" rx="3"/><rect x="286" y="404" width="14" height="40" rx="3"/>
+    <rect x="310" y="404" width="14" height="40" rx="3"/><rect x="334" y="404" width="14" height="40" rx="3"/>
+  </g>
+  <!-- corpo, mais largo em cima, com a pegada arredondada -->
+  <path d="M84 96c0-30 20-50 50-50h244c30 0 50 20 50 50v258c0 22-16 36-36 36H120c-20 0-36-14-36-36z" fill="url(#body)" stroke="#47528c" stroke-width="6"/>
+  <!-- ranhuras de pegar -->
+  <g stroke="#47528c" stroke-width="7" stroke-linecap="round">
+    <path d="M128 76h256M128 96h256"/>
+  </g>
+  <!-- etiqueta -->
+  <rect x="120" y="122" width="272" height="226" rx="20" fill="url(#label)"/>
+  <rect x="120" y="122" width="272" height="226" rx="20" fill="url(#shine)"/>
+  <!-- C com o play dentro -->
+  <path d="M318 196a72 72 0 1 0 0 78" fill="none" stroke="#161a35" stroke-width="28" stroke-linecap="round"/>
+  <path d="M246 199l54 36-54 36z" fill="#161a35" stroke="#161a35" stroke-width="10" stroke-linejoin="round"/>
+</svg>

@@ -1,6 +1,6 @@
 // Biblioteca completa: todos os jogos em grade, com filtro por origem ou coleção e ordenação.
 // LT e RT trocam o filtro, Y troca a ordem, X esconde ou mostra o jogo em foco. Jogos de fora da Steam entram por "Adicionar jogo".
-import { h, cover, hours, sortRecent } from '../lib/ui.js';
+import { h, cover, hours, sortRecent, keyPill, segBar } from '../lib/ui.js';
 import { collectionsOf } from '../lib/collections.js';
 import { shelfGames, isHidden, setHidden } from '../lib/shelf.js';
 import { emptyState } from './home.js';
@@ -62,10 +62,7 @@ export default {
     const step = (delta) => setFilter((filterIndex + delta + filters.length) % filters.length);
     const nextSort = () => { sortIndex = (sortIndex + 1) % sorts.length; ctx.sfx.tab(); ctx.rerender(); };
 
-    const tab = (f, i) => h('button', { class: `seg ${f.collection ? 'col' : ''} ${f.hidden ? 'hid' : ''} ${i === filterIndex ? 'on' : ''}`, 'data-key': `filter:${f.id}`, onclick: () => setFilter(i) },
-      f.label, h('small', {}, String(f.games.length)));
-    const trig = (t) => h('i', { class: 'k trig' }, ctx.state.device === 'gamepad' ? t : t === 'LT' ? 'PgUp' : 'PgDn');
-    const segBar = h('div', { class: 'segbar' }, trig('LT'), h('div', { class: 'lib-pills' }, filters.map(tab)), trig('RT'));
+    const filterBar = segBar(ctx, filters.map((f, i) => ({ key: `filter:${f.id}`, label: f.label, count: f.games.length, on: i === filterIndex, cls: f.collection ? 'col' : f.hidden ? 'hid' : '', onclick: () => setFilter(i) })));
 
     const cards = games.map((g) => h('div', { class: `card ${isHidden(ctx, g) ? 'is-hidden' : ''}`, 'data-focus': true, 'data-key': g.key, 'data-select-first': true, role: 'button', onclick: () => ctx.go('game', { key: g.key }) },
       cover(g),
@@ -77,10 +74,10 @@ export default {
     const el = h('div', { class: 'lib' },
       h('div', { class: 'lib-head' },
         h('h2', {}, title),
-        h('button', { class: 'pill', 'data-focus': true, 'data-key': 'sort', onclick: nextSort }, h('i', { class: 'k y' }, 'Y'), sorts[sortIndex].label),
-        h('button', { class: 'pill', 'data-focus': true, 'data-key': 'add', onclick: () => { ctx.sfx.confirm(); ctx.go('addgame'); } }, '+ Adicionar jogo'),
-        h('button', { class: 'pill', 'data-focus': true, 'data-key': 'collections', onclick: () => { ctx.sfx.confirm(); ctx.go('collectionpick'); } }, '✎ Coleções')),
-      segBar,
+        keyPill(ctx, 'y', sorts[sortIndex].label, { 'data-key': 'sort', onclick: nextSort }),
+        keyPill(ctx, null, '+ Adicionar jogo', { 'data-key': 'add', onclick: () => { ctx.sfx.confirm(); ctx.go('addgame'); } }),
+        keyPill(ctx, null, '✎ Coleções', { 'data-key': 'collections', onclick: () => { ctx.sfx.confirm(); ctx.go('collectionpick'); } })),
+      filterBar,
       h('div', { class: 'grid' }, cards.length ? cards : h('p', { class: 'muted' }, empty)));
 
     // Começa com o foco no primeiro jogo, não nos botões.

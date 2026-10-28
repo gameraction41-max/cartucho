@@ -6,7 +6,7 @@ function lastGame(state) {
   return sortRecent((state.games || []).filter((g) => !g.instanceId && g.lastPlayed))[0] || null;
 }
 
-export function showBoot({ state, sfx, first = true, onDone }) {
+export function showBoot({ state, sfx, first = true, sound = true, onDone }) {
   const name = (state.profile && state.profile.name) || 'Jogador';
   const avatar = h('span', { class: 'avatar' });
   if (state.profile && state.profile.avatar) avatar.style.backgroundImage = `url("${state.profile.avatar}")`;
@@ -33,7 +33,7 @@ export function showBoot({ state, sfx, first = true, onDone }) {
     bg,
     h('div', { class: 'boot-shade' }),
     h('div', { class: 'boot-top' },
-      h('div', { class: 'boot-logo' }, 'CARTU', h('span', {}, 'CHO')),
+      h('div', { class: 'boot-logo' }, h('img', { src: 'img/logo.svg', alt: '' }), h('b', {}, 'CARTU', h('span', {}, 'CHO'))),
       h('div', { class: 'boot-clock' },
         h('b', { class: 'clock' }, now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })),
         h('small', {}, now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })))),
@@ -42,7 +42,7 @@ export function showBoot({ state, sfx, first = true, onDone }) {
       card),
     h('div', { class: 'boot-press' }, h('i', { class: 'k a' }, 'A'), 'Entrar'));
   document.body.append(el);
-  if (first) setTimeout(() => sfx.boot(), 250);
+  if (first && sound) setTimeout(() => sfx.boot(), 250);
 
   let done = false;
   function finish() {

@@ -1,7 +1,7 @@
 // Buscar capa, fundo e música na internet, sem baixar e escolher arquivo na mão.
-// Imagens: grade do SteamGridDB, Y troca entre capas e fundos, A usa a imagem.
+// Imagens: grade do SteamGridDB, LT/RT (ou Y) troca entre capas e fundos, A usa a imagem.
 // Música: lista de trilhas sonoras do KHInsider, A abre o álbum; nas faixas, Y ouve e A usa no jogo.
-import { h } from '../lib/ui.js';
+import { h, keyPill, segBar } from '../lib/ui.js';
 import { setGameTrack } from '../lib/sound.js';
 
 const KIND_LABEL = { cover: 'Capas', hero: 'Fundos' };
@@ -63,7 +63,8 @@ export default {
 
     const body = h('div', { class: 'search-body' });
     const head = h('div', { class: 'lib-head search-head' });
-    const el = h('div', { class: 'search' }, head, body);
+    const bar = h('div', { class: 'search-bar' });
+    const el = h('div', { class: 'search' }, head, bar, body);
 
     const setHints = (list) => {
       hints = list;
@@ -84,15 +85,14 @@ export default {
       },
     });
 
+    // Cabeçalho igual ao da Biblioteca: título e botões em cima, Capas e Fundos na barra de baixo com LT e RT.
     function header(title, sub) {
-      const kindPills = mode === 'images'
-        ? h('div', { class: 'shots-kind' }, Object.entries(KIND_LABEL).map(([id, label]) => h('button', { class: `pill ${id === kind ? 'on' : ''}`, 'data-focus': true, 'data-key': `kind:${id}`, onclick: () => setKind(id) }, label)))
-        : null;
-      head.replaceChildren(...[
+      head.replaceChildren(
         h('div', { class: 'search-title' }, h('h2', {}, title), sub ? h('small', {}, sub) : null),
-        kindPills,
-        h('button', { class: 'pill', 'data-focus': true, 'data-key': 'term', onclick: askTerm }, `Buscar outro nome${term ? ` · ${term}` : ''}`),
-      ].filter(Boolean));
+        keyPill(ctx, 'x', `Buscar outro nome${term ? ` · ${term}` : ''}`, { 'data-key': 'term', onclick: askTerm }));
+      bar.replaceChildren(...(mode === 'images'
+        ? [segBar(ctx, Object.entries(KIND_LABEL).map(([id, label]) => ({ key: `kind:${id}`, label, on: id === kind, onclick: () => setKind(id) })))]
+        : []));
     }
 
     function loading(text) {
@@ -160,7 +160,7 @@ export default {
           item.author ? h('small', {}, item.author) : null));
         body.replaceChildren(h('div', { class: `grid pick-grid pick-${kind}s` }, tiles));
       }
-      setHints([['confirm', 'Usar'], ['y', kind === 'cover' ? 'Ver fundos' : 'Ver capas'], ['x', 'Outro nome'], ['back', 'Voltar']]);
+      setHints([['confirm', 'Usar'], ['ltrt', kind === 'cover' ? 'Ver fundos' : 'Ver capas'], ['x', 'Outro nome'], ['back', 'Voltar']]);
       ctx.refocus(keepKey || (r.items.length ? `img:${r.items[0].id}` : 'term'));
       const kept = keepKey && body.querySelector(`[data-key="${keepKey}"]`);
       if (kept) kept.scrollIntoView({ block: 'nearest' });
@@ -262,6 +262,10 @@ export default {
       onAction(action, { focused } = {}) {
         if (action === 'x') {
           askTerm();
+          return true;
+        }
+        if (mode === 'images' && (action === 'lt' || action === 'rt')) {
+          setKind(kind === 'cover' ? 'hero' : 'cover');
           return true;
         }
         if (action === 'y') {

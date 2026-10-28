@@ -1,5 +1,5 @@
 // Conquistas: nível de jogador do Cartucho e o progresso de cada jogo da Steam.
-import { h, cover, when, hours } from '../lib/ui.js';
+import { h, cover, when, hours, keyPill } from '../lib/ui.js';
 import { emptyState } from './home.js';
 
 const SORTS = [
@@ -93,7 +93,7 @@ export default {
         h('div', { class: 'list-head' },
           h('h2', { class: 'panel-title', style: { margin: 0 } }, 'Seus jogos'),
           st.running ? h('span', { class: 'muted' }, `lendo ${st.done} de ${st.total}…`) : null,
-          h('button', { class: 'pill on', 'data-focus': true, 'data-key': 'sort', onclick: () => { sortIndex = (sortIndex + 1) % SORTS.length; ctx.sfx.tab(); ctx.rerender(); } }, h('i', { class: 'k y' }, 'Y'), sort.label)),
+          keyPill(ctx, 'y', sort.label, { 'data-key': 'sort', onclick: () => { sortIndex = (sortIndex + 1) % SORTS.length; ctx.sfx.tab(); ctx.rerender(); } })),
         h('div', { class: 'glist' }, rows)));
 
     return {

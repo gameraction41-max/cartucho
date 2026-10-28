@@ -166,8 +166,9 @@ export default {
       await loadBg();
     };
 
+    // Fica no body, atrás da tela inteira: dentro da tela, a animação de entrada prendia o fundo numa caixa.
+    document.body.append(bg);
     const el = h('div', { class: 'pc' },
-      bg,
       h('section', { class: 'home-info pc-hero' },
         h('span', { class: 'label' }, 'Seu setup'),
         h('h1', { class: 'big-title' }, 'Seu PC'), osName),
@@ -184,6 +185,7 @@ export default {
       destroy() {
         alive = false;
         clearTimeout(timer);
+        bg.remove();
       },
     };
   },

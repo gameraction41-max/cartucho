@@ -1,6 +1,6 @@
 // Capturas: prints e vídeos feitos pelo Cartucho e prints da Steam, separados por jogo.
 // A abre em tela cheia; nela, esquerda e direita passam as fotos, A dá play no clipe, X apaga (com confirmação) e B volta para a grade.
-import { h, when } from '../lib/ui.js';
+import { h, when, keyPill, segBar } from '../lib/ui.js';
 
 const CACHE_MS = 15 * 1000;
 const SOURCE = { cartucho: 'Cartucho', steam: 'Steam' };
@@ -50,10 +50,14 @@ export default {
 
     const setFilter = (key) => { filterKey = key; ctx.sfx.tab(); ctx.rerender(); };
     const setKind = (id) => { kind = id; filterKey = 'all'; ctx.sfx.tab(); ctx.rerender(); };
-    const kindPills = KINDS.map((k) => h('button', { class: `pill ${k.id === kind ? 'on' : ''}`, 'data-focus': true, 'data-key': `kind:${k.id}`, onclick: () => setKind(k.id) },
-      k.label, h('small', {}, String(counts[k.id]))));
-    const pills = filters.map((f) => h('button', { class: `pill ${f.key === filterKey ? 'on' : ''}`, 'data-focus': true, 'data-key': `filter:${f.key}`, onclick: () => setFilter(f.key) },
-      f.title, h('small', {}, String(f.count))));
+    const stepFilter = (delta) => {
+      const i = filters.findIndex((f) => f.key === filterKey);
+      setFilter(filters[(i + delta + filters.length) % filters.length].key);
+    };
+    // Cabeçalho igual ao da Biblioteca: Y troca prints e vídeos, LT e RT trocam o jogo.
+    const other = KINDS.find((k) => k.id !== kind);
+    const filterBar = segBar(ctx, filters.map((f) => ({ key: `filter:${f.key}`, label: f.title, count: f.count, on: f.key === filterKey, onclick: () => setFilter(f.key) })));
+    const kindLabel = kind === 'videos' ? (shots.length === 1 ? 'vídeo' : 'vídeos') : shots.length === 1 ? 'print' : 'prints';
 
     const cards = shots.map((s, i) => h('div', { class: 'shot', 'data-focus': true, 'data-key': `shot:${i}`, role: 'button', onclick: () => open(i) },
       h('span', { class: 'pic' }, thumb(s), s.video ? h('i', { class: 'play' }, '▶') : null),
@@ -152,8 +156,9 @@ export default {
 
     const el = h('div', { style: { display: 'contents' } },
       h('div', { class: 'lib-head shots-head' },
-        h('div', { class: 'shots-kind' }, kindPills),
-        h('div', { class: 'shots-filters' }, pills)),
+        h('h2', {}, `${shots.length} ${kindLabel}`),
+        keyPill(ctx, 'y', `Ver ${other.label.toLowerCase()} · ${counts[other.id]}`, { 'data-key': `kind:${other.id}`, onclick: () => setKind(other.id) })),
+      h('div', { class: 'lib-bar' }, filterBar),
       h('div', { class: 'grid shots-grid' }, cards.length ? cards : h('p', { class: 'muted' }, kind === 'videos'
         ? 'Nenhum vídeo ainda. Com um jogo aberto, Xbox + X salva os últimos 30 segundos e Xbox + RB começa e para a gravação.'
         : 'Nenhum print ainda.')));
@@ -165,7 +170,7 @@ export default {
 
     return {
       el,
-      hints: [['confirm', 'Ver'], ['y', kind === 'prints' ? 'Ver vídeos' : 'Ver prints'], ['x', 'Trocar jogo'], ['menu', 'Menu']],
+      hints: [['confirm', 'Ver'], ['ltrt', 'Jogo'], ['y', kind === 'prints' ? 'Ver vídeos' : 'Ver prints'], ['menu', 'Menu']],
       onAction(action) {
         if (index >= 0 && confirming) {
           if (busy) return true;
@@ -188,9 +193,8 @@ export default {
           setKind(kind === 'prints' ? 'videos' : 'prints');
           return true;
         }
-        if (action === 'x') {
-          const i = filters.findIndex((f) => f.key === filterKey);
-          setFilter(filters[(i + 1) % filters.length].key);
+        if (action === 'lt' || action === 'rt' || action === 'x') {
+          stepFilter(action === 'lt' ? -1 : 1);
           return true;
         }
         return false;

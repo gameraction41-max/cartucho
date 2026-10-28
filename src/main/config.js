@@ -17,6 +17,9 @@ const DEFAULTS = {
   openAtLogin: false,
   returnAfterGame: true,
   showBoot: true,
+  introAnim: true,
+  // Sair para o Windows deixa o Cartucho escondido, esperando o botão Xbox.
+  guideOpens: true,
   sounds: true,
   music: true,
   musicFile: '',

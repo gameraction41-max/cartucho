@@ -1,6 +1,6 @@
 // Aba Coleções: uma prateleira de capas para cada coleção, na ordem em que os jogos foram postos.
 // A abre a página do jogo, Y joga e X renomeia a coleção da prateleira em foco.
-import { h, cover, hours } from '../lib/ui.js';
+import { h, cover, hours, keyPill } from '../lib/ui.js';
 import { collectionsOf, gamesIn, askName, createCollection, renameCollection } from '../lib/collections.js';
 
 export default {
@@ -46,8 +46,8 @@ export default {
 
     const el = h('div', { class: 'cols' },
       h('div', { class: 'lib-head' }, h('h2', {}, 'Coleções'),
-        h('button', { class: 'pill', 'data-focus': true, 'data-key': 'new', onclick: create }, '+ Nova coleção'),
-        list.length ? h('button', { class: 'pill', 'data-focus': true, 'data-key': 'manage', onclick: () => { ctx.sfx.confirm(); ctx.go('collectionpick'); } }, '✎ Gerenciar') : null),
+        keyPill(ctx, null, '+ Nova coleção', { 'data-key': 'new', onclick: create }),
+        list.length ? keyPill(ctx, null, '✎ Gerenciar', { 'data-key': 'manage', onclick: () => { ctx.sfx.confirm(); ctx.go('collectionpick'); } }) : null),
       h('div', { class: 'shelves' }, list.length ? list.map(shelf)
         : h('p', { class: 'muted' }, 'Nenhuma coleção ainda. Crie uma, como "Jogando agora" ou "Para zerar".')));
 

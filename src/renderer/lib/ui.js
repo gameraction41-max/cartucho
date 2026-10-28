@@ -126,6 +126,27 @@ export function cover(game, cls = '') {
   return el;
 }
 
+// Botão do controle (ou tecla) desenhado na tela. Troca sozinho quando a pessoa passa do teclado para o controle.
+export function glyph(ctx, action, cls = '') {
+  const [text, kind] = ctx.glyph(action);
+  return h('i', { class: `k ${kind} ${cls}`.trim(), 'data-glyph': action, 'data-glyph-class': cls || null }, text);
+}
+
+// Botão do cabeçalho com o atalho na frente, como "Y Ordenar".
+export function keyPill(ctx, action, label, attrs = {}) {
+  return h('button', { ...attrs, class: `pill kp ${attrs.class || ''}`.trim(), 'data-focus': true }, action ? glyph(ctx, action) : null, label);
+}
+
+// Barra de filtros do cabeçalho, igual à da Biblioteca: LT e RT nas pontas trocam a opção.
+// items: [{ key, label, count, on, cls, onclick }]
+export function segBar(ctx, items) {
+  return h('div', { class: 'segbar' },
+    glyph(ctx, 'lt', 'trig'),
+    h('div', { class: 'lib-pills' }, items.map((it) => h('button', { class: `seg ${it.cls || ''} ${it.on ? 'on' : ''}`, 'data-key': it.key, onclick: it.onclick },
+      it.label, it.count != null ? h('small', {}, String(it.count)) : null))),
+    glyph(ctx, 'rt', 'trig'));
+}
+
 export function hours(minutes) {
   if (!minutes) return '0 h';
   if (minutes < 60) return `${minutes} min`;
