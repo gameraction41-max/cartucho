@@ -285,6 +285,7 @@ async function launchGame(game) {
     return { error: 'Tipo de jogo desconhecido.' };
   }
   running = { key: game.key, title: game.title, since: Date.now() };
+  config.update({ lastLaunched: game.key });
   send('game:started', running);
   captureShortcuts(true);
   capture.gameStarted(running);
@@ -300,6 +301,29 @@ function openInSource(game) {
   }
   if (game.source === 'hytale' && library.hytaleExe()) shell.showItemInFolder(library.hytaleExe());
   if (game.source === 'custom' && game.exe && fs.existsSync(game.exe)) shell.showItemInFolder(game.exe);
+}
+
+// Pasta do jogo no Explorador: a de instalação da Steam, a da instância do Prism, a das instâncias (Minecraft) ou a do executável.
+function openGameFolder(game) {
+  if (game.source === 'steam') {
+    const app = steamlocal.scanApps().get(Number(game.appid));
+    if (!app || !app.dir || !fs.existsSync(app.dir)) return { error: 'Não achei a pasta deste jogo. Ele está instalado neste PC?' };
+    return shell.openPath(app.dir).then(() => ({ ok: true }));
+  }
+  if (game.source === 'prism') {
+    const inst = prism.listInstances(library.prismDir()).find((i) => i.id === game.instanceId);
+    if (!inst) return { error: 'Não achei esta instância na pasta do Prism.' };
+    return shell.openPath(inst.dir).then(() => ({ ok: true }));
+  }
+  if (game.source === 'minecraft') {
+    const dir = prism.instancesDir(library.prismDir());
+    if (!fs.existsSync(dir)) return { error: 'Não achei a pasta de instâncias do Prism.' };
+    return shell.openPath(dir).then(() => ({ ok: true }));
+  }
+  const exe = game.source === 'hytale' ? library.hytaleExe() : game.exe;
+  if (!exe || !fs.existsSync(exe)) return { error: 'Não achei a pasta deste jogo.' };
+  shell.showItemInFolder(exe);
+  return { ok: true };
 }
 
 function registerIpc() {
@@ -340,6 +364,7 @@ function registerIpc() {
   ipcMain.handle('achievements:game', (_e, appid) => library.gameAchievements(appid));
   ipcMain.handle('game:launch', (_e, game) => launchGame(game));
   ipcMain.handle('game:open-source', (_e, game) => openInSource(game));
+  ipcMain.handle('game:folder', (_e, game) => openGameFolder(game));
   ipcMain.handle('art:pick', async (_e, key, kind) => {
     if (!art.EXT[kind]) return { error: 'Tipo de arquivo desconhecido.' };
     const name = kind === 'music' ? 'Músicas' : 'Imagens';
@@ -395,6 +420,15 @@ function registerIpc() {
   ipcMain.handle('artsearch:done', () => clearPreviews());
   ipcMain.handle('artsearch:open-site', (_e, game, term) => shell.openExternal(artsearch.siteSearchUrl(game, term)));
   app.on('will-quit', clearPreviews);
+  ipcMain.handle('prism:rename', (_e, instanceId, name) => {
+    if (running && running.key === `prism:${instanceId}`) return { error: 'Feche o Minecraft antes de renomear esta instância.' };
+    try {
+      prism.renameInstance(library.prismDir(), instanceId, name);
+      return { ok: true };
+    } catch (err) {
+      return { error: err.message };
+    }
+  });
   ipcMain.handle('prism:presets', () => mcoptions.PRESET_LIST);
   ipcMain.handle('prism:preset-get', (_e, instanceId) => {
     const dir = instanceDir(instanceId);

@@ -6,6 +6,57 @@ import { homeGames } from '../lib/shelf.js';
 const ROW_SIZE = 24;
 const DL_SHOWN = 3;
 
+// Janelinha que o botão Menu abre embaixo do jogo em foco: pasta do jogo e desinstalar. Funciona sem o sistema de
+// foco da tela: enquanto está aberta, a tela manda cima/baixo/A/B para ela.
+function gameMenu(ctx, g, tile, onClose) {
+  const items = [];
+  const add = (label, desc, fn, cls = '') => items.push(h('button', { class: `gmenu-item ${cls}`, onclick: () => { close(); fn(); } }, label, desc ? h('small', {}, desc) : null));
+  if (g.installed !== false) {
+    add('Abrir pasta do jogo', g.group ? 'Pasta das instâncias do Prism' : 'No Explorador de Arquivos', async () => {
+      ctx.sfx.confirm();
+      const r = await ctx.api.openGameFolder(g);
+      if (r && r.error) ctx.toast(r.error, { error: true });
+    });
+  }
+  if (g.source === 'steam' && g.installed === false && !g.download) add('Instalar', 'Pela janela da Steam', () => ctx.install(g));
+  if (g.source === 'steam' && g.installed === true) add('Desinstalar', 'Pela janela da Steam, que pede confirmação', () => ctx.uninstall(g), 'danger');
+  if (g.source === 'custom') add('Opções do jogo', 'Renomear ou tirar do Cartucho', () => { ctx.sfx.confirm(); ctx.go('gameopts', { key: g.key }); });
+  add('Menu do Cartucho', '', () => ctx.openMenu(), 'quiet');
+
+  let index = 0;
+  const el = h('div', { class: 'gmenu' }, h('div', { class: 'gmenu-title' }, g.title), items);
+  const paint = () => items.forEach((it, i) => it.classList.toggle('focused', i === index));
+  items.forEach((it, i) => it.addEventListener('mouseenter', () => { index = i; paint(); }));
+  paint();
+  document.body.append(el);
+  // Embaixo da capa; se não couber (tema com a fileira no pé da tela), em cima dela.
+  const r = tile.getBoundingClientRect();
+  const left = Math.min(r.left, window.innerWidth - el.offsetWidth - 16);
+  const below = r.bottom + 12 + el.offsetHeight < window.innerHeight - 16;
+  el.style.left = `${Math.max(16, left)}px`;
+  el.style.top = `${below ? r.bottom + 12 : r.top - 12 - el.offsetHeight}px`;
+  requestAnimationFrame(() => el.classList.add('on'));
+
+  let open = true;
+  function close() {
+    if (!open) return;
+    open = false;
+    el.remove();
+    onClose();
+  }
+  return {
+    close,
+    handle(action) {
+      if (action === 'up' || action === 'down') {
+        const next = Math.max(0, Math.min(items.length - 1, index + (action === 'down' ? 1 : -1)));
+        if (next !== index) { index = next; paint(); ctx.sfx.move(); }
+      } else if (action === 'confirm') items[index].click();
+      else if (action === 'back' || action === 'menu') { ctx.sfx.back(); close(); }
+      return true;
+    },
+  };
+}
+
 // Rótulo do botão principal: jogo da Steam fora do PC instala, e durante o download abre a fila da Steam.
 export function playLabel(g) {
   if (g.source !== 'steam' || g.installed !== false) return 'Jogar';
@@ -92,18 +143,27 @@ export default {
       h('h3', { class: 'row-label' }, 'No seu PC'),
       h('div', { class: 'row' }, tiles, more));
 
+    let popup = null;
     return {
       el,
       keepBackground: true,
-      hints: [['confirm', 'Detalhes'], ['y', 'Jogar'], ['menu', 'Menu']],
+      hints: [['confirm', 'Detalhes'], ['y', 'Jogar'], ['menu', 'Opções']],
       onAction(action, { focused }) {
-        const g = action === 'y' && focused && games.find((x) => x.key === focused.dataset.key);
-        if (g) {
+        if (popup) return popup.handle(action);
+        const g = focused && games.find((x) => x.key === focused.dataset.key);
+        if (g && action === 'y') {
           ctx.launch(g);
+          return true;
+        }
+        // Menu em cima de um jogo abre a janelinha dele; o botão Xbox continua abrindo o menu do Cartucho.
+        if (g && action === 'menu') {
+          ctx.sfx.confirm();
+          popup = gameMenu(ctx, g, focused, () => { popup = null; });
           return true;
         }
         return false;
       },
+      destroy() { if (popup) popup.close(); },
     };
   },
 };

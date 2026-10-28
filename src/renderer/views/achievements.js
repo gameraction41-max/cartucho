@@ -1,6 +1,7 @@
 // Conquistas: nível de jogador do Cartucho e o progresso de cada jogo da Steam.
 import { h, cover, when, hours, keyPill } from '../lib/ui.js';
 import { emptyState } from './home.js';
+import { hiddenKeys } from '../lib/shelf.js';
 
 const SORTS = [
   { id: 'near', label: 'Mais perto de completar', fn: (a, b) => done(a) - done(b) || pct(b) - pct(a) },
@@ -69,7 +70,9 @@ export default {
 
     const gamesByKey = new Map(ctx.state.games.map((g) => [g.key, g]));
     const sort = SORTS[sortIndex];
-    const rows = [...s.games].sort(sort.fn).map((row) => {
+    // Jogos ocultos na Biblioteca também saem desta lista; o nível e os números continuam contando com eles.
+    const hidden = hiddenKeys(ctx);
+    const rows = s.games.filter((row) => !hidden.has(row.key)).sort(sort.fn).map((row) => {
       const g = gamesByKey.get(row.key) || { key: row.key, source: 'steam', title: row.title };
       const left = row.total - row.unlocked;
       return h('div', { class: 'gline', 'data-focus': true, 'data-key': row.key, role: 'button', onclick: () => ctx.go('game', { key: row.key }) },

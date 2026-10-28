@@ -1,9 +1,23 @@
 // Tela de perfil (abertura): aparece ao ligar e quando o B não tem mais para onde voltar, como a tela de escolher
-// usuário de um console. O fundo é a arte do último jogo, e o cartão do perfil mostra o resumo de quem vai entrar.
+// usuário de um console. O fundo é a arte do último jogo aberto pelo Cartucho, e o cartão do perfil mostra o resumo de quem vai entrar.
 import { h, hours, when, loadFirst, sortRecent } from '../lib/ui.js';
 
-function lastGame(state) {
-  return sortRecent((state.games || []).filter((g) => !g.instanceId && g.lastPlayed))[0] || null;
+// O último jogo aberto pelo Cartucho; antes do primeiro, o último jogado. Jogos ocultos nunca entram. Uma instância do
+// Minecraft usa a arte do Minecraft.
+export function lastGame(state) {
+  const games = state.games || [];
+  const hidden = new Set((state.config && state.config.hiddenGames) || []);
+  const shown = (g) => g && !hidden.has(g.key);
+  let g = games.find((x) => x.key === (state.config && state.config.lastLaunched));
+  if (g && g.instanceId) {
+    const group = games.find((x) => x.group);
+    return shown(g) && shown(group) ? { ...group, title: g.title, lastPlayed: g.lastPlayed || group.lastPlayed } : fallback();
+  }
+  return shown(g) ? g : fallback();
+
+  function fallback() {
+    return sortRecent(games.filter((x) => !x.instanceId && x.lastPlayed && shown(x)))[0] || null;
+  }
 }
 
 export function showBoot({ state, sfx, first = true, sound = true, onDone }) {
