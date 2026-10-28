@@ -17,12 +17,13 @@ import friends from './views/friends.js';
 import screenshots from './views/screenshots.js';
 import artsearch from './views/artsearch.js';
 import profile from './views/profile.js';
+import collections from './views/collections.js';
 import { showBoot } from './views/boot.js';
 import { createMenu } from './views/menu.js';
 
-const VIEWS = { home, game, artsearch, profile, achievements, minecraft, friends, library, screenshots, pc, settings };
+const VIEWS = { home, game, artsearch, profile, collections, achievements, minecraft, friends, library, screenshots, pc, settings };
 const TABS = ['home', 'minecraft', 'achievements', 'friends', 'library', 'screenshots', 'pc', 'settings'];
-const SCROLLERS = '.shots-filters, .set-list, .glist, .grid, .row, .mc-row, .ach-list';
+const SCROLLERS = '.lib-pills, .shots-filters, .set-list, .glist, .grid, .row, .mc-row, .ach-list';
 
 const GLYPHS = {
   gamepad: { confirm: ['A', 'a'], back: ['B', 'b'], x: ['X', 'x'], y: ['Y', 'y'], lb: ['LB', ''], rb: ['RB', ''], menu: ['☰', ''], lr: ['◀ ▶', ''] },

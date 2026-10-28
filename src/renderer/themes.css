@@ -4,6 +4,11 @@
 /* peças que só alguns temas mostram */
 .row-label { margin: 0 0 1rem; font-family: var(--f-display); font-weight: 600; font-size: .9rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .tile-name { display: none; }
+/* Prateleiras da tela inicial: "Jogados recentemente" e as coleções com jogo. X troca. */
+.row-label.shelves { display: flex; gap: 1.6rem; }
+.row-label span { cursor: pointer; }
+.row-label.shelves span:not(.on) { opacity: .5; }
+.row-label.shelves span.on { color: var(--ink); }
 .qico { display: none; }
 .choice { display: inline-flex; align-items: center; gap: .9rem; }
 .choice i { font-style: normal; font-size: .8rem; color: var(--muted); }
@@ -46,6 +51,8 @@
 
 /* Início: fileira de ícones logo abaixo da barra de cima, informações do jogo embaixo. */
 [data-theme="ps5"] .row-label { display: none; }
+[data-theme="ps5"] .row-label.shelves { display: flex; order: -2; margin: .6rem 0 0; font-family: var(--f-body); font-size: 1.15rem; font-weight: 600; letter-spacing: 0; text-transform: none; gap: 2rem; }
+[data-theme="ps5"] .row-label.shelves span.on { font-weight: 800; }
 [data-theme="ps5"] .row { order: -1; align-items: flex-start; gap: 1.1rem; margin-top: calc(1.4rem - var(--bleed)); }
 [data-theme="ps5"] .tile { width: 7.6rem; height: 7.6rem; padding: .6rem; font-size: .85rem; box-shadow: 0 .4rem 1.2rem rgba(0, 0, 0, .4); }
 [data-theme="ps5"] .tile.focused { width: 11.4rem; height: 11.4rem; font-size: 1rem; border-radius: 1.2rem; }
@@ -127,6 +134,10 @@
 /* Início: a prateleira vem primeiro e o jogo selecionado ganha um painel embaixo dela. */
 [data-theme="bigpicture"] .row-label { order: -2; margin-top: 1.2rem; font-family: var(--f-body); font-weight: 700; font-size: 1.45rem; letter-spacing: 0; text-transform: none; color: var(--ink); }
 [data-theme="bigpicture"] .row { order: -1; align-items: flex-start; }
+[data-theme="bigpicture"] .row-label.shelves { gap: .4rem; font-size: 1.15rem; font-weight: 600; }
+[data-theme="bigpicture"] .row-label.shelves span { padding: .4rem 1.1rem; border-radius: 2rem; }
+[data-theme="bigpicture"] .row-label.shelves span:not(.on) { opacity: 1; color: #b3bdcc; }
+[data-theme="bigpicture"] .row-label.shelves span.on { background: #fff; color: #0f1520; }
 [data-theme="bigpicture"] .tile { width: 12.4rem; height: 18.6rem; box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .5); }
 [data-theme="bigpicture"] .tile.focused { width: 14.4rem; height: 21.6rem; }
 [data-theme="bigpicture"] .tile.more { border-radius: .4rem; }

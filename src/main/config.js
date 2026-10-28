@@ -2,6 +2,7 @@
 const path = require('node:path');
 const { app, safeStorage } = require('electron');
 const { JsonStore } = require('./store');
+const collections = require('./collections');
 
 const DEFAULTS = {
   steamId: '',
@@ -20,6 +21,7 @@ const DEFAULTS = {
   volume: 0.5,
   captureBuffer: true,
   theme: 'cartucho',
+  collections: collections.DEFAULT_COLLECTIONS,
 };
 
 let store;
@@ -73,6 +75,7 @@ function update(patch) {
     if (!(key in DEFAULTS)) delete next[key];
   }
   if (typeof next.steamId === 'string') next.steamId = next.steamId.trim();
+  if ('collections' in next) next.collections = collections.sanitize(next.collections);
   s.patch(next);
   if ('openAtLogin' in next) applyLoginItem(next.openAtLogin);
   return getPublic();
