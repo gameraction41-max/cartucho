@@ -219,6 +219,8 @@ export const mock = {
   uninstallGame: async () => ({ ok: true }),
   openDownloads: async () => {},
   openInSource: async () => {},
+  openGameFolder: async () => ({ ok: true }),
+  renameInstance: async (id, name) => { const g = games.find((x) => x.instanceId === id); if (g) g.title = name; return { ok: true }; },
   pickArt: async () => ({ canceled: true }),
   artUrl: async () => null,
   openMusicSite: async () => {},

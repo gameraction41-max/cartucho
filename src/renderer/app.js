@@ -194,6 +194,7 @@ const ctx = {
   back,
   goTab,
   openProfile,
+  openMenu: () => openMenu(),
   launch,
   install,
   uninstall,
@@ -552,7 +553,7 @@ async function start() {
     if (target.profile) openProfile();
     if (target.sync) sync({ force: true, quiet: false });
   });
-  api.on('game:started', (r) => { state.running = r; });
+  api.on('game:started', (r) => { state.running = r; state.config.lastLaunched = r.key; });
   api.on('game:ended', () => { state.running = null; });
   api.on('window:blur', () => setMusicPaused(true));
   api.on('window:focus', () => setMusicPaused(false));

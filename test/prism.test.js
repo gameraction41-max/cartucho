@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { parseIni, parseMmcPack, listInstances } = require('../src/main/prism');
+const { parseIni, parseMmcPack, listInstances, setInstanceName } = require('../src/main/prism');
 
 test('parseIni lê chave=valor e ignora seções e comentários', () => {
   const ini = parseIni('[General]\nname=Fabulously Optimized\n# comentário\ntotalTimePlayed=137400\nnotes="com aspas"\n');
@@ -47,4 +47,16 @@ test('listInstances respeita InstanceDir do prismlauncher.cfg', () => {
   fs.mkdirSync(path.join(custom, 'Vanilla'));
   fs.writeFileSync(path.join(custom, 'Vanilla', 'instance.cfg'), 'name=Vanilla Survival\n');
   assert.deepStrictEqual(listInstances(root).map((i) => i.name), ['Vanilla Survival']);
+});
+
+test('setInstanceName troca só o name= e mantém o resto', () => {
+  const cfg = '[General]\r\nConfigVersion=1.2\r\nname=All The Forge\r\niconKey=default\r\n';
+  const out = setInstanceName(cfg, 'Modpack do Filipi');
+  assert.strictEqual(out, '[General]\r\nConfigVersion=1.2\r\nname=Modpack do Filipi\r\niconKey=default\r\n');
+  assert.strictEqual(parseIni(out).name, 'Modpack do Filipi');
+});
+
+test('setInstanceName põe o name= quando não existe', () => {
+  assert.strictEqual(setInstanceName('[General]\niconKey=x\n', 'Nova\nlinha'), '[General]\nname=Nova linha\niconKey=x\n');
+  assert.strictEqual(setInstanceName('iconKey=x', 'A'), 'name=A\niconKey=x');
 });

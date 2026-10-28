@@ -113,6 +113,27 @@ function listInstances(prismDir) {
   return out;
 }
 
+// Troca o name= do instance.cfg, sem mexer no resto do arquivo. É o mesmo nome que o Prism mostra.
+function setInstanceName(cfgText, name) {
+  const clean = String(name).replace(/[\r\n]+/g, ' ').trim();
+  const lines = cfgText.split(/\r?\n/);
+  const eol = cfgText.includes('\r\n') ? '\r\n' : '\n';
+  const i = lines.findIndex((l) => /^\s*name\s*=/.test(l));
+  if (i >= 0) lines[i] = `name=${clean}`;
+  else {
+    const general = lines.findIndex((l) => l.trim() === '[General]');
+    lines.splice(general + 1, 0, `name=${clean}`);
+  }
+  return lines.join(eol);
+}
+
+function renameInstance(prismDir, instanceId, name) {
+  const file = path.join(instancesDir(prismDir), instanceId, 'instance.cfg');
+  const text = readText(file);
+  if (text == null) throw new Error('Não achei esta instância na pasta do Prism.');
+  fs.writeFileSync(file, setInstanceName(text, name));
+}
+
 function findExe(prismDir, configured) {
   const candidates = [configured];
   if (process.platform === 'win32') {
@@ -136,4 +157,4 @@ function launchInstance(exe, instanceId) {
   launch(exe, ['--launch', instanceId]);
 }
 
-module.exports = { defaultPrismDir, parseIni, parseMmcPack, listInstances, findExe, launch, launchInstance };
+module.exports = { defaultPrismDir, parseIni, parseMmcPack, instancesDir, listInstances, setInstanceName, renameInstance, findExe, launch, launchInstance };

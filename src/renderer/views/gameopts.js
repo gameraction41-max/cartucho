@@ -2,7 +2,7 @@
 // Fica fora da página do jogo para ela mostrar só o principal.
 import { h, cover } from '../lib/ui.js';
 import { isHidden, setHidden } from '../lib/shelf.js';
-import { presetBackend } from './game.js';
+import { presetBackend, renameInstance } from './game.js';
 
 const OPEN_LABEL = { steam: ['Abrir na Steam', 'Página do jogo no app da Steam'], prism: ['Abrir no Prism', 'Janela do Prism Launcher com esta instância'], minecraft: ['Abrir o Prism Launcher', 'Para trocar versão e loader'], hytale: ['Mostrar a pasta do Hytale', 'Onde o launcher está instalado'], custom: ['Mostrar a pasta do jogo', 'Abre o Explorador de Arquivos no executável'] };
 
@@ -58,7 +58,7 @@ export default {
       const hide = !isHidden(ctx, g);
       await setHidden(ctx, g, hide);
       ctx.sfx.confirm();
-      ctx.toast(hide ? `${g.title} não aparece mais no Início nem na Biblioteca. Ele fica no filtro Ocultos.` : `${g.title} voltou para o Início e a Biblioteca.`);
+      ctx.toast(hide ? `${g.title} não aparece mais no Início, na Biblioteca nem nas Conquistas. Ele fica no filtro Ocultos.` : `${g.title} voltou para o Início, a Biblioteca e as Conquistas.`);
       ctx.rerender();
     };
     const rename = () => ctx.keyboard({
@@ -112,8 +112,9 @@ export default {
       section('Jogo'),
       open ? row('open', open[0], open[1], () => { ctx.sfx.confirm(); ctx.api.openInSource(target); }) : null,
       restoreRow,
+      inst ? row('rename-inst', 'Renomear a instância', 'Muda o nome no Cartucho e no Prism', () => renameInstance(ctx, inst), { value: inst.title }) : null,
       g.source === 'custom' ? row('rename', 'Renomear', 'O nome que aparece no Cartucho', rename, { value: g.title }) : null,
-      row('hide', isHidden(ctx, g) ? 'Mostrar no Início e na Biblioteca' : 'Ocultar do Início e da Biblioteca', isHidden(ctx, g) ? 'O jogo está escondido no filtro Ocultos' : 'Ele continua no filtro Ocultos da Biblioteca', toggleHidden),
+      row('hide', isHidden(ctx, g) ? 'Mostrar de novo' : 'Ocultar do Início, da Biblioteca e das Conquistas', isHidden(ctx, g) ? 'O jogo está escondido no filtro Ocultos' : 'Ele continua no filtro Ocultos da Biblioteca', toggleHidden),
       g.source === 'steam' && g.installed === true ? row('uninstall', 'Desinstalar', 'Pela janela da Steam, que pede confirmação', () => ctx.uninstall(g), { cls: 'danger' }) : null,
       g.source === 'custom' ? row('remove', 'Tirar do Cartucho', 'O jogo continua instalado no PC', remove, { cls: 'danger', confirm: 'Aperte de novo para tirar do Cartucho' }) : null);
 

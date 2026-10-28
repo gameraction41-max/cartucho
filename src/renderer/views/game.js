@@ -55,6 +55,23 @@ function infoPanel(title, text) {
   return h('section', { class: 'panel' }, h('h2', { class: 'panel-title' }, title), h('p', { class: 'muted', style: { margin: 0 } }, text));
 }
 
+// Renomeia a instância no instance.cfg do Prism, então o nome novo aparece no Prism também.
+export function renameInstance(ctx, inst) {
+  ctx.keyboard({
+    title: 'Nome da instância',
+    value: inst.title,
+    done: async (raw) => {
+      const name = raw.replace(/\s+/g, ' ').trim();
+      if (!name || name === inst.title) return;
+      const r = await ctx.api.renameInstance(inst.instanceId, name);
+      if (r && r.error) return ctx.toast(r.error, { error: true });
+      ctx.sfx.confirm();
+      await ctx.reloadLibrary();
+      ctx.toast(`Agora a instância se chama ${name}.`);
+    },
+  });
+}
+
 // Minecraft: a lista de instâncias do Prism. A escolhe a instância; a barra de ações da esquerda passa a valer para ela.
 function instancesPanel(ctx, list, chosen, choose) {
   const rows = list.map((g) => h('div', { class: `inst-line ${g.key === chosen.key ? 'on' : ''}`, 'data-focus': true, 'data-key': `inst:${g.key}`, role: 'button', onclick: () => choose(g) },
@@ -204,12 +221,17 @@ export default {
     return {
       el,
       keepBackground: true,
-      hints: [['confirm', 'Selecionar'], ['y', 'Jogar'], ['back', 'Voltar']],
+      // No Minecraft, X renomeia a instância em foco (ou a escolhida).
+      hints: [['confirm', 'Selecionar'], ['y', 'Jogar'], ...(inst ? [['x', 'Renomear']] : []), ['back', 'Voltar']],
       onAction(action, { focused }) {
-        if (action !== 'y') return false;
+        if (action !== 'y' && !(action === 'x' && inst)) return false;
         // Y joga direto; numa instância da lista, joga aquela.
         const k = focused && focused.dataset.key;
         const picked = k && k.startsWith('inst:') ? instances.find((x) => `inst:${x.key}` === k) : null;
+        if (action === 'x') {
+          renameInstance(ctx, picked || inst);
+          return true;
+        }
         ctx.launch(picked || target);
         return true;
       },
