@@ -53,7 +53,14 @@ async function getPlayerSummary(key, steamId) {
   const data = await call('/ISteamUser/GetPlayerSummaries/v2/', { key, steamids: steamId });
   const p = data.response && data.response.players && data.response.players[0];
   if (!p) return null;
-  return { name: p.personaname, avatar: p.avatarfull || p.avatarmedium || '' };
+  return { name: p.personaname, avatar: p.avatarfull || p.avatarmedium || '', since: (p.timecreated || 0) * 1000 };
+}
+
+// Nível da conta na Steam (o das insígnias). Vem null quando o perfil é privado.
+async function getSteamLevel(key, steamId) {
+  const data = await call('/IPlayerService/GetSteamLevel/v1/', { key, steamid: steamId });
+  const level = data.response && data.response.player_level;
+  return Number.isFinite(level) ? level : null;
 }
 
 const PERSONA = { 0: 'offline', 1: 'online', 2: 'busy', 3: 'away', 4: 'away', 5: 'online', 6: 'online' };
@@ -145,4 +152,4 @@ function art(appid) {
   };
 }
 
-module.exports = { SteamError, getOwnedGames, getPlayerSummary, getFriends, getPlayerAchievements, getSchema, getGlobalPercentages, art };
+module.exports = { SteamError, getOwnedGames, getPlayerSummary, getSteamLevel, getFriends, getPlayerAchievements, getSchema, getGlobalPercentages, art };

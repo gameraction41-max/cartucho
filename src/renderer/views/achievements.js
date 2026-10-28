@@ -11,7 +11,7 @@ const pct = (g) => g.unlocked / g.total;
 const done = (g) => (g.unlocked === g.total ? 1 : 0);
 let sortIndex = 0;
 
-function ring(level, progress) {
+export function ring(level, progress) {
   const c = 2 * Math.PI * 50;
   return h('div', {
     html: `<svg viewBox="0 0 120 120" role="img" aria-label="Nível ${level}">
@@ -80,7 +80,8 @@ export default {
 
     const el = h('div', { class: 'ach-wrap' },
       h('div', { class: 'ach-side' },
-      h('section', { class: 'panel level' },
+      // O painel do nível leva para o perfil.
+      h('section', { class: 'panel level', 'data-focus': true, 'data-key': 'profile', role: 'button', onclick: () => ctx.openProfile() },
         ring(s.level, s.progress),
         h('div', { class: 'counts' },
           h('span', {}, h('b', {}, s.unlocked), 'conquistas'),
@@ -97,7 +98,7 @@ export default {
 
     return {
       el,
-      hints: [['confirm', 'Ver jogo'], ['x', 'Ordenar'], ['menu', 'Menu']],
+      hints: [['confirm', 'Abrir'], ['x', 'Ordenar'], ['menu', 'Menu']],
       onAction(action) {
         if (action !== 'x') return false;
         sortIndex = (sortIndex + 1) % SORTS.length;

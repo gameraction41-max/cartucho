@@ -122,6 +122,35 @@ export const mock = {
       level: Math.floor(xp / 250) + 1, progress: (xp % 250) / 250, xp,
     };
   },
+  getProfile: async () => {
+    const summary = await mock.achievementSummary();
+    const bySource = { steam: 0, prism: 0, hytale: 0 };
+    for (const g of games) bySource[g.source] += g.minutes;
+    // Ícones de exemplo: um troféu com a cor de cada jogo.
+    const icon = (hh) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="hsl(${hh} 45% 22%)"/><path d="M20 14h24v10a12 12 0 0 1-24 0z M28 36h8v8h6v6H22v-6h6z" fill="hsl(${hh} 70% 62%)"/></svg>`)}`;
+    const rare = [
+      ['ELDEN RING', 1245620, 'Elden Lord', 'Alcançou o final Era da Fratura', 3.8, 40],
+      ['Hades II', 1145350, 'Medo Absoluto', 'Venceu com 32 de Medo', 0.6, 350],
+      ['Celeste', 504230, 'Coração Dourado', 'Terminou o Capítulo 9', 1.4, 300],
+      ['Terraria', 105600, 'Fim de Jogo', 'Derrotou o Senhor da Lua', 4.9, 190],
+      ['Stardew Valley', 413150, 'Lenda', 'Ganhou 10.000.000 de ouro', 2.7, 100],
+      ['Euro Truck Simulator 2', 227300, 'Magnata', 'Comprou todas as garagens', 6.2, 210],
+      ['Cyberpunk 2077', 1091500, 'O Lendário', 'Atingiu reputação de rua máxima', 9.8, 55],
+      ['Hollow Knight: Silksong', 1030300, 'Rainha da Seda', 'Terminou o jogo em menos de 5 horas', 0.3, 280],
+    ].map(([game, appid, name, description, percent, hh], i) => ({ appid, api: `R${i}`, key: `steam:${appid}`, game, name, description, percent, icon: icon(hh), unlocktime: now - i * 9 * day }))
+      .sort((a, b) => a.percent - b.percent);
+    return {
+      player: { name: 'Filipi', avatar: '', steamLevel: 37, since: new Date(2014, 5, 2).getTime() },
+      steamConfigured: true,
+      summary,
+      playtime: {
+        minutes: games.reduce((s, g) => s + g.minutes, 0), bySource, games: games.length, played: games.filter((g) => g.minutes).length,
+        top: [...games].sort((a, b) => b.minutes - a.minutes).slice(0, 4).map((g) => ({ key: g.key, title: g.title, source: g.source, minutes: g.minutes })),
+      },
+      rare: new URLSearchParams(location.search).get('raras') === '0' ? [] : rare,
+      rarityStatus: { running: false, done: 0, total: 0 },
+    };
+  },
   gameAchievements: async (appid) => {
     const g = games.find((x) => x.appid === appid);
     if (!g || !g.ach) return null;

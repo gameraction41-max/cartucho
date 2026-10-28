@@ -143,3 +143,13 @@
 [data-theme="bigpicture"] .qitem.focused { background: #fff; color: #0f1520; }
 [data-theme="bigpicture"] .qnow { border-radius: .5rem; border: 0; }
 [data-theme="bigpicture"] .qnow small { color: var(--accent); }
+
+/* Perfil nos outros temas */
+[data-theme="ps5"] .prof-stat { border-color: transparent; border-radius: 1.2rem; backdrop-filter: blur(14px); }
+[data-theme="ps5"] .prof-stat b { font-weight: 800; }
+[data-theme="ps5"] .rare-card, [data-theme="ps5"] .top-line { border-radius: 1rem; }
+[data-theme="bigpicture"] .prof-stat { background: var(--panel); border-color: transparent; backdrop-filter: none; border-radius: .5rem; }
+[data-theme="bigpicture"] .prof-stat b { font-weight: 800; }
+[data-theme="bigpicture"] .rare-card, [data-theme="bigpicture"] .top-line { border-radius: .4rem; background: rgba(255, 255, 255, .05); }
+[data-theme="bigpicture"] .top-line .bar i { background: var(--accent); }
+[data-theme="bigpicture"] .prof-avatar { border-radius: .6rem; }
