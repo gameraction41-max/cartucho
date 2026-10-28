@@ -10,7 +10,6 @@ import { applyTheme } from './lib/themes.js';
 import home from './views/home.js';
 import game from './views/game.js';
 import achievements from './views/achievements.js';
-import minecraft from './views/minecraft.js';
 import library from './views/library.js';
 import settings from './views/settings.js';
 import pc from './views/pc.js';
@@ -21,12 +20,14 @@ import profile from './views/profile.js';
 import collections from './views/collections.js';
 import collectionpick from './views/collectionpick.js';
 import mods from './views/mods.js';
+import gameopts from './views/gameopts.js';
+import addgame from './views/addgame.js';
 import { showBoot } from './views/boot.js';
 import { createMenu } from './views/menu.js';
 
-const VIEWS = { home, game, artsearch, mods, profile, collectionpick, collections, achievements, minecraft, friends, library, screenshots, pc, settings };
-const TABS = ['home', 'minecraft', 'achievements', 'friends', 'library', 'collections', 'screenshots', 'pc', 'settings'];
-const SCROLLERS = '.shelves, .shelf-row, .lib-pills, .shots-filters, .set-list, .glist, .grid, .row, .mc-row, .ach-list';
+const VIEWS = { home, game, gameopts, addgame, artsearch, mods, profile, collectionpick, collections, achievements, friends, library, screenshots, pc, settings };
+const TABS = ['home', 'achievements', 'friends', 'library', 'collections', 'screenshots', 'pc', 'settings'];
+const SCROLLERS = '.shelves, .shelf-row, .lib-pills, .shots-filters, .set-list, .glist, .grid, .row, .ach-list, .inst-list, .opts-list, .add-list';
 
 const GLYPHS = {
   gamepad: { confirm: ['A', 'a'], back: ['B', 'b'], x: ['X', 'x'], y: ['Y', 'y'], lb: ['LB', ''], rb: ['RB', ''], lt: ['LT', ''], rt: ['RT', ''], ltrt: ['LT RT', ''], menu: ['☰', ''], lr: ['◀ ▶', ''] },
@@ -276,6 +277,12 @@ function cycleTab(delta) {
 // ===== jogos e dados =====
 
 async function launch(g) {
+  // O Minecraft da lista abre a instância jogada por último; a página dele deixa escolher outra.
+  if (g.group) {
+    const first = (g.instances || []).map((k) => state.games.find((x) => x.key === k)).find(Boolean);
+    if (!first) return toast('Nenhuma instância do Minecraft encontrada no Prism Launcher.', { error: true });
+    g = first;
+  }
   // Jogo da Steam que não está neste PC: Jogar vira Instalar.
   if (g.source === 'steam' && g.installed === false) return g.download ? api.openDownloads() : install(g);
   sfx.confirm();

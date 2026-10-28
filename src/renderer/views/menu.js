@@ -2,12 +2,14 @@
 // O mesmo menu aparece por cima de um jogo aberto (overlay.js), com o jogo em destaque no topo.
 import { h, loadFirst } from '../lib/ui.js';
 
-// Ícones dos itens. Só aparecem no tema PS5, em que o menu vira uma fileira de botões redondos embaixo.
+// Ícones dos itens. No tema PS5 o menu vira uma fileira de botões redondos embaixo; nos outros, ficam ao lado do nome.
 const svg = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const ICONS = {
   close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
   profile: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
   home: svg('<path d="M3 11l9-7 9 7v9h-6v-6H9v6H3z"/>'),
+  achievements: svg('<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.5a3 3 0 0 0 3.5 4M16 6h3.5a3 3 0 0 1-3.5 4M12 13v4M8.5 20h7M10 17h4"/>'),
+  screenshots: svg('<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M8.5 6l1.5-2h4l1.5 2"/><circle cx="12" cy="12.5" r="3.2"/>'),
   library: svg('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'),
   settings: svg('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>'),
   sync: svg('<path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4"/>'),
@@ -59,15 +61,27 @@ export function createMenu({ ctx, focus, root, onClose }) {
     onClose(how);
   }
 
-  function item(key, label, fn, { small = '', confirm = '' } = {}) {
-    // O texto fica como primeiro filho: o aviso de confirmação troca só ele.
-    const el = h('button', { class: 'qitem', 'data-focus': true, 'data-key': key }, label, small ? h('small', {}, small) : null,
+  // Linha embaixo da fileira de energia: diz o nome do botão em foco e pede a confirmação.
+  const powerHint = h('div', { class: 'qpower-hint' });
+
+  function item(key, label, fn, { small = '', confirm = '', short = '' } = {}) {
+    // O texto fica como primeiro filho: o aviso de confirmação troca só ele. Na fileira de energia, aparece o nome curto.
+    const el = h('button', { class: 'qitem', 'data-focus': true, 'data-key': key, title: short ? label : null }, short || label, small ? h('small', {}, small) : null,
       ICONS[key] ? h('i', { class: 'qico', html: ICONS[key] }) : null);
+    el.addEventListener('focusin-nav', () => {
+      powerHint.textContent = !short ? '' : armed === key ? confirm : label;
+      powerHint.classList.toggle('warn', !!short && armed === key);
+    });
     el.addEventListener('click', () => {
       if (confirm && armed !== key) {
         armed = key;
         el.classList.add('confirm');
-        el.firstChild.textContent = confirm;
+        if (short) {
+          powerHint.textContent = confirm;
+          powerHint.classList.add('warn');
+        } else {
+          el.firstChild.textContent = confirm;
+        }
         ctx.sfx.tab();
         return;
       }
@@ -96,32 +110,47 @@ export function createMenu({ ctx, focus, root, onClose }) {
 
   function render(focusKey) {
     armed = null;
+    powerHint.textContent = '';
+    powerHint.classList.remove('warn');
     const running = ctx.state.running;
     const avatar = h('span', { class: 'avatar' });
     if (ctx.state.profile && ctx.state.profile.avatar) avatar.style.backgroundImage = `url("${ctx.state.profile.avatar}")`;
-    const clock = h('span', { class: 'clock' }, new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+    const now = new Date();
+    const clock = h('span', { class: 'clock' }, now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+    const date = h('small', { class: 'qdate' }, now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }));
     const go = (fn) => () => { close('navigate'); fn(); };
+    const name = (ctx.state.profile && ctx.state.profile.name) || 'Jogador';
+    const label = (text) => h('div', { class: 'qlabel' }, text);
 
     const panel = h('div', { class: 'qmenu', onclick: (e) => e.stopPropagation() },
-      h('div', { class: 'qhead' }, h('div', { class: 'me' }, avatar, (ctx.state.profile && ctx.state.profile.name) || 'Jogador'), clock),
+      h('div', { class: 'qhead' },
+        h('div', { class: 'me' }, avatar, h('span', { class: 'qwho' }, name, h('small', {}, running ? 'Jogando agora' : 'No Cartucho'))),
+        h('div', { class: 'qtime' }, clock, date)),
       running ? nowPlaying(ctx, running, go(() => ctx.resume())) : null,
+      label('Ir para'),
       h('div', { class: 'qlist qnav' },
         item('close', 'Fechar menu', () => close()),
-        item('profile', 'Perfil', go(() => ctx.openProfile())),
         item('home', 'Início', go(() => ctx.goTab('home'))),
         item('library', 'Biblioteca', go(() => ctx.goTab('library'))),
-        item('settings', 'Configurações', go(() => ctx.goTab('settings'))),
+        item('achievements', 'Conquistas', go(() => ctx.goTab('achievements'))),
+        item('screenshots', 'Capturas', go(() => ctx.goTab('screenshots'))),
+        item('profile', 'Perfil', go(() => ctx.openProfile())),
+        item('settings', 'Configurações', go(() => ctx.goTab('settings')))),
+      captureItems(running),
+      label('Cartucho'),
+      h('div', { class: 'qlist qtools' },
         item('sync', 'Sincronizar com a Steam', go(() => ctx.sync({ force: true, quiet: false }))),
         ctx.state.update && ctx.state.update.state === 'ready'
           ? item('update', `Atualizar para a ${ctx.state.update.version}`, () => ctx.api.installUpdate(), { small: 'reinicia o app' })
           : null),
-      captureItems(running),
       h('div', { class: 'qsep' }),
+      // Energia: uma fileira de botões no pé do menu. Os que desligam pedem um segundo aperto.
       h('div', { class: 'qlist qpower' },
-        item('quit', 'Sair para o Windows', () => ctx.api.power('quit')),
-        item('sleep', 'Suspender o PC', () => { close(); ctx.api.power('sleep'); }, { confirm: 'Aperte de novo para suspender' }),
-        item('shutdown', 'Desligar o PC', () => ctx.api.power('shutdown'), { confirm: 'Aperte de novo para desligar' }),
-        item('restart', 'Reiniciar o PC', () => ctx.api.power('restart'), { confirm: 'Aperte de novo para reiniciar' })));
+        item('quit', 'Sair para o Windows', () => ctx.api.power('quit'), { short: 'Sair' }),
+        item('sleep', 'Suspender o PC', () => { close(); ctx.api.power('sleep'); }, { short: 'Suspender', confirm: 'Aperte de novo para suspender' }),
+        item('shutdown', 'Desligar o PC', () => ctx.api.power('shutdown'), { short: 'Desligar', confirm: 'Aperte de novo para desligar' }),
+        item('restart', 'Reiniciar o PC', () => ctx.api.power('restart'), { short: 'Reiniciar', confirm: 'Aperte de novo para reiniciar' })),
+      powerHint);
 
     root.replaceChildren(panel);
     focus.setScope(root, focusKey || (running ? 'resume' : 'close'));

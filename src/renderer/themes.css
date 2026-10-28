@@ -4,7 +4,6 @@
 /* peças que só alguns temas mostram */
 .row-label { margin: 0 0 1rem; font-family: var(--f-display); font-weight: 600; font-size: .9rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .tile-name { display: none; }
-.qico { display: none; }
 .choice { display: inline-flex; align-items: center; gap: .9rem; }
 .choice i { font-style: normal; font-size: .8rem; color: var(--muted); }
 
@@ -14,7 +13,7 @@
 [data-theme="cartucho"] .tabs .on { border-bottom-color: var(--accent); }
 
 /* ===================== PS5 ===================== */
-/* A arte do jogo ocupa a tela, os jogos viram ícones quadrados no topo e o menu rápido vira uma central na parte de baixo. */
+/* A arte do jogo ocupa a tela, os jogos viram uma fileira de capas no topo e o menu rápido vira uma central na parte de baixo. */
 [data-theme="ps5"] {
   --page: #070912;
   --ink: #ffffff;
@@ -44,15 +43,15 @@
 [data-theme="ps5"] .opt { border-radius: 1rem; }
 [data-theme="ps5"] .src { font-family: var(--f-body); font-weight: 600; letter-spacing: .08em; }
 
-/* Início: fileira de ícones logo abaixo da barra de cima, informações do jogo embaixo. */
+/* Início: fileira de capas logo abaixo da barra de cima, informações do jogo embaixo. As capas ficam no formato vertical (2:3),
+   como em todo o Cartucho, para a arte não ser cortada. */
 [data-theme="ps5"] .row-label { display: none; }
 [data-theme="ps5"] .row { order: -1; align-items: flex-start; gap: 1.1rem; margin-top: calc(1.4rem - var(--bleed)); }
-[data-theme="ps5"] .tile { width: 7.6rem; height: 7.6rem; padding: .6rem; font-size: .85rem; box-shadow: 0 .4rem 1.2rem rgba(0, 0, 0, .4); }
-[data-theme="ps5"] .tile.focused { width: 11.4rem; height: 11.4rem; font-size: 1rem; border-radius: 1.2rem; }
+[data-theme="ps5"] .tile { width: 7rem; height: 10.5rem; padding: .6rem; font-size: .85rem; box-shadow: 0 .4rem 1.2rem rgba(0, 0, 0, .4); }
+[data-theme="ps5"] .tile.focused { width: 10rem; height: 15rem; font-size: 1rem; border-radius: 1.2rem; }
 [data-theme="ps5"] .tile .t { visibility: hidden; }
 [data-theme="ps5"] .tile.focused .t { visibility: hidden; }
 [data-theme="ps5"] .tile .mc-tag, [data-theme="ps5"] .tile .inst-tag { display: none; }
-[data-theme="ps5"] .tile .mc-art svg { left: 22%; top: 14%; width: 56%; height: 72%; }
 [data-theme="ps5"] .tile.more { font-size: .8rem; padding: .4rem; border-style: solid; border-color: transparent; background: var(--glass-strong); color: var(--ink); }
 [data-theme="ps5"] .tile-name { display: block; flex: none; width: 13rem; padding: .4rem .2rem 0 .4rem; font-weight: 600; font-size: 1.55rem; line-height: 1.2; text-wrap: balance; text-shadow: 0 1px 6px rgba(0, 0, 0, .5); }
 [data-theme="ps5"] .home-info { margin-bottom: 0; }
@@ -72,13 +71,16 @@
 [data-theme="ps5"] .qsep { display: none; }
 [data-theme="ps5"] .qcap { order: 2; align-content: center; padding: 1.2rem; border-radius: 1.2rem; background: var(--panel); backdrop-filter: blur(14px); min-width: 20rem; }
 [data-theme="ps5"] .qcap .qitem { font-size: 1.1rem; padding: .7rem 1rem; }
-[data-theme="ps5"] .qnav, [data-theme="ps5"] .qpower { order: 4; display: flex; gap: .6rem; align-items: flex-start; }
+[data-theme="ps5"] .qlabel, [data-theme="ps5"] .qpower-hint, [data-theme="ps5"] .qdate, [data-theme="ps5"] .qwho small { display: none; }
+[data-theme="ps5"] .qhead { border: 0; padding: 0; }
+[data-theme="ps5"] .qnav, [data-theme="ps5"] .qtools, [data-theme="ps5"] .qpower { order: 4; display: flex; gap: .6rem; align-items: flex-start; margin-top: 0; }
+[data-theme="ps5"] .qitem .qico svg { width: 1.7rem; height: 1.7rem; }
 [data-theme="ps5"] .qpower { order: 5; margin-left: auto; }
-[data-theme="ps5"] .qnav .qitem, [data-theme="ps5"] .qpower .qitem { flex-direction: column; justify-content: flex-start; gap: .7rem; width: 7.6rem; padding: 0; border-radius: 0; background: none; text-align: center; font-size: .95rem; font-weight: 600; line-height: 1.2; color: #d3d8e3; }
-[data-theme="ps5"] .qnav .qitem small, [data-theme="ps5"] .qpower .qitem small { display: none; }
-[data-theme="ps5"] .qnav .qico, [data-theme="ps5"] .qpower .qico { order: -1; display: grid; place-items: center; width: 4.4rem; height: 4.4rem; border-radius: 50%; background: rgba(40, 43, 64, .92); color: #fff; transition: transform .15s; }
+[data-theme="ps5"] .qnav .qitem, [data-theme="ps5"] .qtools .qitem, [data-theme="ps5"] .qpower .qitem { flex-direction: column; justify-content: flex-start; gap: .7rem; width: 7.6rem; padding: 0; border-radius: 0; background: none; text-align: center; font-size: .95rem; font-weight: 600; line-height: 1.2; color: #d3d8e3; }
+[data-theme="ps5"] .qnav .qitem small, [data-theme="ps5"] .qtools .qitem small, [data-theme="ps5"] .qpower .qitem small { display: none; }
+[data-theme="ps5"] .qnav .qico, [data-theme="ps5"] .qtools .qico, [data-theme="ps5"] .qpower .qico { order: -1; display: grid; place-items: center; width: 4.4rem; height: 4.4rem; border-radius: 50%; background: rgba(40, 43, 64, .92); color: #fff; transition: transform .15s; }
 [data-theme="ps5"] .qico svg { width: 1.7rem; height: 1.7rem; }
-[data-theme="ps5"] .qnav .qitem.focused, [data-theme="ps5"] .qpower .qitem.focused { background: none; color: #fff; }
+[data-theme="ps5"] .qnav .qitem.focused, [data-theme="ps5"] .qtools .qitem.focused, [data-theme="ps5"] .qpower .qitem.focused { background: none; color: #fff; }
 [data-theme="ps5"] .qitem.focused .qico { background: #fff; color: #070912; transform: scale(1.08); box-shadow: 0 0 1.6rem rgba(255, 255, 255, .35); }
 [data-theme="ps5"] .qitem.confirm.focused .qico { background: var(--danger); color: #fff; }
 
@@ -139,6 +141,8 @@
 
 /* Menu rápido: painel lateral escuro, como o menu do botão Steam. */
 [data-theme="bigpicture"] .qmenu { background: #0e141b; border-right-color: rgba(255, 255, 255, .06); }
+[data-theme="bigpicture"] .qitem .qico { border-radius: .35rem; }
+[data-theme="bigpicture"] .qwho small { color: var(--accent); }
 [data-theme="bigpicture"] .qitem { border-radius: .4rem; }
 [data-theme="bigpicture"] .qitem.focused { background: #fff; color: #0f1520; }
 [data-theme="bigpicture"] .qnow { border-radius: .5rem; border: 0; }

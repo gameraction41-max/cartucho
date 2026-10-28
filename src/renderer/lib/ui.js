@@ -23,7 +23,7 @@ export function h(tag, attrs = {}, ...children) {
   return el;
 }
 
-export const SOURCE_NAME = { steam: 'Steam', prism: 'Prism Launcher', hytale: 'Hytale' };
+export const SOURCE_NAME = { steam: 'Steam', prism: 'Prism Launcher', minecraft: 'Prism Launcher', hytale: 'Hytale', custom: 'Jogo do PC' };
 
 export function hue(text) {
   let n = 0;
@@ -94,7 +94,8 @@ export function dlBar(d, label = '') {
 }
 
 export function cover(game, cls = '') {
-  const isPrism = game.source === 'prism';
+  // O Minecraft da lista (todas as instâncias juntas) usa o mesmo bloco de grama, sem a versão no canto.
+  const isPrism = game.source === 'prism' || game.source === 'minecraft';
   const missing = game.installed === false;
   const el = h('div', { class: `cover ${cls} ${isPrism ? 'blocks' : ''} ${missing ? 'not-installed' : ''}`, style: { '--h': String(hue(game.title)) } },
     missing && !game.download ? h('span', { class: 'inst-tag' }, '⤓ Instalar') : null,

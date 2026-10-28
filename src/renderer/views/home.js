@@ -1,7 +1,9 @@
-// Início: fileira com os jogos jogados recentemente e o fundo trocando para a arte do jogo selecionado.
-import { h, cover, hours, when, sortRecent, dlBar, SOURCE_NAME } from '../lib/ui.js';
+// Início: fileira com os jogos que estão no PC (e os que saíram dele há pouco), do aberto mais recente para o mais antigo.
+// O fundo troca para a arte do jogo selecionado. A abre a página do jogo e Y joga direto.
+import { h, cover, hours, when, dlBar, SOURCE_NAME } from '../lib/ui.js';
+import { homeGames } from '../lib/shelf.js';
 
-const ROW_SIZE = 12;
+const ROW_SIZE = 24;
 const DL_SHOWN = 3;
 
 // Rótulo do botão principal: jogo da Steam fora do PC instala, e durante o download abre a fila da Steam.
@@ -22,6 +24,8 @@ export function metaFor(g) {
   const parts = [h('span', {}, h('b', {}, hours(g.minutes)), ' jogadas')];
   if (g.ach && g.ach.total) parts.push(h('span', {}, h('b', {}, `${g.ach.unlocked}/${g.ach.total}`), ' conquistas'));
   if (g.source === 'prism') parts.push(h('span', {}, h('b', {}, g.mcVersion || '?'), ` · ${g.loader}`));
+  if (g.group) parts.push(h('span', {}, h('b', {}, g.instances.length), g.instances.length === 1 ? ' instância' : ' instâncias'));
+  if (g.installed === false) parts.push(h('span', {}, 'fora do PC'));
   parts.push(h('span', {}, when(g.lastPlayed)));
   return parts;
 }
@@ -34,9 +38,9 @@ export function emptyState(ctx, { title, text }) {
 }
 
 export default {
-  label: 'Jogos',
+  label: 'Início',
   render(ctx) {
-    const games = sortRecent(ctx.state.games).slice(0, ROW_SIZE);
+    const games = homeGames(ctx).slice(0, ROW_SIZE);
     if (!games.length) {
       return {
         el: h('div', { style: { display: 'contents' } }, emptyState(ctx, {
@@ -68,7 +72,7 @@ export default {
       const t = cover(g, 'tile');
       Object.assign(t.dataset, { focus: '', key: g.key, selectFirst: '' });
       t.setAttribute('role', 'button');
-      t.addEventListener('click', () => ctx.launch(g));
+      t.addEventListener('click', () => { ctx.sfx.confirm(); ctx.go('game', { key: g.key }); });
       t.addEventListener('focusin-nav', () => {
         showInfo(g);
         tileName.textContent = g.title;
@@ -85,17 +89,17 @@ export default {
         h('div', { class: 'actions' },
           playBtn,
           h('button', { class: 'btn', onclick: () => ctx.go('game', { key: selected.key }) }, 'Detalhes'))),
-      h('h3', { class: 'row-label' }, 'Jogados recentemente'),
+      h('h3', { class: 'row-label' }, 'No seu PC'),
       h('div', { class: 'row' }, tiles, more));
 
     return {
       el,
       keepBackground: true,
-      hints: [['confirm', 'Jogar / Instalar'], ['y', 'Detalhes'], ['menu', 'Menu']],
+      hints: [['confirm', 'Detalhes'], ['y', 'Jogar'], ['menu', 'Menu']],
       onAction(action, { focused }) {
-        if (action === 'y' && focused && focused.dataset.key !== 'more') {
-          ctx.sfx.confirm();
-          ctx.go('game', { key: focused.dataset.key });
+        const g = action === 'y' && focused && games.find((x) => x.key === focused.dataset.key);
+        if (g) {
+          ctx.launch(g);
           return true;
         }
         return false;

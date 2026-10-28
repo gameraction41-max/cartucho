@@ -1,11 +1,26 @@
-// Painel do PC: processador, placa de vídeo, memória e discos. Ao lado, o preset gráfico que combina com esse hardware.
+// Painel do PC: processador, placa de vídeo, memória e discos em cartões, com uma foto de setup no fundo.
+// Ao lado, o preset gráfico que combina com esse hardware. Y troca a foto do fundo por uma sua (a do seu setup, por exemplo).
 import { h } from '../lib/ui.js';
+
+const svg = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ICONS = {
+  cpu: svg('<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>'),
+  gpu: svg('<rect x="2" y="7" width="20" height="11" rx="2"/><circle cx="9" cy="12.5" r="3"/><circle cx="16.5" cy="12.5" r="2"/><path d="M5 18v3M10 18v3"/>'),
+  mem: svg('<rect x="2" y="7" width="20" height="10" rx="1.5"/><path d="M6 10v4M10 10v4M14 10v4M18 10v4M5 17v3M19 17v3"/>'),
+  disk: svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="12" cy="11" r="4"/><circle cx="12" cy="11" r=".8"/><path d="M7 17h2"/>'),
+};
+const DEFAULT_BG = 'img/setup.svg';
+const BG_KEY = 'cartucho:pc';
 
 const REFRESH_MS = 2000;
 const GB = 1024 ** 3;
 
 const gb = (bytes) => `${(bytes / GB).toFixed(bytes >= 100 * GB ? 0 : 1).replace('.', ',')} GB`;
 const pct = (v) => (v == null ? '–' : `${Math.round(v)}%`);
+
+function card(icon, title, ...body) {
+  return h('section', { class: 'pc-card' }, h('div', { class: 'pc-card-head' }, h('i', { class: 'pc-ico', html: ICONS[icon] }), h('span', {}, title)), ...body);
+}
 
 function meter(label) {
   const fill = h('i');
@@ -27,17 +42,18 @@ export default {
   label: 'PC',
   async render(ctx) {
     const cpuName = h('p', { class: 'muted hw' }, 'Lendo o hardware…');
-    const gpuName = h('p', { class: 'muted hw' }, '');
+    const gpuName = h('p', { class: 'pc-big' }, '');
     const osName = h('span', { class: 'mono muted' }, '');
-    const cpu = meter('Processador');
-    const mem = meter('Memória');
+    const cpu = meter('Uso agora');
+    const mem = meter('Em uso');
     const disksBox = h('div', { class: 'disks' });
 
-    const hw = h('section', { class: 'panel pc-hw' },
-      h('div', { class: 'pc-block' }, cpu.el, cpuName),
-      h('div', { class: 'pc-block' }, h('div', { class: 'meter-head' }, h('span', {}, 'Placa de vídeo')), gpuName),
-      h('div', { class: 'pc-block' }, mem.el),
-      h('div', { class: 'pc-block' }, h('div', { class: 'meter-head' }, h('span', {}, 'Discos')), disksBox));
+    const gpuVram = h('small', { class: 'muted' }, '');
+    const hw = h('div', { class: 'pc-cards' },
+      card('cpu', 'Processador', cpu.el, cpuName),
+      card('gpu', 'Placa de vídeo', gpuName, gpuVram),
+      card('mem', 'Memória', mem.el),
+      card('disk', 'Discos', disksBox));
 
     const presetsBox = h('div', { class: 'plans' }, h('p', { class: 'muted' }, 'Carregando…'));
     // Jogos da Steam com preset, um por linha, com o preset em uso em cada um.
@@ -110,7 +126,10 @@ export default {
       if (!alive) return;
       cpuName.textContent = `${s.cpu} · ${s.cores} núcleos, ${s.threads} threads`;
       cpu.update((s.cpuLoad || 0) / 100, pct(s.cpuLoad), s.cpuTemp ? `${Math.round(s.cpuTemp)} °C` : '');
-      gpuName.textContent = s.gpu.length ? s.gpu.map((g) => (g.vram ? `${g.model} · ${gb(g.vram * 1024 ** 2)}` : g.model)).join('\n') : 'Não identificada';
+      // A placa dedicada (a de mais memória) fica em destaque; a integrada do processador vai embaixo, menor.
+      const gpus = [...s.gpu].sort((a, b) => (b.vram || 0) - (a.vram || 0));
+      gpuName.textContent = gpus.length ? gpus[0].model : 'Não identificada';
+      gpuVram.textContent = [gpus[0] && gpus[0].vram ? `${gb(gpus[0].vram * 1024 ** 2)} de memória de vídeo` : '', ...gpus.slice(1).map((g) => `também: ${g.model}`)].filter(Boolean).join('\n');
       mem.update(s.memUsed / s.memTotal, pct((s.memUsed / s.memTotal) * 100), `${gb(s.memUsed)} de ${gb(s.memTotal)}`);
       disksBox.replaceChildren(...s.disks.slice(0, 4).map((d) => {
         const m = meter(d.mount);
@@ -123,14 +142,45 @@ export default {
     tick();
     loadPresets();
 
+    // Fundo: a foto escolhida pela pessoa ou o desenho de setup do Cartucho.
+    const bg = h('div', { class: 'pc-bg' });
+    let customBg = null;
+    const loadBg = async () => {
+      customBg = ctx.api.artUrl ? await ctx.api.artUrl(BG_KEY, 'hero').catch(() => null) : null;
+      bg.style.backgroundImage = `url("${customBg || DEFAULT_BG}")`;
+      bg.classList.toggle('photo', !!customBg);
+    };
+    loadBg();
+    const changeBg = async () => {
+      const r = await ctx.api.pickArt(BG_KEY, 'hero');
+      if (!r || r.canceled) return;
+      if (r.error) return ctx.toast(r.error, { error: true });
+      ctx.sfx.confirm();
+      await loadBg();
+      ctx.toast('Fundo da aba PC trocado. X volta para o desenho do Cartucho.');
+    };
+    const resetBg = async () => {
+      if (!customBg) return;
+      await ctx.api.resetArt(BG_KEY);
+      ctx.sfx.back();
+      await loadBg();
+    };
+
     const el = h('div', { class: 'pc' },
-      h('section', { class: 'home-info', style: { marginBottom: '1.6rem', marginTop: 0 } },
+      bg,
+      h('section', { class: 'home-info pc-hero' },
+        h('span', { class: 'label' }, 'Seu setup'),
         h('h1', { class: 'big-title' }, 'Seu PC'), osName),
       h('div', { class: 'pc-grid' }, hw, presetsPanel));
 
     return {
       el,
-      hints: [['confirm', 'Aplicar preset'], ['menu', 'Menu']],
+      hints: [['confirm', 'Aplicar preset'], ['y', 'Trocar fundo'], ['x', 'Fundo padrão'], ['menu', 'Menu']],
+      onAction(action) {
+        if (action === 'y') { changeBg(); return true; }
+        if (action === 'x') { resetBg(); return true; }
+        return false;
+      },
       destroy() {
         alive = false;
         clearTimeout(timer);

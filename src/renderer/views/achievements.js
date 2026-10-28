@@ -93,14 +93,15 @@ export default {
         h('div', { class: 'list-head' },
           h('h2', { class: 'panel-title', style: { margin: 0 } }, 'Seus jogos'),
           st.running ? h('span', { class: 'muted' }, `lendo ${st.done} de ${st.total}…`) : null,
-          h('span', { class: 'pill on' }, sort.label)),
+          h('button', { class: 'pill on', 'data-focus': true, 'data-key': 'sort', onclick: () => { sortIndex = (sortIndex + 1) % SORTS.length; ctx.sfx.tab(); ctx.rerender(); } }, h('i', { class: 'k y' }, 'Y'), sort.label)),
         h('div', { class: 'glist' }, rows)));
 
     return {
       el,
-      hints: [['confirm', 'Abrir'], ['x', 'Ordenar'], ['menu', 'Menu']],
+      // Y ordena, como na Biblioteca.
+      hints: [['confirm', 'Abrir'], ['y', 'Ordenar'], ['menu', 'Menu']],
       onAction(action) {
-        if (action !== 'x') return false;
+        if (action !== 'y') return false;
         sortIndex = (sortIndex + 1) % SORTS.length;
         ctx.sfx.tab();
         ctx.rerender();

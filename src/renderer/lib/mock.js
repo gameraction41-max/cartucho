@@ -24,6 +24,9 @@ const games = [
 // Na demo, Silksong está baixando, Celeste e Stardew não estão no PC e o Terraria tem atualização na fila.
 for (const g of games) if ([1030300, 504230, 413150].includes(g.appid)) Object.assign(g, { installed: false, size: 0 });
 // Na demo, os jogos da lista do gamepresets.js têm presets.
+// Um jogo de fora da Steam, adicionado pela pessoa, e um jogo desinstalado há poucos dias (aparece no Início).
+games.push({ key: 'custom:a1b2c3', source: 'custom', customId: 'a1b2c3', title: 'Osu!', exe: 'C:\\Users\\Filipi\\AppData\\Local\\osu!\\osu!.exe', minutes: 410, lastPlayed: now - 6 * day, installed: true, art: null });
+for (const g of games) if (g.appid === 1030300) g.lastPlayed = now - 9 * day;
 for (const g of games) if ([1174180, 227300, 1091500].includes(g.appid)) g.presets = true;
 
 // Capturas de exemplo: paisagens em SVG, cada jogo com suas cores.
@@ -65,7 +68,7 @@ setInterval(() => {
 }, 1500);
 
 let config = {
-  steamId: '76561198000000000', hasSteamApiKey: true, steamApiKeyHint: 'A91F', hasSgdbApiKey: new URLSearchParams(location.search).get('sgdb') !== '0', sgdbApiKeyHint: '7C2E', prismDir: '', prismExe: '', hytaleExe: 'C:\\Program Files\\Hytale\\Hytale.exe', hytaleProcess: '',
+  steamId: '76561198000000000', hasSteamApiKey: true, steamApiKeyHint: 'A91F', hasSgdbApiKey: new URLSearchParams(location.search).get('sgdb') !== '0', sgdbApiKeyHint: '7C2E', prismDir: '', prismExe: '', hytaleExe: '', hytaleProcess: '',
   openAtLogin: true, returnAfterGame: true, captureBuffer: true, showBoot: true, sounds: true, music: true, musicFile: '', volume: 0.5,
   // Na demo dá para abrir já com um tema: index.html?tema=ps5
   theme: new URLSearchParams(location.search).get('tema') || 'cartucho',
@@ -76,6 +79,8 @@ let config = {
   ],
   sofaAction: 'off', sofaMinutes: 30,
   defaultPrismDir: 'C:\\Users\\Filipi\\AppData\\Roaming\\PrismLauncher', running: null,
+  defaultHytaleExe: 'C:\\Users\\Filipi\\AppData\\Roaming\\Hytale\\install\\release\\package\\launcher\\2026.10.21-4f1c9e2\\hytale-launcher.exe',
+  hiddenGames: [],
 };
 
 const mcPresets = { FO: 'desempenho' };
@@ -123,7 +128,20 @@ const listeners = new Map();
 // No navegador dá para simular eventos do processo principal, por exemplo: mockEmit('overlay:open', { running: {...} }).
 window.mockEmit = (event, payload) => (listeners.get(event) || []).forEach((cb) => cb(payload));
 
-const library = () => ({ games, profile: { name: 'Filipi', avatar: '' }, syncedAt: now, steamConfigured: true });
+// O Minecraft aparece nas listas como um jogo só, com as instâncias dentro (igual ao library.js).
+function withMinecraft() {
+  const list = games.filter((g) => g.source === 'prism').sort((a, b) => b.lastPlayed - a.lastPlayed);
+  const group = { key: 'minecraft', source: 'minecraft', title: 'Minecraft', group: true, instances: list.map((g) => g.key), minutes: list.reduce((s, g) => s + g.minutes, 0), lastPlayed: Math.max(...list.map((g) => g.lastPlayed)), mods: list.reduce((s, g) => s + g.mods, 0), installed: true, art: null };
+  return [...games, group];
+}
+const library = () => ({ games: withMinecraft(), profile: { name: 'Filipi', avatar: '' }, syncedAt: now, steamConfigured: true });
+const startMenu = [
+  { title: 'Hollow Knight', exe: 'C:\\GOG Games\\Hollow Knight\\hollow_knight.exe' },
+  { title: 'League of Legends', exe: 'C:\\Riot Games\\Riot Client\\RiotClientServices.exe' },
+  { title: 'Genshin Impact', exe: 'C:\\Program Files\\Genshin Impact\\launcher.exe' },
+  { title: 'Roblox Player', exe: 'C:\\Users\\Filipi\\AppData\\Local\\Roblox\\Versions\\RobloxPlayerBeta.exe' },
+  { title: 'Valorant', exe: 'C:\\Riot Games\\VALORANT\\live\\VALORANT.exe' },
+];
 
 export const mock = {
   getConfig: async () => ({ ...config }),
@@ -202,6 +220,17 @@ export const mock = {
   openDownloads: async () => {},
   openInSource: async () => {},
   pickArt: async () => ({ canceled: true }),
+  artUrl: async () => null,
+  openMusicSite: async () => {},
+  scanGames: async () => { await new Promise((r) => setTimeout(r, 300)); return startMenu.filter((x) => !games.some((g) => g.exe === x.exe)); },
+  pickGameExe: async () => null,
+  addGame: async (item) => {
+    const id = Math.random().toString(16).slice(2, 8);
+    games.push({ key: `custom:${id}`, source: 'custom', customId: id, title: item.title, exe: item.exe, minutes: 0, lastPlayed: 0, installed: true, art: null });
+    return { key: `custom:${id}` };
+  },
+  updateGame: async (id, patch) => { const g = games.find((x) => x.customId === id); if (g && patch.title) g.title = patch.title; return { ok: true }; },
+  removeGame: async (id) => { const i = games.findIndex((x) => x.customId === id); if (i >= 0) games.splice(i, 1); return { ok: true }; },
   // Busca na internet: imagens de exemplo no lugar do SteamGridDB e uma trilha de mentira no lugar do KHInsider.
   searchImages: async (game, kind, term) => {
     await new Promise((r) => setTimeout(r, 400));
@@ -216,6 +245,8 @@ export const mock = {
   },
   searchAlbums: async (game, term) => {
     await new Promise((r) => setTimeout(r, 400));
+    // index.html?khi=403 mostra o aviso de quando o KHInsider recusa a busca.
+    if (new URLSearchParams(location.search).get('khi') === '403') return { error: 'O KHInsider está recusando buscas feitas por programas agora (erro 403). Dá para abrir o site no navegador, baixar a faixa e escolher o arquivo em Música do PC.', blocked: true };
     const name = term || (game.source === 'prism' ? 'Minecraft' : game.title);
     return { term: name, items: [`${name} Original Soundtrack`, `${name} (Gamerip)`, `${name} - Volume Beta`, `${name} Deluxe Edition Soundtrack`].map((n, i) => ({ id: `album-${i}`, name: n })) };
   },
