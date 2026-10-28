@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('cartucho', {
   sync: invoke('library:sync'),
   achievementSummary: invoke('achievements:summary'),
   gameAchievements: invoke('achievements:game'),
+  getProfile: invoke('profile:get'),
   launch: invoke('game:launch'),
   openInSource: invoke('game:open-source'),
   pickArt: invoke('art:pick'),

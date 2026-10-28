@@ -161,6 +161,10 @@ function gameEnded(game) {
   if (config.get('returnAfterGame')) bringToFront();
 }
 
+function syncRarity() {
+  return library.syncRarity({ onProgress: () => send('achievements:changed') });
+}
+
 // Conquistas novas aparecem como aviso na tela do Cartucho. Com um jogo aberto, a própria Steam já avisa por cima dele.
 function notifyUnlocks(list) {
   if (list && list.length) send('achievements:unlocked', list);
@@ -240,6 +244,7 @@ function registerIpc() {
       library.syncAchievements({ ...opts, onProgress: () => send('achievements:changed') }).then((unlocked) => {
         send('achievements:changed');
         notifyUnlocks(unlocked);
+        return syncRarity();
       }).catch(() => {});
       return lib;
     } catch (err) {
@@ -247,6 +252,11 @@ function registerIpc() {
     }
   });
   ipcMain.handle('achievements:summary', () => library.achievementSummary());
+  // Abrir o perfil já começa a ler a raridade que falta; a tela se atualiza com achievements:changed.
+  ipcMain.handle('profile:get', () => {
+    syncRarity().catch(() => {});
+    return library.profile();
+  });
   ipcMain.handle('achievements:game', (_e, appid) => library.gameAchievements(appid));
   ipcMain.handle('game:launch', (_e, game) => launchGame(game));
   ipcMain.handle('game:open-source', (_e, game) => openInSource(game));
