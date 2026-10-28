@@ -1,6 +1,6 @@
 // Mods de uma instância do Minecraft: ver, atualizar, desativar e remover os instalados, e instalar novos do Modrinth.
 // Y troca entre Instalados e Buscar. Nos instalados, A abre o mod e X atualiza tudo; na busca, A instala e X digita o nome.
-import { h } from '../lib/ui.js';
+import { h, keyPill, segBar } from '../lib/ui.js';
 
 // O que já foi carregado, por instância: a tela redesenha (sincronização, downloads) sem perder a lista nem a busca.
 const memo = new Map();
@@ -44,7 +44,8 @@ export default {
     let hints = [];
     const body = h('div', { class: 'search-body' });
     const head = h('div', { class: 'lib-head search-head' });
-    const el = h('div', { class: 'search mods' }, head, body);
+    const bar = h('div', { class: 'search-bar' });
+    const el = h('div', { class: 'search mods' }, head, bar, body);
 
     const setHints = (list) => {
       hints = list;
@@ -62,12 +63,14 @@ export default {
       const ups = updates().length;
       head.replaceChildren(...[
         h('div', { class: 'search-title' }, h('h2', {}, `Mods · ${g.title}`), h('small', {}, `Minecraft ${g.mcVersion || '?'} · ${g.loader} · Modrinth`)),
-        h('div', { class: 'shots-kind' },
-          h('button', { class: `pill ${m.tab === 'installed' ? 'on' : ''}`, 'data-focus': true, 'data-key': 'tab:installed', onclick: () => setTab('installed') }, 'Instalados', n != null ? h('small', {}, String(n)) : null),
-          h('button', { class: `pill ${m.tab === 'search' ? 'on' : ''}`, 'data-focus': true, 'data-key': 'tab:search', onclick: () => setTab('search') }, 'Buscar')),
-        m.tab === 'installed' && ups && !m.detail ? h('button', { class: 'pill warn', 'data-focus': true, 'data-key': 'update-all', onclick: updateAll }, `Atualizar tudo · ${ups}`) : null,
-        m.tab === 'search' ? h('button', { class: 'pill', 'data-focus': true, 'data-key': 'term', onclick: askTerm }, m.text ? `Buscar · ${m.text}` : 'Digitar o nome') : null,
+        m.tab === 'installed' && ups && !m.detail ? keyPill(ctx, 'x', `Atualizar tudo · ${ups}`, { class: 'warn', 'data-key': 'update-all', onclick: updateAll }) : null,
+        m.tab === 'search' ? keyPill(ctx, 'x', m.text ? `Buscar · ${m.text}` : 'Digitar o nome', { 'data-key': 'term', onclick: askTerm }) : null,
       ].filter(Boolean));
+      // Instalados e Buscar ficam na barra de baixo, como os filtros da Biblioteca (LT e RT trocam).
+      bar.replaceChildren(segBar(ctx, [
+        { key: 'tab:installed', label: 'Instalados', count: n, on: m.tab === 'installed', onclick: () => setTab('installed') },
+        { key: 'tab:search', label: 'Buscar', on: m.tab === 'search', onclick: () => setTab('search') },
+      ]));
     }
 
     function loading(text) {
@@ -121,7 +124,7 @@ export default {
       const notice = m.data.offline ? h('p', { class: 'muted mods-note' }, `${m.data.offline} Mostrando só os arquivos da pasta.`) : null;
       if (!list.length) {
         body.replaceChildren(message('Nenhum mod ainda', 'Aperte Y para buscar mods no Modrinth. O Cartucho só mostra os que servem nesta versão e neste loader, e já instala as dependências.'));
-        setHints([['y', 'Buscar mods'], ['back', 'Voltar']]);
+        setHints([['ltrt', 'Buscar mods'], ['back', 'Voltar']]);
         return ctx.refocus('tab:search');
       }
       // Atualizações primeiro, depois os ativos e por fim os desativados.
@@ -130,7 +133,7 @@ export default {
       const rows = sorted.map(row);
       if (rows[0]) rows[0].setAttribute('data-autofocus', '');
       body.replaceChildren(...[notice, h('div', { class: 'set-list pick-list mod-list' }, rows)].filter(Boolean));
-      setHints([['confirm', 'Abrir'], ...(updates().length ? [['x', 'Atualizar tudo']] : []), ['y', 'Buscar mods'], ['back', 'Voltar']]);
+      setHints([['confirm', 'Abrir'], ...(updates().length ? [['x', 'Atualizar tudo']] : []), ['ltrt', 'Buscar mods'], ['back', 'Voltar']]);
       ctx.refocus(focusKey && body.querySelector(`[data-key="${CSS.escape(focusKey)}"]`) ? focusKey : `mod:${sorted[0].file}`);
     }
 
@@ -274,7 +277,7 @@ export default {
       }
       if (m.data && !m.data.supported) {
         body.replaceChildren(message('Instância sem mods', `${g.title} é ${g.loader}. Troque o loader no Prism para Fabric, Forge, NeoForge ou Quilt antes de instalar mods.`));
-        setHints([['y', 'Instalados'], ['back', 'Voltar']]);
+        setHints([['ltrt', 'Instalados'], ['back', 'Voltar']]);
         return ctx.refocus('tab:search');
       }
       let focusKey = null;
@@ -299,7 +302,7 @@ export default {
       const sub = m.text ? `${total} resultados para "${m.text}"` : `Os mais baixados para ${g.mcVersion} · ${g.loader}`;
       if (!items.length) {
         body.replaceChildren(message('Nada encontrado', `Nenhum mod com esse nome tem versão para Minecraft ${g.mcVersion} com ${g.loader}. Tente outro nome com X.`));
-        setHints([['x', 'Buscar'], ['y', 'Instalados'], ['back', 'Voltar']]);
+        setHints([['x', 'Buscar'], ['ltrt', 'Instalados'], ['back', 'Voltar']]);
         return ctx.refocus('term');
       }
       const rows = items.map((x, i) => {
@@ -311,7 +314,7 @@ export default {
       });
       if (items.length < total) rows.push(h('button', { class: 'opt more', 'data-focus': true, 'data-key': 'more', onclick: () => loadSearch(true) }, h('span', { class: 'txt' }, 'Mostrar mais')));
       body.replaceChildren(h('p', { class: 'muted mods-note' }, sub), h('div', { class: 'set-list pick-list mod-list' }, rows));
-      setHints([['confirm', 'Instalar'], ['x', 'Buscar'], ['y', 'Instalados'], ['back', 'Voltar']]);
+      setHints([['confirm', 'Instalar'], ['x', 'Buscar'], ['ltrt', 'Instalados'], ['back', 'Voltar']]);
       ctx.refocus(focusKey || `res:${items[0].projectId}`);
     }
 
@@ -343,7 +346,7 @@ export default {
       keepBackground: true,
       get hints() { return hints; },
       onAction(action) {
-        if (action === 'y') {
+        if (action === 'y' || action === 'lt' || action === 'rt') {
           setTab(m.tab === 'installed' ? 'search' : 'installed');
           return true;
         }

@@ -18,6 +18,8 @@ const REPORT_EVERY = 5000;
 const WAKE_GRACE = 700;
 // Quanto tempo cada jogo fica na tela no descanso com capas.
 const SLIDE_MS = 9000;
+// Troca de jogo: a tela escurece por inteiro antes do próximo aparecer, para os nomes não ficarem um por cima do outro.
+const FADE_OUT_MS = 900;
 
 export function minutesText(m) {
   return m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`;
@@ -68,6 +70,13 @@ export function createSofa({ api, root, saver, sfx, hints, setMusicPaused, games
     const urls = g.art ? [...(g.art.hero || []), ...(g.source === 'prism' ? [] : g.art.cover || [])] : [];
     const url = urls.length ? await loadFirst(urls) : null;
     if (!slides) return;
+    const old = [...saver.querySelectorAll('.saver-slide')];
+    if (old.length) {
+      old.forEach((el) => el.classList.add('out'));
+      await new Promise((done) => setTimeout(done, FADE_OUT_MS));
+      old.forEach((el) => el.remove());
+      if (!slides) return;
+    }
     const hh = hue(g.title);
     const slide = h('div', { class: 'saver-slide' },
       h('div', { class: 'saver-img', style: { backgroundImage: url ? `url("${url}")` : `radial-gradient(circle at 70% 35%, hsl(${hh} 55% 42%) 0%, hsl(${hh} 50% 16%) 40%, hsl(${hh} 40% 5%) 80%)` } }),
@@ -75,9 +84,6 @@ export function createSofa({ api, root, saver, sfx, hints, setMusicPaused, games
     saver.querySelector('.saver-slides').append(slide);
     saver.querySelector('.clock').textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     requestAnimationFrame(() => requestAnimationFrame(() => slide.classList.add('on')));
-    // A anterior some depois que a nova já apareceu.
-    const old = [...saver.querySelectorAll('.saver-slide')].slice(0, -1);
-    setTimeout(() => old.forEach((el) => el.remove()), 2000);
     slides.timer = setTimeout(nextSlide, SLIDE_MS);
   }
 

@@ -2,7 +2,7 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const { spawn } = require('node:child_process');
-const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, globalShortcut, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, globalShortcut, powerMonitor, Tray, Menu } = require('electron');
 const config = require('./config');
 const library = require('./library');
 const prism = require('./prism');
@@ -30,6 +30,8 @@ let win = null;
 let running = null;
 let recommended = null; // preset gráfico que combina com o hardware, calculado uma vez
 let couch = null; // modo sofá (sofa.js)
+let tray = null; // ícone perto do relógio enquanto o Cartucho espera o botão Xbox
+let quitting = false;
 
 // Música e sons tocam sem precisar de um clique antes, como num console.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -66,6 +68,7 @@ if (!app.requestSingleInstanceLock()) {
     });
     startSofa();
   });
+  app.on('before-quit', () => { quitting = true; });
   app.on('window-all-closed', () => app.quit());
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
@@ -82,6 +85,7 @@ function createWindow() {
     backgroundColor: '#0b0d14',
     show: false,
     title: 'Cartucho',
+    icon: path.join(__dirname, '..', 'renderer', 'img', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -94,6 +98,12 @@ function createWindow() {
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.on('focus', () => send('window:focus'));
   win.on('blur', () => send('window:blur'));
+  // Fechar a janela (Alt+F4) também só esconde, se o botão Xbox estiver ligado para abrir o Cartucho.
+  win.on('close', (e) => {
+    if (quitting || config.get('guideOpens') === false) return;
+    e.preventDefault();
+    hideToTray();
+  });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 }
 
@@ -111,6 +121,24 @@ function bringToFront() {
   win.setAlwaysOnTop(true);
   win.focus();
   win.setAlwaysOnTop(false);
+}
+
+// "Sair para o Windows" esconde o Cartucho em vez de fechar: ele fica quietinho perto do relógio
+// lendo o botão Xbox, que traz a tela de volta. Para fechar de vez, é pelo ícone perto do relógio.
+function hideToTray() {
+  if (!win || win.isDestroyed()) return;
+  releaseTop();
+  win.hide();
+  send('window:blur');
+  if (tray) return;
+  tray = new Tray(path.join(__dirname, '..', 'renderer', 'img', 'icon.png'));
+  tray.setToolTip('Cartucho: aperte o botão Xbox do controle para abrir');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Abrir o Cartucho', click: () => bringToFront() },
+    { type: 'separator' },
+    { label: 'Fechar de vez', click: () => app.quit() },
+  ]));
+  tray.on('click', () => bringToFront());
 }
 
 // Botão do Xbox com outro app ou jogo na frente: o Cartucho fica por cima de tudo até o menu fechar,
@@ -138,6 +166,11 @@ function onGuide() {
   if (!win || win.isDestroyed()) return;
   if (overlay.isOpen()) return overlay.send('input:guide');
   if (running && !win.isFocused()) return overlay.open({ running });
+  // Escondido perto do relógio (Sair para o Windows): volta direto para a tela, sem abrir o menu.
+  if (!win.isVisible()) {
+    bringToFront();
+    return send('window:focus');
+  }
   const fromBackground = !win.isFocused();
   if (fromBackground) showOverApp();
   send('input:guide', { fromBackground });
@@ -540,7 +573,7 @@ function registerIpc() {
   ipcMain.handle('sofa:activity', () => couch && couch.activity());
   ipcMain.handle('clipboard:read', () => clipboard.readText().slice(0, 500));
   ipcMain.handle('system:power', (_e, action) => {
-    if (action === 'quit') return app.quit();
+    if (action === 'quit') return config.get('guideOpens') === false ? app.quit() : hideToTray();
     return system.power(action);
   });
   ipcMain.handle('window:minimize', () => {

@@ -140,6 +140,8 @@ export default {
       section('console', 'Modo console'),
       toggle('openAtLogin', 'Abrir quando o Windows iniciar', 'O Cartucho abre sozinho, em tela cheia, ao ligar o PC'),
       toggle('returnAfterGame', 'Voltar para o Cartucho ao fechar um jogo'),
+      toggle('guideOpens', 'Botão Xbox abre o Cartucho', 'Sair para o Windows deixa o Cartucho escondido perto do relógio; o botão Xbox traz de volta'),
+      toggle('introAnim', 'Animação do cartucho ao abrir', 'O cartucho encaixa no console antes da tela de perfil'),
       toggle('showBoot', 'Mostrar a tela de abertura'),
       action('fullscreen', 'Tela cheia', 'Também funciona com F11', () => ctx.api.toggleFullscreen()),
 

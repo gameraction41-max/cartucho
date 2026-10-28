@@ -1,6 +1,6 @@
 // Adicionar jogo de fora da Steam: a lista dos programas do menu Iniciar e da Área de Trabalho que parecem jogos,
 // para escolher com o controle, ou um .exe escolhido na janela do Windows. O jogo entra no Início e na Biblioteca.
-import { h } from '../lib/ui.js';
+import { h, keyPill } from '../lib/ui.js';
 
 let scanned = null; // a lista demora alguns segundos para montar; voltando à tela, aparece na hora
 
@@ -59,8 +59,8 @@ export default {
     const el = h('div', { class: 'search addgame' },
       h('div', { class: 'lib-head search-head' },
         h('div', { class: 'search-title' }, h('h2', {}, 'Adicionar jogo'), h('small', {}, 'Programas do menu Iniciar e da Área de Trabalho que parecem jogos')),
-        h('button', { class: 'pill', 'data-focus': true, 'data-key': 'browse', onclick: browse }, 'Procurar .exe'),
-        h('button', { class: 'pill', 'data-focus': true, 'data-key': 'rescan', onclick: () => { scanned = null; draw(); ctx.api.scanGames().then((l) => { scanned = l || []; if (alive) draw(); }); } }, 'Procurar de novo')),
+        keyPill(ctx, null, 'Procurar .exe', { 'data-key': 'browse', onclick: browse }),
+        keyPill(ctx, null, 'Procurar de novo', { 'data-key': 'rescan', onclick: () => { scanned = null; draw(); ctx.api.scanGames().then((l) => { scanned = l || []; if (alive) draw(); }); } })),
       body);
 
     return {

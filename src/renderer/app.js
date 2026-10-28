@@ -23,6 +23,7 @@ import mods from './views/mods.js';
 import gameopts from './views/gameopts.js';
 import addgame from './views/addgame.js';
 import { showBoot } from './views/boot.js';
+import { playIntro } from './lib/intro.js';
 import { createMenu } from './views/menu.js';
 
 const VIEWS = { home, game, gameopts, addgame, artsearch, mods, profile, collectionpick, collections, achievements, friends, library, screenshots, pc, settings };
@@ -100,6 +101,12 @@ function renderDevice() {
   document.body.classList.toggle('hide-cursor', state.device === 'gamepad');
   renderHints();
   renderTopbar();
+  // Botões desenhados nas telas (Y Ordenar, LT/RT dos filtros) acompanham o controle ou o teclado.
+  document.querySelectorAll('[data-glyph]').forEach((el) => {
+    const [text, cls] = GLYPHS[glyphSet()][el.dataset.glyph];
+    el.textContent = text;
+    el.className = `k ${cls} ${el.dataset.glyphClass || ''}`.trim();
+  });
 }
 
 function tickClock() {
@@ -197,6 +204,7 @@ const ctx = {
   reloadLibrary: async () => { await loadLibrary(await api.getLibrary()); show({ keepFocus: true }); },
   applyConfig,
   hints: (list) => hintEls(list),
+  glyph: (action) => GLYPHS[glyphSet()][action],
 };
 
 async function show({ keepFocus = false } = {}) {
@@ -466,14 +474,14 @@ document.addEventListener('click', (e) => {
 let bootHandler = null;
 
 // Tela de perfil (abertura). Aparece ao ligar e quando o B não tem mais para onde voltar. A entra de novo pelo Início.
-function openBoot({ first = false } = {}) {
+function openBoot({ first = false, sound = true } = {}) {
   if (bootHandler) return;
   if (!first) {
     tabHistory.length = 0;
     stack.length = 0;
     stack.push({ id: 'home', params: {} });
   }
-  bootHandler = showBoot({ state, sfx, first, onDone: enterFromBoot });
+  bootHandler = showBoot({ state, sfx, first, sound, onDone: enterFromBoot });
 }
 
 async function enterFromBoot() {
@@ -559,15 +567,21 @@ async function start() {
   document.querySelector('#topbar .me').addEventListener('click', openProfile);
 
   stack.push({ id: 'home', params: {} });
-  if (cfg.showBoot) {
-    openBoot({ first: true });
+  const afterIntro = (played) => (cfg.showBoot ? openBoot({ first: true, sound: !played }) : enterFromBoot());
+  if (cfg.introAnim !== false) {
+    // Durante a animação, qualquer botão pula (o bootHandler recebe tudo).
+    const skip = playIntro({ sfx, onDone: () => { bootHandler = null; afterIntro(true); } });
+    bootHandler = () => skip();
   } else {
-    await enterFromBoot();
+    await afterIntro(false);
   }
   sync({ quiet: true }).catch(() => {});
   if (isDemo) {
     document.title = 'Cartucho (demonstração)';
     window.demoNotice = notifyAchievements;
+    window.demoGo = (id, params = {}) => ctx.go(id, params);
+    window.demoTab = goTab;
+    window.demoDevice = (d) => { state.device = d; renderDevice(); };
     window.demoSofa = (action = 'screen', seconds = 30) => (action === 'covers' ? sofa.rest('covers') : sofa.warn({ action, seconds }));
   }
 }

@@ -54,6 +54,8 @@ export const sfx = {
   tab: () => blip(740, { dur: 0.06, type: 'triangle', gain: 0.14 }),
   achievement: () => { [784, 988, 1319].forEach((f, i) => setTimeout(() => blip(f, { dur: 0.22, gain: 0.14, type: 'triangle' }), i * 110)); },
   error: () => blip(180, { dur: 0.2, type: 'square', gain: 0.08 }),
+  // Cartucho encaixando: um tranco grave e o estalo da trava.
+  insert: () => { blip(150, { dur: 0.16, type: 'sine', gain: 0.35, slide: 0.5 }); setTimeout(() => blip(2400, { dur: 0.03, type: 'square', gain: 0.05 }), 70); },
   boot: () => { [330, 494, 659, 988].forEach((f, i) => setTimeout(() => blip(f, { dur: 0.5, gain: 0.12, type: 'triangle' }), i * 140)); },
 };
 
