@@ -54,7 +54,7 @@ function sidePanel(ctx, g) {
   if (g.source === 'prism') {
     return h('section', { class: 'panel' },
       h('h2', { class: 'panel-title' }, 'Instância do Prism Launcher'),
-      h('p', { class: 'muted', style: { margin: 0 } }, 'O Cartucho abre esta instância direto, sem passar pela janela do Prism. Mods e versões continuam sendo gerenciados no Prism.'));
+      h('p', { class: 'muted', style: { margin: 0 } }, 'O Cartucho abre esta instância direto, sem passar pela janela do Prism. Em Mods dá para atualizar, desativar, remover e instalar mods do Modrinth. A versão do Minecraft e o loader continuam sendo trocados no Prism.'));
   }
   return h('section', { class: 'panel' },
     h('h2', { class: 'panel-title' }, 'Tempo de jogo'),
@@ -193,6 +193,7 @@ export default {
         h('div', { class: 'menu-v' },
           g.download ? dlBar(g.download, g.download.update ? 'Atualizando' : 'Baixando') : null,
           h('button', { class: 'btn primary', 'data-focus': true, 'data-autofocus': true, 'data-key': 'play', onclick: () => ctx.launch(g) }, playLabel(g)),
+          g.source === 'prism' ? h('button', { class: 'btn', 'data-focus': true, 'data-key': 'mods', onclick: () => { ctx.sfx.confirm(); ctx.go('mods', { key: g.key }); } }, g.mods ? `Mods · ${g.mods}` : 'Mods') : null,
           g.source === 'prism' || g.presets ? presetButton(ctx, g) : null,
           h('button', { class: 'btn', 'data-focus': true, 'data-key': 'open', onclick: () => ctx.api.openInSource(g) }, OPEN_LABEL[g.source]),
           collectionsButton(ctx, g),

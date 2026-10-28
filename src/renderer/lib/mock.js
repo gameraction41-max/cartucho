@@ -78,6 +78,33 @@ let config = {
 };
 
 const mcPresets = { FO: 'desempenho' };
+// Mods de exemplo: ícones em SVG no lugar dos do Modrinth.
+const modIcon = (hue, letter) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="hsl(${hue} 55% 42%)"/><rect x="10" y="10" width="44" height="44" rx="8" fill="hsl(${hue + 20} 70% 60%)" opacity=".35"/><text x="32" y="43" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="30" fill="#fff">${letter}</text></svg>`)}`;
+const mod = (name, version, hue, extra = {}) => ({
+  file: `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${version}.jar`, enabled: true, size: 400000 + name.length * 91000, name, icon: modIcon(hue, name[0]),
+  projectId: `p-${name}`, version, update: null, description: '', ...extra,
+});
+const modsByInstance = {
+  FO: [
+    mod('Sodium', '0.6.5+mc1.21.1', 150, { update: { number: '0.6.13+mc1.21.1' }, description: 'O mod de otimização de renderização mais rápido para o Minecraft.' }),
+    mod('Iris Shaders', '1.8.1+1.21.1', 280, { update: { number: '1.8.8+1.21.1' }, description: 'Mod de shaders moderno, compatível com OptiFine shaders.' }),
+    mod('Fabric API', '0.110.0+1.21.1', 30, { update: { number: '0.116.6+1.21.1' }, description: 'Biblioteca base para a maioria dos mods de Fabric.' }),
+    mod('Lithium', '0.15.0+mc1.21.1', 200, { description: 'Otimizações gerais para o jogo, sem mudar nada da jogabilidade.' }),
+    mod('Mod Menu', '11.0.3', 0, { description: 'Lista os mods instalados e abre as configurações de cada um.' }),
+    mod('Entity Culling', '1.7.2', 100, { description: 'Não desenha entidades que estão escondidas atrás de blocos.' }),
+    mod('Continuity', '3.0.0+1.21', 50, { description: 'Texturas conectadas, como no OptiFine.' }),
+    mod('Zoomify', '2.14.2', 320, { description: 'Zoom configurável, com animação suave.' }),
+    mod('ImmediatelyFast', '1.3.4+1.21.1', 15, { description: 'Acelera o desenho de interface, textos e entidades.' }),
+    mod('Xaeros Minimap', '24.6.1', 220, { enabled: false, file: 'xaeros-minimap-24.6.1.jar.disabled', description: 'Minimapa com waypoints.' }),
+    mod('cool-hud-1.0', '', 0, { icon: null, projectId: null, version: '', file: 'cool-hud-1.0.jar' }),
+  ],
+  CABE: [mod('Create', '0.3.2g', 40, { description: 'Engrenagens, esteiras e máquinas.' }), mod('JEI', '7.7.1.153', 210, { description: 'Mostra as receitas de todos os itens.' })],
+};
+const modResults = [
+  ['Sodium', 150, 92e6], ['Fabric API', 30, 110e6], ['Iris Shaders', 280, 75e6], ['Lithium', 200, 44e6], ['Mod Menu', 0, 61e6], ['Entity Culling', 100, 38e6],
+  ['Xaeros Minimap', 220, 29e6], ['Just Enough Items', 210, 120e6], ['AppleSkin', 120, 33e6], ['Jade', 260, 41e6], ['Waystones', 180, 25e6], ['Clumps', 90, 19e6],
+  ['FerriteCore', 20, 52e6], ['Simple Voice Chat', 340, 24e6], ['Distant Horizons', 240, 12e6],
+].map(([name, hue, dl]) => ({ projectId: `p-${name}`, slug: name.toLowerCase(), name, description: `Descrição de exemplo de ${name}, como aparece no Modrinth.`, icon: modIcon(hue, name[0]), downloads: dl, author: 'autor' }));
 const friend = (steamId, name, status, extra = {}) => ({ steamId, name, avatar: '', status, appid: null, game: '', lastOnline: now - 2 * day, ...extra });
 const friends = [
   friend('76561198000000001', 'Rafa', 'playing', { appid: 1245620, game: 'ELDEN RING' }),
@@ -197,6 +224,41 @@ export const mock = {
   useTrack: async () => ({ ok: true }),
   searchDone: async () => {},
   resetArt: async () => {},
+  modsList: async (id) => {
+    await new Promise((r) => setTimeout(r, 500));
+    const g = games.find((x) => x.instanceId === id);
+    return { mods: [...(modsByInstance[id] || [])], offline: null, supported: !!g && g.loader !== 'Vanilla', dir: '' };
+  },
+  modsSearch: async (id, text) => {
+    await new Promise((r) => setTimeout(r, 400));
+    const t = String(text || '').toLowerCase();
+    const items = t ? modResults.filter((x) => x.name.toLowerCase().includes(t)) : modResults;
+    return { items, total: items.length, offset: 0 };
+  },
+  modsInstall: async (id, projectId) => {
+    await new Promise((r) => setTimeout(r, 700));
+    const x = modResults.find((y) => y.projectId === projectId);
+    (modsByInstance[id] ||= []).push(mod(x.name, '1.0.0', 60, { icon: x.icon, projectId, description: x.description }));
+    return { installed: [x.name] };
+  },
+  modsUpdate: async (id, file) => {
+    await new Promise((r) => setTimeout(r, 500));
+    const x = (modsByInstance[id] || []).find((y) => y.file === file);
+    const version = x.update.number;
+    Object.assign(x, { version, update: null });
+    return { updated: true, name: x.name, version };
+  },
+  modsToggle: async (id, file) => {
+    const x = (modsByInstance[id] || []).find((y) => y.file === file);
+    x.enabled = !x.enabled;
+    x.file = x.enabled ? x.file.replace(/\.disabled$/, '') : `${x.file}.disabled`;
+    return { file: x.file, enabled: x.enabled };
+  },
+  modsRemove: async (id, file) => {
+    modsByInstance[id] = (modsByInstance[id] || []).filter((y) => y.file !== file);
+    return { ok: true };
+  },
+  modsFolder: async () => {},
   mcPresets: async () => [
     { id: 'desempenho', label: 'Desempenho', desc: 'Mais FPS: sombras, reflexos e efeitos mais leves' },
     { id: 'equilibrado', label: 'Equilibrado', desc: 'Bonito e fluido: o meio-termo de cada jogo' },
