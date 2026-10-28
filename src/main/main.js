@@ -181,8 +181,9 @@ function startSofa() {
     systemIdleMs: () => powerMonitor.getSystemIdleTime() * 1000,
     onWarn: (w) => send('sofa:warn', w),
     onCancel: () => send('sofa:cancel'),
-    onScreen: (off) => send('sofa:screen', { off }),
+    onRest: (mode) => send('sofa:rest', { mode }),
     act: (action) => {
+      if (action === 'covers') return;
       if (action === 'screen') return system.screen(false);
       if (action === 'wake') return system.screen(true);
       return system.power(action);

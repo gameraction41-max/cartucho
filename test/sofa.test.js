@@ -13,7 +13,7 @@ function setup({ action = 'screen', minutes = 10, busy = null, inFront = true } 
     systemIdleMs: () => t.idle,
     onWarn: (w) => t.events.push(['warn', w.action]),
     onCancel: () => t.events.push(['cancel']),
-    onScreen: (off) => t.events.push(['screen', off]),
+    onRest: (mode) => t.events.push(['rest', mode]),
     act: (a) => t.acts.push(a),
     now: () => t.now,
   });
@@ -91,7 +91,7 @@ test('tela desligada liga de novo com o controle e não desliga de novo em segui
   assert.deepStrictEqual(t.acts, ['screen']);
   t.sofa.activity();
   assert.deepStrictEqual(t.acts, ['screen', 'wake']);
-  assert.deepStrictEqual(t.events.at(-1), ['screen', false]);
+  assert.deepStrictEqual(t.events.at(-1), ['rest', null]);
   t.wait(5 * MIN);
   assert.deepStrictEqual(t.acts, ['screen', 'wake']);
 });
@@ -103,5 +103,17 @@ test('desligar o modo sofá no meio da contagem cancela', () => {
   t.wait(1000);
   assert.deepStrictEqual(t.events, [['warn', 'screen'], ['cancel']]);
   t.wait(WARN_MS);
+  assert.deepStrictEqual(t.acts, []);
+});
+
+test('capas entram direto no tempo escolhido, sem contagem, e saem com qualquer botão', () => {
+  const t = setup({ action: 'covers', minutes: 5 });
+  t.wait(5 * MIN);
+  assert.deepStrictEqual(t.events, [['rest', 'covers']]);
+  t.wait(30 * MIN);
+  assert.deepStrictEqual(t.events, [['rest', 'covers']]);
+  assert.deepStrictEqual(t.acts, []);
+  t.sofa.activity();
+  assert.deepStrictEqual(t.events, [['rest', 'covers'], ['rest', null]]);
   assert.deepStrictEqual(t.acts, []);
 });

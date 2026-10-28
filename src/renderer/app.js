@@ -45,7 +45,7 @@ let renderToken = 0;
 
 const $ = (id) => document.getElementById(id);
 const focus = createFocus();
-const sofa = createSofa({ api, root: document.getElementById('sofa'), sfx, hints: (list) => hintEls(list), setMusicPaused });
+const sofa = createSofa({ api, root: document.getElementById('sofa'), saver: document.getElementById('saver'), sfx, hints: (list) => hintEls(list), setMusicPaused, games: () => state.games });
 const vkb = createKeyboard({ root: document.getElementById('vkb-root'), focus, sfx, hints: (list) => hintEls(list), readClipboard: () => api.readClipboard() });
 
 // ===== interface comum =====
@@ -513,7 +513,7 @@ async function start() {
   if (isDemo) {
     document.title = 'Cartucho (demonstração)';
     window.demoNotice = notifyAchievements;
-    window.demoSofa = (action = 'screen', seconds = 30) => sofa.warn({ action, seconds });
+    window.demoSofa = (action = 'screen', seconds = 30) => (action === 'covers' ? sofa.rest('covers') : sofa.warn({ action, seconds }));
   }
 }
 

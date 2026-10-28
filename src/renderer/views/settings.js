@@ -127,7 +127,7 @@ export default {
         ctx.sfx.tab();
         save({ sofaAction: cycle(sofaKeys, sofaAction, delta) });
       }),
-      choice('sofaMinutes', 'Depois de', sofaAction === 'off' ? 'Escolha o que fazer na linha de cima' : `Sem mexer em nada por ${minutesText(sofaMinutes)}. Antes, aparece uma contagem de 30 s`, minutesText(sofaMinutes), (delta) => {
+      choice('sofaMinutes', 'Depois de', sofaAction === 'off' ? 'Escolha o que fazer na linha de cima' : `Sem mexer em nada por ${minutesText(sofaMinutes)}.${sofaAction === 'covers' ? '' : ' Antes, aparece uma contagem de 30 s'}`, minutesText(sofaMinutes), (delta) => {
         ctx.sfx.tab();
         save({ sofaMinutes: cycle(SOFA_MINUTES, sofaMinutes, delta) });
       }),

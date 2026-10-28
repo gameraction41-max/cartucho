@@ -211,7 +211,8 @@ export const mock = {
   pickFile: async () => null,
   pickFolder: async () => null,
   power: async () => true,
-  sofaActivity: async () => {},
+  // Na demo, qualquer botão sai do descanso com capas, como o processo principal faria.
+  sofaActivity: async () => window.mockEmit('sofa:rest', { mode: null }),
   readClipboard: async () => 'A91F3C0D5E7B2468ACE13579BDF02468',
   minimize: async () => {},
   releaseTop: async () => {},
