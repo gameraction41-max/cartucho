@@ -1,4 +1,6 @@
 // Desligar, reiniciar e suspender o PC pelo menu rápido, informações do hardware e o preset gráfico que combina com ele.
+const fs = require('node:fs');
+const os = require('node:os');
 const { spawn } = require('node:child_process');
 
 const COMMANDS = {
@@ -35,31 +37,68 @@ function recommendPreset({ gpu = [], memTotal = 0, threads = 0 }) {
 }
 
 // O hardware não muda enquanto o app está aberto, então ele é lido uma vez só. Uso e temperatura são lidos a cada pedido.
+// A aba PC pede a cada 2 s, por isso nada aqui abre o PowerShell depois da primeira leitura (no Windows, o
+// systeminformation abre um PowerShell para a memória, a temperatura e os discos, e cada um pesa no processador).
+const DISKS_EVERY_MS = 60000;
+const TEMP_EVERY_MS = 10000;
+
 let hardware = null;
+let temp = { value: null, at: 0, missing: false };
+
+// Espaço de um disco já conhecido, direto do sistema (sem PowerShell). null quando não dá para ler.
+function diskUsage(mount) {
+  try {
+    const s = fs.statfsSync(process.platform === 'win32' && /^[a-z]:$/i.test(mount) ? `${mount}\\` : mount);
+    const size = s.blocks * s.bsize;
+    return { mount, size, used: size - s.bfree * s.bsize };
+  } catch {
+    return null;
+  }
+}
+
+async function readDisks(si) {
+  if (hardware.disks.length && typeof fs.statfsSync === 'function') {
+    const list = hardware.disks.map((d) => diskUsage(d.mount));
+    if (list.every(Boolean)) return list;
+  }
+  return si.fsSize().catch(() => hardware.disks);
+}
+
+// Muitos PCs (a maioria dos Ryzen, por exemplo) não informam a temperatura ao Windows. Se a primeira leitura vier
+// vazia, o Cartucho não pergunta de novo; se vier, lê no máximo a cada 10 s.
+async function readTemp(si) {
+  if (temp.missing || Date.now() - temp.at < TEMP_EVERY_MS) return temp.value;
+  const t = await si.cpuTemperature().catch(() => ({ main: null }));
+  temp = { value: t.main || null, at: Date.now(), missing: !t.main };
+  return temp.value;
+}
 
 async function stats() {
   const si = require('systeminformation');
   if (!hardware) {
-    const [cpu, gpu, os, disks] = await Promise.all([si.cpu(), si.graphics().catch(() => ({ controllers: [] })), si.osInfo(), si.fsSize().catch(() => [])]);
+    const [cpu, gpu, info, disks] = await Promise.all([si.cpu(), si.graphics().catch(() => ({ controllers: [] })), si.osInfo(), si.fsSize().catch(() => [])]);
     const gpus = gpu.controllers.filter((c) => c.model && !/basic|virtual|microsoft/i.test(c.model));
     hardware = {
       cpu: `${cpu.manufacturer} ${cpu.brand}`.trim(),
       cores: cpu.physicalCores,
       threads: cpu.cores,
       gpu: gpus.map((c) => ({ model: c.model, vram: c.vram || 0 })),
-      os: `${os.distro} ${os.release}`.trim(),
+      os: `${info.distro} ${info.release}`.trim(),
       disksAt: Date.now(),
-      disks,
+      disks: disks.map((d) => ({ mount: d.mount, used: d.used, size: d.size })),
     };
   }
-  const [load, mem, temp, disks] = await Promise.all([
+  const [load, cpuTemp, disks] = await Promise.all([
     si.currentLoad().catch(() => ({ currentLoad: null })),
-    si.mem(),
-    si.cpuTemperature().catch(() => ({ main: null })),
-    Date.now() - hardware.disksAt > 60000 ? si.fsSize().catch(() => hardware.disks) : hardware.disks,
+    readTemp(si),
+    Date.now() - hardware.disksAt > DISKS_EVERY_MS ? readDisks(si) : hardware.disks,
   ]);
-  hardware.disks = disks;
-  hardware.disksAt = Date.now();
+  if (disks !== hardware.disks) {
+    hardware.disks = disks.map((d) => ({ mount: d.mount, used: d.used, size: d.size }));
+    hardware.disksAt = Date.now();
+  }
+  // Memória em uso = total menos a disponível, a mesma conta do Gerenciador de Tarefas (e do systeminformation).
+  const memTotal = os.totalmem();
   return {
     cpu: hardware.cpu,
     cores: hardware.cores,
@@ -67,10 +106,10 @@ async function stats() {
     gpu: hardware.gpu,
     os: hardware.os,
     cpuLoad: load.currentLoad,
-    cpuTemp: temp.main || null,
-    memUsed: mem.active,
-    memTotal: mem.total,
-    disks: disks.filter((d) => d.size > 0).map((d) => ({ mount: d.mount, used: d.used, size: d.size })),
+    cpuTemp,
+    memUsed: memTotal - os.freemem(),
+    memTotal,
+    disks: hardware.disks.filter((d) => d.size > 0),
   };
 }
 

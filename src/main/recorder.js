@@ -118,20 +118,40 @@ function createRecorder({ ffmpeg, tmpDir, video, encoders = ['nvenc', 'amf', 'x2
   let pump = null;
   let poll = null;
   let segments = [];
-  let listLength = 0;
+  let listBytes = 0;
+  let listRest = '';
   let recording = null; // { fromEnd, since }
   const locked = new Set();
   let workingEncoder = null;
 
   const lastEnd = () => (segments.length ? segments[segments.length - 1].end : 0);
 
+  // A lista só cresce (uma linha a cada pedaço), então só o que foi escrito desde a última leitura é lido.
+  // Numa partida de horas ela passa de milhares de linhas, e ler tudo duas vezes por segundo pesava à toa.
   function readList() {
-    let text = '';
-    try { text = fs.readFileSync(path.join(tmpDir, 'list.csv'), 'utf8'); } catch { return; }
-    const all = parseSegmentList(text);
-    if (all.length <= listLength) return;
-    segments.push(...all.slice(listLength).map((s) => ({ ...s, path: path.join(tmpDir, s.file) })));
-    listLength = all.length;
+    let chunk;
+    try {
+      const fd = fs.openSync(path.join(tmpDir, 'list.csv'), 'r');
+      try {
+        const size = fs.fstatSync(fd).size;
+        if (size <= listBytes) return;
+        const buf = Buffer.alloc(size - listBytes);
+        fs.readSync(fd, buf, 0, buf.length, listBytes);
+        listBytes = size;
+        chunk = buf.toString('utf8');
+      } finally {
+        fs.closeSync(fd);
+      }
+    } catch {
+      return;
+    }
+    // Uma linha pela metade (o ffmpeg ainda escrevendo) fica para a próxima leitura.
+    const text = listRest + chunk;
+    const cut = text.lastIndexOf('\n');
+    listRest = text.slice(cut + 1);
+    const fresh = cut < 0 ? [] : parseSegmentList(text.slice(0, cut));
+    if (!fresh.length) return;
+    segments.push(...fresh.map((s) => ({ ...s, path: path.join(tmpDir, s.file) })));
     prune();
   }
 
@@ -162,7 +182,8 @@ function createRecorder({ ffmpeg, tmpDir, video, encoders = ['nvenc', 'amf', 'x2
     fs.rmSync(tmpDir, { recursive: true, force: true });
     fs.mkdirSync(tmpDir, { recursive: true });
     segments = [];
-    listLength = 0;
+    listBytes = 0;
+    listRest = '';
     const p = spawn(ffmpeg, bufferArgs({ dir: tmpDir, video, encoder: encoderArgs[name] }), { windowsHide: true });
     let err = '';
     p.stderr.on('data', (d) => { err = (err + d).slice(-2000); });

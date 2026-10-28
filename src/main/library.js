@@ -24,7 +24,7 @@ let historyStore;
 function stores() {
   if (!cache) {
     const dir = app.getPath('userData');
-    cache = new JsonStore(path.join(dir, 'steam-cache.json'), { owned: [], syncedAt: 0, profile: null, ach: {}, schema: {}, rarity: {} });
+    cache = new JsonStore(path.join(dir, 'steam-cache.json'), { owned: [], syncedAt: 0, profile: null, ach: {}, schema: {}, rarity: {} }, { compact: true });
     playtime = new JsonStore(path.join(dir, 'playtime.json'), { hytale: { seconds: 0, lastPlayed: 0 } });
     historyStore = new JsonStore(path.join(dir, 'history.json'), { snapshot: {}, days: {} });
   }

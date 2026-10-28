@@ -54,14 +54,32 @@ export function createInput({ onAction, onDevice, onScroll, nativeGuide = false 
   window.addEventListener('mousemove', () => setDevice('mouse'), { passive: true });
   window.addEventListener('gamepadconnected', () => setDevice('gamepad'));
 
+  // Sem o foco (um jogo na frente), o controle não é lido a cada quadro: só confere de vez em quando se o foco voltou.
+  // Assim a janela não desenha nada enquanto a pessoa joga.
+  const IDLE_CHECK_MS = 250;
+  let sleeping = null;
+  const check = () => {
+    if (document.hasFocus()) wake();
+    else sleeping = setTimeout(check, IDLE_CHECK_MS);
+  };
+  const sleep = () => {
+    held.clear();
+    sleeping = setTimeout(check, IDLE_CHECK_MS);
+  };
+  const wake = () => {
+    if (!sleeping) return;
+    clearTimeout(sleeping);
+    sleeping = null;
+    last = performance.now();
+    requestAnimationFrame(poll);
+  };
+  window.addEventListener('focus', wake);
+
   const poll = (now) => {
+    if (!document.hasFocus()) return sleep();
     requestAnimationFrame(poll);
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    if (!document.hasFocus()) {
-      held.clear();
-      return;
-    }
     const active = new Set();
     let sx = 0;
     let sy = 0;

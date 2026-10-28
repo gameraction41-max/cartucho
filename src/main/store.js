@@ -3,9 +3,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 class JsonStore {
-  constructor(file, defaults = {}) {
+  // compact: grava sem espaços. Para arquivos grandes que ninguém edita na mão (o cache da Steam passa de alguns MB),
+  // a gravação fica com quase metade do tempo e do tamanho.
+  constructor(file, defaults = {}, { compact = false } = {}) {
     this.file = file;
     this.defaults = defaults;
+    this.compact = compact;
     this.data = { ...structuredClone(defaults), ...this.read() };
   }
 
@@ -34,7 +37,7 @@ class JsonStore {
   save() {
     fs.mkdirSync(path.dirname(this.file), { recursive: true });
     const tmp = `${this.file}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(this.data, null, 2));
+    fs.writeFileSync(tmp, this.compact ? JSON.stringify(this.data) : JSON.stringify(this.data, null, 2));
     fs.renameSync(tmp, this.file);
   }
 }

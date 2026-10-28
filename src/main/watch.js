@@ -1,4 +1,5 @@
 // Descobre quando um jogo abriu e fechou, para contar o tempo e trazer o launcher de volta.
+const path = require('node:path');
 const { execFile } = require('node:child_process');
 
 const POLL_MS = 4000;
@@ -10,9 +11,77 @@ function run(cmd, args) {
   });
 }
 
+// Leitura direta do Windows (koffi), sem abrir o tasklist.exe e o reg.exe a cada volta, o que pesava com o jogo aberto.
+// Se algo der errado aqui, o Cartucho volta de vez para o tasklist e o reg, que sempre funcionaram.
+let native;
+function nativeApi() {
+  if (native !== undefined) return native;
+  native = null;
+  if (process.platform !== 'win32') return native;
+  try {
+    const koffi = require('koffi');
+    const kernel32 = koffi.load('kernel32.dll');
+    const advapi32 = koffi.load('advapi32.dll');
+    const ENTRY = koffi.struct('PROCESSENTRY32W', {
+      dwSize: 'uint32',
+      cntUsage: 'uint32',
+      th32ProcessID: 'uint32',
+      th32DefaultHeapID: 'uintptr',
+      th32ModuleID: 'uint32',
+      cntThreads: 'uint32',
+      th32ParentProcessID: 'uint32',
+      pcPriClassBase: 'int32',
+      dwFlags: 'uint32',
+      szExeFile: koffi.array('char16_t', 260, 'String'),
+    });
+    native = {
+      size: koffi.sizeof(ENTRY),
+      snapshot: kernel32.func('intptr __stdcall CreateToolhelp32Snapshot(uint32 flags, uint32 pid)'),
+      first: kernel32.func('int __stdcall Process32FirstW(intptr snap, _Inout_ PROCESSENTRY32W *entry)'),
+      next: kernel32.func('int __stdcall Process32NextW(intptr snap, _Inout_ PROCESSENTRY32W *entry)'),
+      close: kernel32.func('int __stdcall CloseHandle(intptr handle)'),
+      regDword: advapi32.func('long __stdcall RegGetValueW(intptr key, str16 subKey, str16 value, uint32 flags, void *type, _Out_ uint32 *data, _Inout_ uint32 *size)'),
+    };
+  } catch {
+    native = null;
+  }
+  return native;
+}
+
+const TH32CS_SNAPPROCESS = 0x2;
+// HKEY_CURRENT_USER é 0x80000001 com sinal (no Windows 64 bits vira 0xFFFFFFFF80000001).
+const HKEY_CURRENT_USER = -2147483647;
+const RRF_RT_REG_DWORD = 0x10;
+const ERROR_FILE_NOT_FOUND = 2;
+
+let nativeProcessesOk = true;
+function nativeProcessNames() {
+  const api = nativeApi();
+  if (!api || !nativeProcessesOk) return null;
+  try {
+    const snap = api.snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snap === -1 || snap === 0) throw new Error('sem snapshot');
+    const names = [];
+    try {
+      const entry = { dwSize: api.size };
+      for (let ok = api.first(snap, entry); ok; ok = api.next(snap, entry)) names.push(String(entry.szExeFile).toLowerCase());
+    } finally {
+      api.close(snap);
+    }
+    // Conferência: o próprio Cartucho tem que estar na lista. Se não estiver, a leitura direta não é confiável.
+    if (!names.includes(path.basename(process.execPath).toLowerCase())) throw new Error('lista incompleta');
+    return names;
+  } catch {
+    nativeProcessesOk = false;
+    return null;
+  }
+}
+
 // Nomes dos processos abertos, em minúsculas (ex.: "hytaleclient.exe").
 async function processNames() {
   if (process.platform === 'win32') {
+    const names = nativeProcessNames();
+    if (names) return names;
     const out = await run('tasklist', ['/FO', 'CSV', '/NH']);
     return out.split(/\r?\n/).map((l) => (l.match(/^"([^"]+)"/) || [])[1]).filter(Boolean).map((n) => n.toLowerCase());
   }
@@ -20,9 +89,27 @@ async function processNames() {
   return out.split('\n').map((l) => l.trim().split('/').pop().toLowerCase()).filter(Boolean);
 }
 
+let nativeRegistryOk = true;
+function nativeSteamAppId() {
+  const api = nativeApi();
+  if (!api || !nativeRegistryOk) return undefined;
+  try {
+    const data = [0];
+    const rc = api.regDword(HKEY_CURRENT_USER, 'Software\\Valve\\Steam', 'RunningAppID', RRF_RT_REG_DWORD, null, data, [4]);
+    if (rc === 0) return data[0];
+    if (rc === ERROR_FILE_NOT_FOUND) return null;
+    throw new Error(`RegGetValueW ${rc}`);
+  } catch {
+    nativeRegistryOk = false;
+    return undefined;
+  }
+}
+
 // Jogo da Steam rodando agora, lido do registro do Windows (0 quando nenhum).
 async function steamRunningAppId() {
   if (process.platform !== 'win32') return null;
+  const fast = nativeSteamAppId();
+  if (fast !== undefined) return fast;
   const out = await run('reg', ['query', 'HKCU\\Software\\Valve\\Steam', '/v', 'RunningAppID']);
   const m = out.match(/RunningAppID\s+REG_DWORD\s+0x([0-9a-f]+)/i);
   return m ? parseInt(m[1], 16) : null;

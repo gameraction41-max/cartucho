@@ -43,7 +43,7 @@ const ICONS = {
 };
 const DEVICE_NAME = { gamepad: 'Controle', keyboard: 'Teclado', mouse: 'Mouse' };
 
-const state = { downloads: [], update: null, config: {}, games: [], profile: null, steamConfigured: false, syncedAt: 0, running: null, device: 'keyboard' };
+const state = { downloads: [], update: null, config: {}, games: [], profile: null, steamConfigured: false, syncedAt: 0, running: null, device: 'keyboard', away: false };
 const stack = []; // [{ id, params }]
 let current = null; // { id, params, view: resultado do render }
 let menu = null;
@@ -201,6 +201,7 @@ const ctx = {
   sync,
   resume: () => api.minimize(),
   rerender: () => show({ keepFocus: true }),
+  whenBack,
   // Teclado na tela. Ao fechar, a seleção volta para onde estava.
   keyboard: (opts) => {
     const back = focus.key;
@@ -361,9 +362,45 @@ async function sync({ force = false, quiet = true } = {}) {
 }
 
 // Atualiza a tela atual com dados novos, sem perder a seleção. A tela de configurações não, para não atrapalhar quem está digitando.
+// Vários avisos seguidos (a sincronização das conquistas manda um a cada 10 jogos) viram um redesenho só, e com o
+// Cartucho atrás do jogo a tela só é redesenhada quando ele volta para a frente.
+let refreshTimer = null;
+let refreshWhenBack = false;
 function refreshLive() {
-  if (!current || menu.isOpen() || current.id === 'settings') return;
-  show({ keepFocus: true });
+  if (refreshTimer) return;
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null;
+    if (!current || menu.isOpen() || current.id === 'settings') return;
+    if (state.away) {
+      refreshWhenBack = true;
+      return;
+    }
+    show({ keepFocus: true });
+  }, 120);
+}
+
+// Telas que se atualizam sozinhas (PC, Amigos) esperam o Cartucho voltar para a frente. Devolve a função que cancela.
+const backWaiters = new Set();
+function whenBack(fn) {
+  if (!state.away) {
+    fn();
+    return () => {};
+  }
+  backWaiters.add(fn);
+  return () => backWaiters.delete(fn);
+}
+
+function setAway(away) {
+  state.away = away;
+  setMusicPaused(away);
+  if (away) return;
+  if (refreshWhenBack) {
+    refreshWhenBack = false;
+    refreshLive();
+  }
+  const waiting = [...backWaiters];
+  backWaiters.clear();
+  waiting.forEach((fn) => fn());
 }
 
 async function applyConfig(cfg) {
@@ -555,8 +592,8 @@ async function start() {
   });
   api.on('game:started', (r) => { state.running = r; state.config.lastLaunched = r.key; });
   api.on('game:ended', () => { state.running = null; });
-  api.on('window:blur', () => setMusicPaused(true));
-  api.on('window:focus', () => setMusicPaused(false));
+  api.on('window:blur', () => setAway(true));
+  api.on('window:focus', () => setAway(false));
   api.on('input:guide', ({ fromBackground }) => {
     input.setDevice('gamepad');
     if (bootHandler) return bootHandler('confirm');

@@ -80,7 +80,8 @@ export default {
           h('div', { class: 'label' }, 'Online e offline'),
           h('div', { class: 'glist flines' }, online.map(line), offline.length ? h('div', { class: 'fsep' }, `Offline · ${offline.length}`) : null, offline.map(line)))));
 
-    const timer = setTimeout(() => ctx.rerender(), REFRESH_MS);
+    let stopWait = () => {};
+    const timer = setTimeout(() => { stopWait = ctx.whenBack(ctx.rerender); }, REFRESH_MS);
     return {
       el,
       hints: [['confirm', 'Abrir'], ['y', 'Perfil na Steam'], ['menu', 'Menu']],
@@ -91,6 +92,7 @@ export default {
       },
       destroy() {
         clearTimeout(timer);
+        stopWait();
       },
     };
   },

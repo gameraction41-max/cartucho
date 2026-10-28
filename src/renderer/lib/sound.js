@@ -10,6 +10,9 @@ let pad = null;
 let audioEl = null;
 let paused = false;
 let gameTrack = null; // música do jogo selecionado, no lugar da música tema
+let quietTimer = null;
+// Tempo para a música sumir antes de parar de vez (o volume cai com constante de 0,4 s).
+const FADE_MS = 2500;
 
 function ensure() {
   if (ctx) return;
@@ -34,6 +37,7 @@ function applyVolume() {
 function blip(freq, { dur = 0.07, type = 'sine', gain = 0.25, slide = 0 } = {}) {
   if (!settings.sounds) return;
   ensure();
+  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   const t = ctx.currentTime;
   const o = ctx.createOscillator();
   const g = ctx.createGain();
@@ -111,10 +115,18 @@ function refreshMusic() {
     audioEl.pause();
     audioEl = null;
   }
+  clearTimeout(quietTimer);
   if (!want) {
     musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.4);
+    // Depois de sumir, a trilha para de verdade em vez de seguir tocando em silêncio. Com o Cartucho atrás do jogo,
+    // o áudio inteiro dorme e não gasta nada; um som de aviso acorda ele (blip).
+    quietTimer = setTimeout(() => {
+      stopPad();
+      if (paused && ctx.state === 'running') ctx.suspend().catch(() => {});
+    }, FADE_MS);
     return;
   }
+  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   if (file) {
     stopPad();
     musicGain.gain.value = 0;
