@@ -69,6 +69,11 @@ let config = {
   openAtLogin: true, returnAfterGame: true, captureBuffer: true, showBoot: true, sounds: true, music: true, musicFile: '', volume: 0.5,
   // Na demo dá para abrir já com um tema: index.html?tema=ps5
   theme: new URLSearchParams(location.search).get('tema') || 'cartucho',
+  collections: [
+    { id: 'jogando', name: 'Jogando agora', keys: ['steam:1145350', 'steam:1174180', 'prism:FO', 'steam:227300'] },
+    { id: 'zerar', name: 'Para zerar', keys: ['steam:1245620', 'steam:1030300', 'steam:1091500', 'steam:504230', 'steam:1174180'] },
+    { id: 'coop', name: 'Com a galera', keys: ['steam:105600', 'prism:CABE', 'steam:413150'] },
+  ],
   defaultPrismDir: 'C:\\Users\\Filipi\\AppData\\Roaming\\PrismLauncher', running: null,
 };
 

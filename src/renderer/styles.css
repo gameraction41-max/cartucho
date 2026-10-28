@@ -224,6 +224,12 @@ img { max-width: 100%; }
 .lib-head h2 { font-family: var(--f-display); font-size: 2.2rem; margin: 0 auto 0 0; }
 .pill { padding: .5rem 1.1rem; border-radius: 2rem; background: var(--glass); border: 1px solid var(--glass-line); color: var(--muted); font-weight: 600; }
 .pill.on { color: var(--ink); border-color: var(--ink); }
+/* Os filtros rolam de lado quando há muitas coleções; as coleções vêm depois de um respiro. */
+.lib-pills { display: flex; gap: 1rem; min-width: 0; overflow-x: auto; scrollbar-width: none; padding: .4rem; margin: -.4rem; }
+.lib-pills::-webkit-scrollbar { display: none; }
+.lib-pills .pill, .lib-head > .pill { flex: none; white-space: nowrap; }
+.pill:not(.col) + .pill.col { margin-left: 1rem; }
+.pill.col::before { content: "★ "; opacity: .55; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: 1.4rem; overflow-y: auto; padding: var(--bleed); margin: calc(-1 * var(--bleed)); scroll-padding: var(--bleed); scrollbar-width: none; align-content: start; min-height: 0; flex: 1; }
 .grid::-webkit-scrollbar { display: none; }
 .card { display: grid; gap: .5rem; border-radius: .8rem; }
@@ -282,6 +288,33 @@ img { max-width: 100%; }
 .preset-game { display: flex; justify-content: space-between; gap: 1rem; padding: .45rem .1rem; border-top: 1px solid var(--glass-line); font-size: .92rem; }
 .preset-game .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .preset-note { margin: -.2rem 0 .2rem; font-size: .85rem; }
+
+/* ===== coleções ===== */
+.col-btn { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.col-btn.on { color: var(--accent); }
+.col-wrap { margin-top: auto; display: grid; grid-template-columns: 16rem minmax(0, 48rem); gap: 3rem; align-items: end; min-height: 0; max-height: 100%; }
+.col-wrap .set-list { max-height: 34rem; }
+.col-game { display: grid; gap: 1rem; align-content: end; }
+.col-game h2 { margin: 0; font-family: var(--f-display); font-size: 1.8rem; line-height: 1.1; }
+.col-game p { margin: 0; }
+.col-cover { width: 100%; aspect-ratio: 2 / 3; font-size: 1.3rem; box-shadow: 0 1rem 2.4rem rgba(0, 0, 0, .5); }
+.col-new { border: 1px dashed var(--glass-line); background: none; }
+.cols { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.cols .lib-head { margin-bottom: 0; }
+/* Sem margem negativa em cima: assim as capas não sobem por cima do título ao rolar. */
+.shelves { flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 2.2rem; align-content: start; padding: var(--bleed); margin: 0 calc(-1 * var(--bleed)) calc(-1 * var(--bleed)); scroll-padding: var(--bleed); scrollbar-width: none; mask-image: linear-gradient(to bottom, transparent, #000 var(--bleed), #000 calc(100% - 3rem), transparent); }
+.shelves::-webkit-scrollbar { display: none; }
+.shelf { display: grid; gap: .9rem; }
+.shelf-head { margin: 0; display: flex; align-items: baseline; gap: 1.2rem; font-family: var(--f-display); font-size: 1.5rem; }
+.shelf-head small { font-family: var(--f-mono); font-size: .9rem; font-weight: 400; color: var(--muted); }
+.shelf-row { display: flex; gap: 1.2rem; overflow-x: auto; padding: var(--bleed); margin: calc(-1 * var(--bleed)); scroll-padding: var(--bleed); scrollbar-width: none; }
+.shelf-row::-webkit-scrollbar { display: none; }
+.shelf-item { flex: none; width: 9.6rem; border-radius: .8rem; }
+.shelf-item .cover { width: 100%; aspect-ratio: 2 / 3; font-size: .95rem; }
+.shelf-empty { width: 30rem; height: 14.4rem; display: grid; align-content: center; gap: .5rem; padding: 1.5rem; border-radius: .8rem; border: 1px dashed var(--glass-line); background: var(--glass); color: var(--muted); }
+.shelf-empty b { color: var(--ink); font-size: 1.15rem; }
+.opt.warn { outline: 1px solid var(--danger); }
+.opt.warn small { color: var(--danger) !important; }
 
 /* ===== configurações ===== */
 .set-wrap { margin-top: 1rem; display: grid; grid-template-columns: minmax(0, 64rem); flex: 1; min-height: 0; }
