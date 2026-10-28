@@ -13,6 +13,7 @@ const art = require('./art');
 const history = require('./history');
 const downloads = require('./downloads');
 const gamepresets = require('./gamepresets');
+const hytale = require('./hytale');
 
 const ACH_CONCURRENCY = 4;
 
@@ -77,8 +78,13 @@ function prismGames() {
   }));
 }
 
+// Sem executável escolhido, o Cartucho procura o launcher oficial do Hytale nas pastas padrão (hytale.js).
+function hytaleExe() {
+  return hytale.findLauncher(config.get('hytaleExe'));
+}
+
 function hytaleGame() {
-  const exe = config.get('hytaleExe');
+  const exe = hytaleExe();
   if (!exe) return [];
   const t = stores().playtime.get('hytale');
   return [{
@@ -92,11 +98,53 @@ function hytaleGame() {
   }];
 }
 
+// Jogos adicionados pela pessoa (customgames.js). O tempo fica em playtime.json, em custom:<id>.
+function customGames() {
+  const times = stores().playtime;
+  return (config.get('customGames') || []).map((c) => {
+    const t = times.get(`custom:${c.id}`) || { seconds: 0, lastPlayed: 0 };
+    return {
+      key: `custom:${c.id}`,
+      source: 'custom',
+      customId: c.id,
+      title: c.title,
+      exe: c.exe,
+      minutes: Math.round(t.seconds / 60),
+      lastPlayed: t.lastPlayed || 0,
+      addedAt: c.addedAt,
+      installed: fs.existsSync(c.exe),
+      art: null,
+    };
+  });
+}
+
+// Todas as instâncias do Prism viram um jogo só, "Minecraft", no Início e na Biblioteca. As instâncias continuam
+// na lista (com instanceId), para o tempo da semana, os presets e a página do Minecraft, que mostra uma por uma.
+function minecraftGroup(games) {
+  const list = games.filter((g) => g.source === 'prism').sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
+  if (!list.length) return null;
+  return {
+    key: 'minecraft',
+    source: 'minecraft',
+    title: 'Minecraft',
+    group: true,
+    instances: list.map((g) => g.key),
+    minutes: list.reduce((s, g) => s + (g.minutes || 0), 0),
+    lastPlayed: Math.max(0, ...list.map((g) => g.lastPlayed || 0)),
+    mods: list.reduce((s, g) => s + (g.mods || 0), 0),
+    installed: true,
+    art: null,
+  };
+}
+
 function getLibrary() {
   const { cache } = stores();
-  const games = [...steamGames(), ...prismGames(), ...hytaleGame()].map(art.apply);
+  const games = [...steamGames(), ...prismGames(), ...hytaleGame(), ...customGames()].map(art.apply);
   // Toda vez que a biblioteca é montada, os totais novos viram tempo jogado no dia (history.js).
+  // O grupo do Minecraft entra depois, para o tempo das instâncias não contar duas vezes.
   if (history.record(historyStore.data, games)) historyStore.save();
+  const mc = minecraftGroup(games);
+  if (mc) games.push(art.apply(mc));
   return {
     games,
     profile: cache.get('profile'),
@@ -344,7 +392,7 @@ function profile() {
     player: lib.profile,
     steamConfigured: lib.steamConfigured,
     summary: achievementSummary(),
-    playtime: profileData.playtime(lib.games),
+    playtime: profileData.playtime(lib.games.filter((g) => !g.group)),
     rare,
     rarityStatus,
   };
@@ -377,10 +425,17 @@ function playWeek() {
   return history.week(store.data);
 }
 
+function addCustomTime(id, ms) {
+  const { playtime } = stores();
+  const key = `custom:${id}`;
+  const t = playtime.get(key) || { seconds: 0, lastPlayed: 0 };
+  playtime.set(key, { seconds: t.seconds + Math.round(ms / 1000), lastPlayed: Date.now() });
+}
+
 function addHytaleTime(ms) {
   const { playtime } = stores();
   const t = playtime.get('hytale');
   playtime.set('hytale', { seconds: t.seconds + Math.round(ms / 1000), lastPlayed: Date.now() });
 }
 
-module.exports = { profile, syncRarity, steamNames, playWeek, friends, newUnlocks, getLibrary, syncSteam, syncAchievements, achievementSummary, gameAchievements, refreshSteamGame, addHytaleTime, prismDir };
+module.exports = { profile, syncRarity, steamNames, playWeek, friends, newUnlocks, getLibrary, syncSteam, syncAchievements, achievementSummary, gameAchievements, refreshSteamGame, addHytaleTime, addCustomTime, hytaleExe, prismDir, minecraftGroup };

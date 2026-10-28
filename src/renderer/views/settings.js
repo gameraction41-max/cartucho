@@ -38,7 +38,7 @@ export default {
     const cfg = ctx.state.config;
     const save = async (patch, message) => {
       const next = await ctx.api.setConfig(patch);
-      await ctx.applyConfig({ ...cfg, ...next, defaultPrismDir: cfg.defaultPrismDir, running: cfg.running });
+      await ctx.applyConfig({ ...cfg, ...next, defaultPrismDir: cfg.defaultPrismDir, defaultHytaleExe: cfg.defaultHytaleExe, running: cfg.running });
       if (message) ctx.toast(message);
       ctx.rerender();
     };
@@ -162,8 +162,14 @@ export default {
       path('prismExe', 'Executável do Prism', 'Procurado automaticamente nas pastas padrão', { filters: [{ name: 'Programas', extensions: ['exe'] }], fallback: 'automático' }),
 
       section('hytale', 'Hytale'),
-      path('hytaleExe', 'Executável do Hytale', 'Escolha o .exe que abre o jogo', { filters: [{ name: 'Programas', extensions: ['exe'] }] }),
+      // Sem nada escolhido, vale o launcher oficial que o Cartucho acha sozinho em %APPDATA%\Hytale.
+      path('hytaleExe', 'Executável do Hytale', cfg.defaultHytaleExe ? `Automático: ${cfg.defaultHytaleExe}` : 'Não achei o launcher do Hytale. Escolha o .exe que abre o jogo', {
+        filters: [{ name: 'Programas', extensions: ['exe'] }], fallback: cfg.defaultHytaleExe ? 'automático' : 'não encontrado',
+      }),
       text('hytaleProcess', 'Nome do processo do jogo', 'Opcional. Usado para contar o tempo quando o .exe acima é só o launcher', { placeholder: 'HytaleClient.exe' }),
+
+      section('', 'Outros jogos'),
+      action('addgame', 'Adicionar jogo de fora da Steam', 'Qualquer jogo do PC: escolha da lista do menu Iniciar ou procure o .exe', () => { ctx.sfx.confirm(); ctx.go('addgame'); }),
 
       section('', 'Capas e músicas'),
       text('sgdbApiKey', 'Chave do SteamGridDB', 'Para buscar capas e fundos. Grátis em steamgriddb.com › Preferências › API. Fica guardada só neste PC.', {
@@ -182,7 +188,7 @@ export default {
       volume,
 
       section('', 'Sobre'),
-      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.15.0', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
+      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.16.0', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
       updateRow(ctx));
 
     const el = h('div', { class: 'set-wrap' }, list);

@@ -99,10 +99,24 @@ export default {
       body.replaceChildren(h('p', { class: 'muted search-wait' }, text));
     }
 
+    // Site de trilhas recusando a busca: dá para abrir no navegador e depois escolher o arquivo baixado.
+    async function pickLocalMusic() {
+      const r = await ctx.api.pickArt(g.key, 'music');
+      if (!r || r.canceled) return;
+      if (r.error) return ctx.toast(r.error, { error: true });
+      ctx.sfx.confirm();
+      await ctx.reloadLibrary();
+      ctx.toast('Música do jogo definida. Ela toca quando o jogo estiver selecionado.');
+    }
+
     function failed(r) {
+      const blocked = r.blocked && mode === 'music';
       body.replaceChildren(message('Não deu para buscar', r.error,
-        h('button', { class: 'btn', 'data-focus': true, 'data-autofocus': true, 'data-key': 'retry', onclick: () => load() }, 'Tentar de novo')));
-      ctx.refocus('retry');
+        h('div', { class: 'actions' },
+          blocked ? h('button', { class: 'btn primary', 'data-focus': true, 'data-autofocus': true, 'data-key': 'site', onclick: () => { ctx.sfx.confirm(); ctx.api.openMusicSite(game, term || undefined); } }, 'Abrir o site no navegador') : null,
+          blocked ? h('button', { class: 'btn', 'data-focus': true, 'data-key': 'local', onclick: pickLocalMusic }, '♪ Música do PC') : null,
+          h('button', { class: 'btn', 'data-focus': true, 'data-autofocus': !blocked, 'data-key': 'retry', onclick: () => load() }, 'Tentar de novo'))));
+      ctx.refocus(blocked ? 'site' : 'retry');
     }
 
     // ===== imagens =====

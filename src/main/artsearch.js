@@ -16,7 +16,12 @@ const IMAGE_QUERY = {
   hero: (id) => `/heroes/game/${id}?types=static&mimes=image/png,image/jpeg,image/webp&nsfw=false&humor=false`,
 };
 
-class SearchError extends Error {}
+class SearchError extends Error {
+  constructor(message, extra = {}) {
+    super(message);
+    Object.assign(this, extra);
+  }
+}
 
 async function get(url, opts = {}) {
   let res;
@@ -117,8 +122,11 @@ function parseSongUrl(html) {
   return link ? decode(link[1]) : null;
 }
 
+// 403 é o KHInsider recusando pedidos que não vêm de um navegador (proteção contra robôs). O Cartucho não tenta
+// passar por cima disso: avisa e oferece abrir o site no navegador, para baixar a faixa e escolher em "Música do PC".
 async function page(url) {
   const res = await get(url);
+  if (res.status === 403 || res.status === 429) throw new SearchError('O KHInsider está recusando buscas feitas por programas agora (erro ' + res.status + '). Dá para abrir o site no navegador, baixar a faixa e escolher o arquivo em Música do PC.', { blocked: true });
   if (!res.ok) throw new SearchError(`O site de trilhas respondeu com erro ${res.status}. Tente de novo daqui a pouco.`);
   return { html: await res.text(), url: res.url };
 }
@@ -191,4 +199,9 @@ function cleanup(file) {
   if (file) fs.rmSync(path.dirname(file), { recursive: true, force: true });
 }
 
-module.exports = { images, albums, tracks, downloadImage, downloadTrack, cleanup, searchTerm, parseAlbums, parseTracks, parseSongUrl, pickImages, SearchError };
+// Endereço da busca no site, para abrir no navegador quando a busca pelo Cartucho é recusada.
+function siteSearchUrl(game, term) {
+  return `${KHI}/search?search=${encodeURIComponent(term || searchTerm(game))}`;
+}
+
+module.exports = { siteSearchUrl, images, albums, tracks, downloadImage, downloadTrack, cleanup, searchTerm, parseAlbums, parseTracks, parseSongUrl, pickImages, SearchError };

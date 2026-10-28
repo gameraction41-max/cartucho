@@ -1,17 +1,17 @@
-// Página do jogo: arte em tela cheia, botão de jogar, tempo jogado e lista de conquistas.
-import { h, hours, when, dlBar, SOURCE_NAME } from '../lib/ui.js';
+// Página do jogo: arte em tela cheia, uma barra de ações (Jogar, preset gráfico, coleções, opções), números do jogo
+// e, ao lado, as conquistas (Steam) ou as instâncias (Minecraft). Trocar capa, música e o resto fica em Opções (gameopts.js).
+import { h, cover, hours, when, dlBar, SOURCE_NAME } from '../lib/ui.js';
 import { playLabel } from './home.js';
 import { collectionsOf } from '../lib/collections.js';
+import { instancesOf } from '../lib/shelf.js';
 
-const OPEN_LABEL = { steam: 'Abrir na Steam', prism: 'Abrir no Prism', hytale: 'Mostrar pasta do Hytale' };
-
-function gb(bytes) {
+export function gb(bytes) {
   const v = bytes / 1024 ** 3;
   return v >= 1 ? `${v.toFixed(1).replace('.', ',')} GB` : `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`;
 }
 
-function chip(label, value) {
-  return h('span', { class: 'chip' }, h('small', {}, label), h('b', {}, value));
+function stat(label, value) {
+  return h('div', { class: 'gstat' }, h('small', {}, label), h('b', {}, value));
 }
 
 function achRow(a) {
@@ -33,68 +33,44 @@ function sortAchievements(list) {
   return [...got, ...locked];
 }
 
-function sidePanel(ctx, g) {
-  if (g.source === 'steam') {
-    const total = g.ach ? g.ach.total : 0;
-    const unlocked = g.ach ? g.ach.unlocked : 0;
-    const list = h('div', { class: 'ach-list' }, h('p', { class: 'muted' }, total ? 'Carregando conquistas…' : 'Este jogo não tem conquistas, ou elas ainda não foram sincronizadas.'));
-    if (total) {
-      ctx.api.gameAchievements(g.appid).then((items) => {
-        if (!items) return;
-        list.replaceChildren(...sortAchievements(items).map(achRow));
-      }).catch(() => {
-        list.replaceChildren(h('p', { class: 'muted' }, 'Não foi possível carregar as conquistas agora.'));
-      });
-    }
-    return h('section', { class: 'panel ach-panel' },
-      h('div', { class: 'ach-head' }, h('h2', { class: 'panel-title', style: { margin: 0 } }, 'Conquistas'), h('span', { class: 'mono' }, `${unlocked}/${total}`)),
-      total ? h('div', { class: 'bar', style: { marginBottom: '1rem' } }, h('i', { style: { width: `${(unlocked / total) * 100}%` } })) : null,
-      list);
+function achPanel(ctx, g) {
+  const total = g.ach ? g.ach.total : 0;
+  const unlocked = g.ach ? g.ach.unlocked : 0;
+  const list = h('div', { class: 'ach-list' }, h('p', { class: 'muted' }, total ? 'Carregando conquistas…' : 'Este jogo não tem conquistas, ou elas ainda não foram sincronizadas.'));
+  if (total) {
+    ctx.api.gameAchievements(g.appid).then((items) => {
+      if (!items) return;
+      list.replaceChildren(...sortAchievements(items).map(achRow));
+    }).catch(() => {
+      list.replaceChildren(h('p', { class: 'muted' }, 'Não foi possível carregar as conquistas agora.'));
+    });
   }
-  if (g.source === 'prism') {
-    return h('section', { class: 'panel' },
-      h('h2', { class: 'panel-title' }, 'Instância do Prism Launcher'),
-      h('p', { class: 'muted', style: { margin: 0 } }, 'O Cartucho abre esta instância direto, sem passar pela janela do Prism. Em Mods dá para atualizar, desativar, remover e instalar mods do Modrinth. A versão do Minecraft e o loader continuam sendo trocados no Prism.'));
-  }
-  return h('section', { class: 'panel' },
-    h('h2', { class: 'panel-title' }, 'Tempo de jogo'),
-    h('p', { class: 'muted', style: { margin: 0 } }, 'O Hytale ainda não tem conquistas nem estatísticas públicas. O Cartucho conta o tempo sozinho enquanto o jogo está aberto.'));
+  return h('section', { class: 'panel ach-panel' },
+    h('div', { class: 'ach-head' }, h('h2', { class: 'panel-title', style: { margin: 0 } }, 'Conquistas'), h('span', { class: 'mono' }, `${unlocked}/${total}`)),
+    total ? h('div', { class: 'bar', style: { marginBottom: '1rem' } }, h('i', { style: { width: `${(unlocked / total) * 100}%` } })) : null,
+    list);
 }
 
-// Arte personalizada: capa (a imagem vertical das listas) e fundo (a imagem grande atrás da página do jogo).
-async function changeArt(ctx, g, kind) {
-  const r = await ctx.api.pickArt(g.key, kind);
-  if (!r || r.canceled) return;
-  if (r.error) return ctx.toast(r.error, { error: true });
-  ctx.sfx.confirm();
-  await ctx.reloadLibrary();
-  ctx.toast(kind === 'cover' ? 'Capa trocada.' : 'Fundo trocado.');
+function infoPanel(title, text) {
+  return h('section', { class: 'panel' }, h('h2', { class: 'panel-title' }, title), h('p', { class: 'muted', style: { margin: 0 } }, text));
 }
 
-async function changeMusic(ctx, g) {
-  if (g.music) {
-    await ctx.api.resetArt(g.key, 'music');
-    await ctx.reloadLibrary();
-    ctx.sfx.back();
-    return ctx.toast('Música do jogo removida. Volta a tocar a música tema.');
-  }
-  const r = await ctx.api.pickArt(g.key, 'music');
-  if (!r || r.canceled) return;
-  if (r.error) return ctx.toast(r.error, { error: true });
-  ctx.sfx.confirm();
-  await ctx.reloadLibrary();
-  ctx.toast('Música do jogo definida. Ela toca quando o jogo estiver selecionado.');
-}
-
-async function resetArt(ctx, g) {
-  await ctx.api.resetArt(g.key);
-  await ctx.reloadLibrary();
-  ctx.sfx.back();
-  ctx.toast('Arte original de volta.');
+// Minecraft: a lista de instâncias do Prism. A escolhe a instância; a barra de ações da esquerda passa a valer para ela.
+function instancesPanel(ctx, list, chosen, choose) {
+  const rows = list.map((g) => h('div', { class: `inst-line ${g.key === chosen.key ? 'on' : ''}`, 'data-focus': true, 'data-key': `inst:${g.key}`, role: 'button', onclick: () => choose(g) },
+    cover(g),
+    h('div', { class: 'nm' },
+      h('b', {}, g.title),
+      h('small', {}, [g.mcVersion || '?', g.loader, g.mods ? `${g.mods} mods` : null].filter(Boolean).join(' · '))),
+    h('div', { class: 'tm' }, h('b', { class: 'mono' }, hours(g.minutes)), h('small', {}, when(g.lastPlayed))),
+    h('i', { class: 'tick' }, g.key === chosen.key ? '✓' : '')));
+  return h('section', { class: 'panel inst-panel' },
+    h('div', { class: 'ach-head' }, h('h2', { class: 'panel-title', style: { margin: 0 } }, 'Instâncias'), h('span', { class: 'mono' }, String(list.length))),
+    h('div', { class: 'inst-list' }, rows));
 }
 
 // Onde cada tipo de jogo guarda o preset: options.txt da instância (Minecraft) ou o arquivo de vídeo do jogo da Steam (gamepresets.js).
-function presetBackend(ctx, g) {
+export function presetBackend(ctx, g) {
   if (g.source === 'prism') {
     return {
       get: async () => ({ found: true, preset: await ctx.api.getMcPreset(g.instanceId) }),
@@ -110,28 +86,28 @@ function presetBackend(ctx, g) {
   };
 }
 
-// Preset gráfico: cada aperto passa para o próximo e grava no arquivo do jogo.
+// Preset gráfico: cada aperto passa para o próximo e grava no arquivo do jogo. Voltar ao original fica em Opções.
 function presetButton(ctx, g) {
   const backend = presetBackend(ctx, g);
-  const btn = h('button', { class: 'btn', 'data-focus': true, 'data-key': 'preset' }, 'Preset gráfico: …');
-  const restoreBtn = h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'preset-restore', hidden: true }, 'Voltar às opções originais do jogo');
+  const value = h('b', {}, '…');
+  const btn = h('button', { class: 'btn act', 'data-focus': true, 'data-key': 'preset' }, h('small', {}, 'Preset gráfico'), value);
   // O que o preset muda neste jogo, quando a receita dele explica (jogos do CATALOG).
   const note = h('p', { class: 'muted preset-note', hidden: true });
   let presets = [];
-  let state = { found: true, preset: null, canRestore: false };
+  let state = { found: true, preset: null };
   let recommendedId = null;
-  // Fora do recomendado, o botão sugere o preset que combina com o hardware (aba PC).
-  const suggestion = () => {
-    const rec = presets.find((x) => x.id === recommendedId);
-    return rec ? ` · sugerido: ${rec.label}` : '';
-  };
   const label = () => {
     const p = presets.find((x) => x.id === state.preset);
-    btn.textContent = !state.found ? 'Preset gráfico: abra o jogo uma vez antes'
-      : `Preset gráfico: ${p ? p.label : 'Personalizado'}${p && p.id === recommendedId ? ' · recomendado' : suggestion()}`;
-    restoreBtn.hidden = !state.canRestore;
-    const text = p && state.notes && state.notes[p.id];
-    note.textContent = text || '';
+    const rec = presets.find((x) => x.id === recommendedId);
+    if (!state.found) {
+      value.textContent = 'abra o jogo uma vez';
+      note.textContent = 'O jogo cria o arquivo de opções gráficas na primeira vez que abre. Depois disso dá para trocar aqui.';
+      note.hidden = false;
+      return;
+    }
+    value.textContent = p ? p.label : 'Personalizado';
+    const text = [p && state.notes && state.notes[p.id], rec && (!p || p.id !== rec.id) ? `Para o seu PC, o sugerido é ${rec.label}.` : null].filter(Boolean).join(' ');
+    note.textContent = text;
     note.hidden = !text;
   };
   Promise.all([ctx.api.mcPresets(), backend.get(), ctx.api.recommendedPreset()]).then(([list, st, rec]) => {
@@ -146,70 +122,97 @@ function presetButton(ctx, g) {
     const next = presets[(i + 1) % presets.length];
     const r = await backend.set(next.id);
     if (r && r.error) return ctx.toast(r.error, { error: true });
-    state = { ...state, found: true, preset: next.id, canRestore: !!backend.restore };
+    state = { ...state, found: true, preset: next.id };
     ctx.sfx.tab();
     label();
     ctx.toast(`${next.label} aplicado. ${backend.applied}`);
   });
-  restoreBtn.addEventListener('click', async () => {
-    const r = await backend.restore();
-    if (r && r.error) return ctx.toast(r.error, { error: true });
-    ctx.sfx.back();
-    state = { ...state, ...(await backend.get()) };
-    label();
-    ctx.refocus('preset');
-    ctx.toast('As opções gráficas voltaram a ser as do jogo antes do Cartucho mexer.');
-  });
-  return [btn, note, restoreBtn];
+  return { btn, note };
 }
 
-// Mostra em quais coleções o jogo está; abre a tela para pôr e tirar.
+// Mostra em quantas coleções o jogo está; abre a tela para pôr e tirar.
 function collectionsButton(ctx, g) {
   const names = collectionsOf(ctx).filter((c) => c.keys.includes(g.key)).map((c) => c.name);
-  const label = names.length ? `Coleções: ${names.join(', ')}` : 'Pôr numa coleção';
-  return h('button', { class: `btn col-btn ${names.length ? 'on' : ''}`, 'data-focus': true, 'data-key': 'collections', onclick: () => { ctx.sfx.confirm(); ctx.go('collectionpick', { key: g.key }); } }, label);
+  return h('button', { class: `btn act col-btn ${names.length ? 'on' : ''}`, 'data-focus': true, 'data-key': 'collections', onclick: () => { ctx.sfx.confirm(); ctx.go('collectionpick', { key: g.key }); } },
+    h('small', {}, 'Coleções'), h('b', {}, names.length ? names.join(', ') : 'nenhuma'));
+}
+
+function statsFor(g, inst) {
+  const list = [stat('Tempo total', hours(g.minutes))];
+  if (g.source === 'steam') list.push(stat('Últimas 2 semanas', hours(g.minutes2w || 0)));
+  if (g.ach && g.ach.total) list.push(stat('Conquistas', `${Math.round((g.ach.unlocked / g.ach.total) * 100)}%`));
+  if (inst) list.push(stat('Versão', `${inst.mcVersion || '?'} ${inst.loader || ''}`.trim()), stat('Tempo nesta', hours(inst.minutes)));
+  list.push(stat('Última sessão', when((inst || g).lastPlayed)));
+  if (g.size) list.push(stat('No disco', gb(g.size)));
+  return h('div', { class: 'gstats' }, list);
 }
 
 export default {
   label: 'Jogo',
-  render(ctx, { key }) {
-    const g = ctx.state.games.find((x) => x.key === key);
+  render(ctx, params) {
+    let g = ctx.state.games.find((x) => x.key === params.key);
     if (!g) {
       return { el: h('p', { class: 'muted', style: { marginTop: 'auto' } }, 'Este jogo não está mais na biblioteca.'), hints: [['back', 'Voltar']] };
     }
+    // Uma instância do Minecraft abre a página do Minecraft com ela escolhida.
+    const group = g.instanceId && ctx.state.games.find((x) => x.group);
+    if (group) {
+      params.inst = g.key;
+      params.key = group.key;
+      g = group;
+    }
     ctx.setBackground(g);
 
-    const chips = [chip('Tempo total', hours(g.minutes))];
-    if (g.source === 'steam') chips.push(chip('Últimas 2 semanas', hours(g.minutes2w || 0)));
-    if (g.source === 'prism') chips.push(chip('Versão', g.mcVersion || '?'), chip('Loader', g.loader), chip('Mods', String(g.mods)));
-    chips.push(chip('Última sessão', when(g.lastPlayed)));
-    if (g.size) chips.push(chip('No disco', gb(g.size)));
-    const steamOnPc = g.source === 'steam' && g.installed === true;
+    // No Minecraft, as ações valem para a instância escolhida na lista (a jogada por último, se nenhuma foi escolhida).
+    const instances = g.group ? instancesOf(ctx, g) : [];
+    const inst = g.group ? instances.find((x) => x.key === params.inst) || instances[0] : null;
+    const target = inst || g;
+    const choose = (x) => {
+      params.inst = x.key;
+      ctx.sfx.confirm();
+      ctx.rerender();
+      ctx.refocus('play');
+    };
 
+    const preset = target.source === 'prism' || target.presets ? presetButton(ctx, target) : null;
+    const play = h('button', { class: 'btn primary play', 'data-focus': true, 'data-autofocus': true, 'data-key': 'play', onclick: () => ctx.launch(target) },
+      inst ? h('span', {}, 'Jogar ', h('small', {}, inst.title)) : playLabel(g));
+    const actions = h('div', { class: 'game-actions' },
+      play,
+      inst ? h('button', { class: 'btn act', 'data-focus': true, 'data-key': 'mods', onclick: () => { ctx.sfx.confirm(); ctx.go('mods', { key: inst.key }); } }, h('small', {}, 'Mods'), h('b', {}, inst.mods ? `${inst.mods} instalados` : 'nenhum')) : null,
+      preset ? preset.btn : null,
+      collectionsButton(ctx, g),
+      h('button', { class: 'btn act more', 'data-focus': true, 'data-key': 'options', onclick: () => { ctx.sfx.confirm(); ctx.go('gameopts', { key: g.key, inst: inst && inst.key }); } }, h('small', {}, 'Capa, música e mais'), h('b', {}, '⋯ Opções')));
+
+    let side;
+    if (g.group) side = instancesPanel(ctx, instances, inst, choose);
+    else if (g.source === 'steam') side = achPanel(ctx, g);
+    else if (g.source === 'hytale') side = infoPanel('Tempo de jogo', 'O Hytale ainda não tem conquistas nem estatísticas públicas. O Cartucho conta o tempo sozinho enquanto o jogo está aberto.');
+    else side = infoPanel('Jogo do PC', `O Cartucho abre ${g.exe ? g.exe.split('\\').pop() : 'o executável'} e conta o tempo enquanto o jogo está aberto. Em Opções dá para buscar a capa, renomear ou tirar o jogo do Cartucho.`);
+
+    const src = inst ? `Prism Launcher · ${instances.length} ${instances.length === 1 ? 'instância' : 'instâncias'}` : `${SOURCE_NAME[g.source]}${g.appid ? ` · ${g.appid}` : ''}`;
     const el = h('div', { class: 'game' },
       h('div', { class: 'game-left' },
-        h('span', { class: `src ${g.source}` }, h('i'), SOURCE_NAME[g.source], g.appid ? ` · ${g.appid}` : ''),
+        h('span', { class: `src ${g.source}` }, h('i'), src),
         h('h1', { class: 'big-title' }, g.title),
-        h('div', { class: 'menu-v' },
-          g.download ? dlBar(g.download, g.download.update ? 'Atualizando' : 'Baixando') : null,
-          h('button', { class: 'btn primary', 'data-focus': true, 'data-autofocus': true, 'data-key': 'play', onclick: () => ctx.launch(g) }, playLabel(g)),
-          g.source === 'prism' ? h('button', { class: 'btn', 'data-focus': true, 'data-key': 'mods', onclick: () => { ctx.sfx.confirm(); ctx.go('mods', { key: g.key }); } }, g.mods ? `Mods · ${g.mods}` : 'Mods') : null,
-          g.source === 'prism' || g.presets ? presetButton(ctx, g) : null,
-          h('button', { class: 'btn', 'data-focus': true, 'data-key': 'open', onclick: () => ctx.api.openInSource(g) }, OPEN_LABEL[g.source]),
-          collectionsButton(ctx, g),
-          h('div', { class: 'art-btns' },
-            h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'art-search', onclick: () => { ctx.sfx.confirm(); ctx.go('artsearch', { key: g.key, mode: 'images' }); } }, 'Buscar capa e fundo'),
-            h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'music-search', onclick: () => { ctx.sfx.confirm(); ctx.go('artsearch', { key: g.key, mode: 'music' }); } }, '♪ Buscar música')),
-          h('div', { class: 'art-btns' },
-            h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'art-cover', onclick: () => changeArt(ctx, g, 'cover') }, 'Capa do PC'),
-            h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'art-hero', onclick: () => changeArt(ctx, g, 'hero') }, 'Fundo do PC'),
-            g.customArt && g.customArt.length ? h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'art-reset', onclick: () => resetArt(ctx, g) }, 'Restaurar') : null),
-          h('button', { class: `btn small music-btn ${g.music ? 'on' : ''}`, 'data-focus': true, 'data-key': 'music', onclick: () => changeMusic(ctx, g) },
-            g.music ? `♪ ${g.musicName} · tirar` : '♪ Música do PC'),
-          steamOnPc ? h('button', { class: 'btn small', 'data-focus': true, 'data-key': 'uninstall', onclick: () => ctx.uninstall(g) }, 'Desinstalar') : null),
-        h('div', { class: 'chips' }, chips)),
-      sidePanel(ctx, g));
+        g.download ? dlBar(g.download, g.download.update ? 'Atualizando' : 'Baixando') : null,
+        actions,
+        preset ? preset.note : null,
+        statsFor(g, inst)),
+      side);
 
-    return { el, keepBackground: true, hints: [['confirm', 'Selecionar'], ['back', 'Voltar']] };
+    return {
+      el,
+      keepBackground: true,
+      hints: [['confirm', 'Selecionar'], ['y', 'Jogar'], ['back', 'Voltar']],
+      onAction(action, { focused }) {
+        if (action !== 'y') return false;
+        // Y joga direto; numa instância da lista, joga aquela.
+        const k = focused && focused.dataset.key;
+        const picked = k && k.startsWith('inst:') ? instances.find((x) => `inst:${x.key}` === k) : null;
+        ctx.launch(picked || target);
+        return true;
+      },
+    };
   },
 };

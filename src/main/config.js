@@ -4,6 +4,7 @@ const { app, safeStorage } = require('electron');
 const { JsonStore } = require('./store');
 const collections = require('./collections');
 const { normalize } = require('./sofa');
+const customgames = require('./customgames');
 
 const DEFAULTS = {
   steamId: '',
@@ -25,6 +26,9 @@ const DEFAULTS = {
   collections: collections.DEFAULT_COLLECTIONS,
   sofaAction: 'off',
   sofaMinutes: 30,
+  // Jogos de fora da Steam adicionados pela pessoa, e chaves dos jogos que ela escondeu do Início e da Biblioteca.
+  customGames: [],
+  hiddenGames: [],
 };
 
 let store;
@@ -79,6 +83,8 @@ function update(patch) {
   }
   if (typeof next.steamId === 'string') next.steamId = next.steamId.trim();
   if ('collections' in next) next.collections = collections.sanitize(next.collections);
+  if ('customGames' in next) next.customGames = customgames.sanitize(next.customGames);
+  if ('hiddenGames' in next) next.hiddenGames = Array.isArray(next.hiddenGames) ? [...new Set(next.hiddenGames.filter((k) => typeof k === 'string' && k.length < 120))].slice(0, 2000) : [];
   if ('sofaAction' in next || 'sofaMinutes' in next) {
     const sofa = normalize({ action: next.sofaAction ?? s.get('sofaAction'), minutes: next.sofaMinutes ?? s.get('sofaMinutes') });
     next.sofaAction = sofa.action;

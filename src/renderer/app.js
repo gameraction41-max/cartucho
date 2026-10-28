@@ -10,7 +10,6 @@ import { applyTheme } from './lib/themes.js';
 import home from './views/home.js';
 import game from './views/game.js';
 import achievements from './views/achievements.js';
-import minecraft from './views/minecraft.js';
 import library from './views/library.js';
 import settings from './views/settings.js';
 import pc from './views/pc.js';
@@ -21,16 +20,18 @@ import profile from './views/profile.js';
 import collections from './views/collections.js';
 import collectionpick from './views/collectionpick.js';
 import mods from './views/mods.js';
+import gameopts from './views/gameopts.js';
+import addgame from './views/addgame.js';
 import { showBoot } from './views/boot.js';
 import { createMenu } from './views/menu.js';
 
-const VIEWS = { home, game, artsearch, mods, profile, collectionpick, collections, achievements, minecraft, friends, library, screenshots, pc, settings };
-const TABS = ['home', 'minecraft', 'achievements', 'friends', 'library', 'collections', 'screenshots', 'pc', 'settings'];
-const SCROLLERS = '.shelves, .shelf-row, .lib-pills, .shots-filters, .set-list, .glist, .grid, .row, .mc-row, .ach-list';
+const VIEWS = { home, game, gameopts, addgame, artsearch, mods, profile, collectionpick, collections, achievements, friends, library, screenshots, pc, settings };
+const TABS = ['home', 'achievements', 'friends', 'library', 'collections', 'screenshots', 'pc', 'settings'];
+const SCROLLERS = '.shelves, .shelf-row, .lib-pills, .shots-filters, .set-list, .glist, .grid, .row, .ach-list, .inst-list, .opts-list, .add-list';
 
 const GLYPHS = {
-  gamepad: { confirm: ['A', 'a'], back: ['B', 'b'], x: ['X', 'x'], y: ['Y', 'y'], lb: ['LB', ''], rb: ['RB', ''], menu: ['☰', ''], lr: ['◀ ▶', ''] },
-  keyboard: { confirm: ['Enter', 'key'], back: ['Esc', 'key'], x: ['F', 'key'], y: ['I', 'key'], lb: ['Q', 'key'], rb: ['E', 'key'], menu: ['M', 'key'], lr: ['← →', 'key'] },
+  gamepad: { confirm: ['A', 'a'], back: ['B', 'b'], x: ['X', 'x'], y: ['Y', 'y'], lb: ['LB', ''], rb: ['RB', ''], lt: ['LT', ''], rt: ['RT', ''], ltrt: ['LT RT', ''], menu: ['☰', ''], lr: ['◀ ▶', ''] },
+  keyboard: { confirm: ['Enter', 'key'], back: ['Esc', 'key'], x: ['F', 'key'], y: ['I', 'key'], lb: ['Q', 'key'], rb: ['E', 'key'], lt: ['PgUp', 'key'], rt: ['PgDn', 'key'], ltrt: ['PgUp PgDn', 'key'], menu: ['M', 'key'], lr: ['← →', 'key'] },
 };
 const ICONS = {
   gamepad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9h4M8 7v4M15 10h.01M18 8h.01"/><path d="M7 4h10a5 5 0 0 1 5 5v4a4 4 0 0 1-7 2.6L14 14h-4l-1 1.6A4 4 0 0 1 2 13V9a5 5 0 0 1 5-5z"/></svg>',
@@ -225,16 +226,36 @@ async function show({ keepFocus = false } = {}) {
   renderHints();
 }
 
+// Abas por onde a pessoa passou. O B volta por elas, uma de cada vez, até a primeira; depois disso vai para a tela de perfil.
+const HISTORY_MAX = 40;
+const tabHistory = []; // [{ id, focusKey }]
+
 function back() {
-  if (stack.length <= 1) return false;
-  stack.pop();
+  if (stack.length > 1) {
+    stack.pop();
+    sfx.back();
+    show();
+    return true;
+  }
+  const prev = tabHistory.pop();
+  if (prev) {
+    stack.length = 0;
+    stack.push({ id: prev.id, params: {}, focusKey: prev.focusKey });
+    sfx.back();
+    show();
+    return true;
+  }
   sfx.back();
-  show();
+  openBoot();
   return true;
 }
 
 function goTab(id) {
   if (stack.length === 1 && stack[0].id === id) return;
+  if (stack[0]) {
+    tabHistory.push({ id: stack[0].id, focusKey: stack.length === 1 ? focus.key : stack[0].focusKey });
+    if (tabHistory.length > HISTORY_MAX) tabHistory.shift();
+  }
   stack.length = 0;
   stack.push({ id, params: {} });
   sfx.tab();
@@ -256,6 +277,12 @@ function cycleTab(delta) {
 // ===== jogos e dados =====
 
 async function launch(g) {
+  // O Minecraft da lista abre a instância jogada por último; a página dele deixa escolher outra.
+  if (g.group) {
+    const first = (g.instances || []).map((k) => state.games.find((x) => x.key === k)).find(Boolean);
+    if (!first) return toast('Nenhuma instância do Minecraft encontrada no Prism Launcher.', { error: true });
+    g = first;
+  }
   // Jogo da Steam que não está neste PC: Jogar vira Instalar.
   if (g.source === 'steam' && g.installed === false) return g.download ? api.openDownloads() : install(g);
   sfx.confirm();
@@ -349,7 +376,7 @@ function handleAction(action, info = {}) {
       if (focus.current) focus.current.click();
       break;
     case 'back':
-      if (!back() && state.device !== 'gamepad') openMenu();
+      back();
       break;
     case 'lb': cycleTab(-1); break;
     case 'rb': cycleTab(1); break;
@@ -438,6 +465,23 @@ document.addEventListener('click', (e) => {
 
 let bootHandler = null;
 
+// Tela de perfil (abertura). Aparece ao ligar e quando o B não tem mais para onde voltar. A entra de novo pelo Início.
+function openBoot({ first = false } = {}) {
+  if (bootHandler) return;
+  if (!first) {
+    tabHistory.length = 0;
+    stack.length = 0;
+    stack.push({ id: 'home', params: {} });
+  }
+  bootHandler = showBoot({ state, sfx, first, onDone: enterFromBoot });
+}
+
+async function enterFromBoot() {
+  bootHandler = null;
+  $('topbar').hidden = false;
+  await show();
+}
+
 async function start() {
   const cfg = await api.getConfig();
   await applyConfig(cfg);
@@ -515,15 +559,10 @@ async function start() {
   document.querySelector('#topbar .me').addEventListener('click', openProfile);
 
   stack.push({ id: 'home', params: {} });
-  const enter = async () => {
-    bootHandler = null;
-    $('topbar').hidden = false;
-    await show();
-  };
   if (cfg.showBoot) {
-    bootHandler = showBoot({ state, sfx, onDone: enter });
+    openBoot({ first: true });
   } else {
-    await enter();
+    await enterFromBoot();
   }
   sync({ quiet: true }).catch(() => {});
   if (isDemo) {

@@ -22,6 +22,8 @@ const capture = require('./capture');
 const steamlocal = require('./steamlocal');
 const mods = require('./mods');
 const sofa = require('./sofa');
+const hytale = require('./hytale');
+const customgames = require('./customgames');
 
 const windowed = process.argv.includes('--windowed');
 let win = null;
@@ -224,14 +226,25 @@ async function launchGame(game) {
     prism.launchInstance(exe, game.instanceId);
     watch.watchJava({ onEnd: () => gameEnded(game) });
   } else if (game.source === 'hytale') {
-    const exe = config.get('hytaleExe');
-    if (!exe || !fs.existsSync(exe)) return { error: 'Não encontrei o Hytale. Indique o executável em Configurações.' };
+    const exe = library.hytaleExe();
+    if (!exe) return { error: 'Não encontrei o Hytale. Indique o executável em Configurações.' };
     spawn(exe, [], { cwd: path.dirname(exe), detached: true, stdio: 'ignore' }).unref();
-    // O executável pode ser o launcher do Hytale, que abre o jogo em outro processo. Por isso olhamos os dois nomes.
-    const names = [config.get('hytaleProcess'), path.basename(exe), 'HytaleClient.exe'];
+    // O executável costuma ser o launcher do Hytale, que abre o jogo em outro processo. Por isso olhamos os dois nomes.
+    const names = [config.get('hytaleProcess'), path.basename(exe), hytale.CLIENT_EXE];
     watch.watchProcesses(names, {
       onEnd: (ms) => {
         library.addHytaleTime(ms);
+        gameEnded(game);
+      },
+    });
+  } else if (game.source === 'custom') {
+    const c = (config.get('customGames') || []).find((x) => x.id === game.customId);
+    if (!c || !fs.existsSync(c.exe)) return { error: 'Não encontrei o executável deste jogo. Ele pode ter mudado de pasta.' };
+    const args = c.args ? (c.args.match(/"[^"]*"|\S+/g) || []).map((a) => a.replace(/^"|"$/g, '')) : [];
+    spawn(c.exe, args, { cwd: path.dirname(c.exe), detached: true, stdio: 'ignore' }).unref();
+    watch.watchProcesses([c.process, path.basename(c.exe)], {
+      onEnd: (ms) => {
+        library.addCustomTime(c.id, ms);
         gameEnded(game);
       },
     });
@@ -247,16 +260,17 @@ async function launchGame(game) {
 
 function openInSource(game) {
   if (game.source === 'steam') return shell.openExternal(`steam://nav/games/details/${game.appid}`);
-  if (game.source === 'prism') {
+  if (game.source === 'prism' || game.source === 'minecraft') {
     const exe = prism.findExe(library.prismDir(), config.get('prismExe'));
     if (exe) prism.launch(exe, game.instanceId ? ['--show', game.instanceId] : []);
     return;
   }
-  if (game.source === 'hytale' && config.get('hytaleExe')) shell.showItemInFolder(config.get('hytaleExe'));
+  if (game.source === 'hytale' && library.hytaleExe()) shell.showItemInFolder(library.hytaleExe());
+  if (game.source === 'custom' && game.exe && fs.existsSync(game.exe)) shell.showItemInFolder(game.exe);
 }
 
 function registerIpc() {
-  ipcMain.handle('config:get', () => ({ ...config.getPublic(), defaultPrismDir: prism.defaultPrismDir(), running }));
+  ipcMain.handle('config:get', () => ({ ...config.getPublic(), defaultPrismDir: prism.defaultPrismDir(), defaultHytaleExe: hytale.findLauncher(null), running }));
   ipcMain.handle('config:set', (_e, patch) => {
     const out = config.update(patch || {});
     if (patch && 'captureBuffer' in patch) capture.setBuffer(patch.captureBuffer !== false);
@@ -306,12 +320,17 @@ function registerIpc() {
     }
   });
   ipcMain.handle('art:reset', (_e, key, kind) => art.reset(key, kind));
+  // Imagem escolhida para algo que não é jogo (o fundo da aba PC usa a chave cartucho:pc).
+  ipcMain.handle('art:url', (_e, key, kind = 'hero') => {
+    const a = art.apply({ key: String(key), art: { cover: [], hero: [] } }).art;
+    return (a[kind] && a[kind][0]) || null;
+  });
   // Busca de capa, fundo e música na internet. Erros voltam como { error } para a tela mostrar.
   const searching = (fn) => async (_e, ...args) => {
     try {
       return await fn(...args);
     } catch (err) {
-      return { error: err instanceof artsearch.SearchError ? err.message : 'Não deu para buscar agora. Tente de novo.' };
+      return err instanceof artsearch.SearchError ? { error: err.message, blocked: !!err.blocked } : { error: 'Não deu para buscar agora. Tente de novo.' };
     }
   };
   const previews = new Map(); // faixa → arquivo baixado para ouvir, reaproveitado se a pessoa escolher a faixa
@@ -341,6 +360,7 @@ function registerIpc() {
     return { ok: true };
   }));
   ipcMain.handle('artsearch:done', () => clearPreviews());
+  ipcMain.handle('artsearch:open-site', (_e, game, term) => shell.openExternal(artsearch.siteSearchUrl(game, term)));
   app.on('will-quit', clearPreviews);
   ipcMain.handle('prism:presets', () => mcoptions.PRESET_LIST);
   ipcMain.handle('prism:preset-get', (_e, instanceId) => {
@@ -468,6 +488,46 @@ function registerIpc() {
     overlay.close({ backToGame: false });
     bringToFront();
     send('menu:navigate', target || {});
+  });
+  // Jogos de fora da Steam: a lista do menu Iniciar (para escolher com o controle) ou um .exe escolhido na janela do Windows.
+  ipcMain.handle('custom:scan', async () => {
+    const known = (config.get('customGames') || []).map((c) => c.exe);
+    const list = customgames.startMenuGames((f) => shell.readShortcutLink(f), { known });
+    return Promise.all(list.map(async (g) => {
+      try {
+        return { ...g, icon: (await app.getFileIcon(g.exe, { size: 'large' })).toDataURL() };
+      } catch {
+        return g;
+      }
+    }));
+  });
+  ipcMain.handle('custom:pick', async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Escolha o executável do jogo', properties: ['openFile'], filters: [{ name: 'Programas', extensions: ['exe'] }] });
+    if (r.canceled) return null;
+    return { title: customgames.niceName(r.filePaths[0]), exe: r.filePaths[0] };
+  });
+  ipcMain.handle('custom:add', (_e, g) => {
+    if (!g || typeof g.exe !== 'string' || !fs.existsSync(g.exe)) return { error: 'Não encontrei esse executável.' };
+    const list = config.get('customGames') || [];
+    const found = list.find((c) => c.exe.toLowerCase() === g.exe.toLowerCase());
+    if (found) return { key: `custom:${found.id}`, existed: true };
+    const id = customgames.newId();
+    config.update({ customGames: [...list, { id, title: g.title, exe: g.exe, args: g.args || '', addedAt: Date.now() }] });
+    send('library:changed');
+    return { key: `custom:${id}` };
+  });
+  ipcMain.handle('custom:update', (_e, id, patch = {}) => {
+    const list = (config.get('customGames') || []).map((c) => (c.id === id ? { ...c, ...(typeof patch.title === 'string' && patch.title.trim() ? { title: patch.title.trim() } : {}) } : c));
+    config.update({ customGames: list });
+    send('library:changed');
+    return { ok: true };
+  });
+  ipcMain.handle('custom:remove', (_e, id) => {
+    config.update({ customGames: (config.get('customGames') || []).filter((c) => c.id !== id) });
+    art.reset(`custom:${id}`);
+    art.reset(`custom:${id}`, 'music');
+    send('library:changed');
+    return { ok: true };
   });
   ipcMain.handle('dialog:file', async (_e, opts = {}) => {
     const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: opts.filters, defaultPath: opts.defaultPath });
