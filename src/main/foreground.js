@@ -5,6 +5,7 @@
 const VK_MENU = 0x12;
 const KEYEVENTF_KEYUP = 0x0002;
 const SW_RESTORE = 9;
+const WM_CLOSE = 0x0010;
 
 let user32 = null;
 let loaded = false;
@@ -22,6 +23,8 @@ function load() {
       ShowWindow: lib.func('int __stdcall ShowWindow(intptr_t hWnd, int nCmdShow)'),
       GetForegroundWindow: lib.func('intptr_t __stdcall GetForegroundWindow()'),
       IsWindow: lib.func('int __stdcall IsWindow(intptr_t hWnd)'),
+      GetWindowThreadProcessId: lib.func('uint32_t __stdcall GetWindowThreadProcessId(intptr_t hWnd, _Out_ uint32_t *pid)'),
+      PostMessageW: lib.func('int __stdcall PostMessageW(intptr_t hWnd, uint32_t msg, uintptr_t wParam, intptr_t lParam)'),
     };
   } catch {
     user32 = null;
@@ -64,4 +67,29 @@ function currentForeground() {
   }
 }
 
-module.exports = { forceForeground, focusHandle, currentForeground };
+// Processo dono de uma janela (o do jogo, para o Fechar jogo do menu).
+function windowPid(hwnd) {
+  const api = load();
+  if (!api || !hwnd) return null;
+  try {
+    if (!api.IsWindow(hwnd)) return null;
+    const pid = [0];
+    api.GetWindowThreadProcessId(hwnd, pid);
+    return pid[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+// Pede para a janela fechar, como o X do canto ou Alt+F4. O jogo tem a chance de salvar antes de sair.
+function closeWindow(hwnd) {
+  const api = load();
+  if (!api || !hwnd) return false;
+  try {
+    return !!api.IsWindow(hwnd) && !!api.PostMessageW(hwnd, WM_CLOSE, 0, 0);
+  } catch {
+    return false;
+  }
+}
+
+module.exports = { forceForeground, focusHandle, currentForeground, windowPid, closeWindow };

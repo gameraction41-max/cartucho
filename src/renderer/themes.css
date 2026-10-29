@@ -69,8 +69,8 @@
 [data-theme="ps5"] .qnow { order: 1; width: 36rem; min-height: 12rem; border-radius: 1.2rem; border: 0; }
 [data-theme="ps5"] .qnow small { color: #cfd5e2; }
 [data-theme="ps5"] .qsep { display: none; }
-[data-theme="ps5"] .qcap { order: 2; align-content: center; padding: 1.2rem; border-radius: 1.2rem; background: var(--panel); backdrop-filter: blur(14px); min-width: 20rem; }
-[data-theme="ps5"] .qcap .qitem { font-size: 1.1rem; padding: .7rem 1rem; }
+[data-theme="ps5"] .qcap, [data-theme="ps5"] .qgame { order: 2; align-content: center; padding: 1.2rem; border-radius: 1.2rem; background: var(--panel); backdrop-filter: blur(14px); min-width: 20rem; }
+[data-theme="ps5"] .qcap .qitem, [data-theme="ps5"] .qgame .qitem { font-size: 1.1rem; padding: .7rem 1rem; }
 [data-theme="ps5"] .qlabel, [data-theme="ps5"] .qpower-hint, [data-theme="ps5"] .qdate, [data-theme="ps5"] .qwho small { display: none; }
 [data-theme="ps5"] .qhead { border: 0; padding: 0; }
 [data-theme="ps5"] .qnav, [data-theme="ps5"] .qtools, [data-theme="ps5"] .qpower { order: 4; display: flex; gap: .6rem; align-items: flex-start; margin-top: 0; }

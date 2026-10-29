@@ -71,4 +71,9 @@ function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
-module.exports = { prepare, open, close, isOpen, send };
+// A janela que estava na frente quando o menu abriu: a do jogo.
+function gameWindow() {
+  return gameHwnd;
+}
+
+module.exports = { prepare, open, close, isOpen, send, gameWindow };

@@ -38,7 +38,7 @@ export default {
     const cfg = ctx.state.config;
     const save = async (patch, message) => {
       const next = await ctx.api.setConfig(patch);
-      await ctx.applyConfig({ ...cfg, ...next, defaultPrismDir: cfg.defaultPrismDir, defaultHytaleExe: cfg.defaultHytaleExe, running: cfg.running });
+      await ctx.applyConfig({ ...cfg, ...next, defaultPrismDir: cfg.defaultPrismDir, defaultHytaleExe: cfg.defaultHytaleExe, running: cfg.running, appVersion: cfg.appVersion });
       if (message) ctx.toast(message);
       ctx.rerender();
     };
@@ -190,7 +190,7 @@ export default {
       volume,
 
       section('', 'Sobre'),
-      h('div', { class: 'opt' }, h('span', { class: 'txt' }, 'Cartucho 0.16.0', h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
+      h('div', { class: 'opt' }, h('span', { class: 'txt' }, `Cartucho ${cfg.appVersion || ''}`.trim(), h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
       updateRow(ctx));
 
     const el = h('div', { class: 'set-wrap' }, list);
