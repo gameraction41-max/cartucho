@@ -168,7 +168,7 @@ export function createMenu({ ctx, focus, root, onClose }) {
       powerHint);
 
     root.replaceChildren(panel);
-    focus.setScope(root, focusKey || (running ? 'resume' : 'close'));
+    focus.setScope(root, focusKey || (running ? 'resume' : 'close'), { sameRow: true });
   }
 
   root.addEventListener('click', (e) => { if (e.target === root) close(); });

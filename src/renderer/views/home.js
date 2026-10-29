@@ -109,6 +109,8 @@ export default {
     const playBtn = h('button', { class: 'btn primary', onclick: () => ctx.launch(selected) }, 'Jogar');
     const showInfo = (g) => {
       selected = g;
+      playBtn.dataset.play = g.key;
+      ctx.markLaunching();
       src.className = `src ${g.source}`;
       src.replaceChildren(h('i'), SOURCE_NAME[g.source]);
       title.textContent = g.title;

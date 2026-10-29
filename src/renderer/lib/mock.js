@@ -80,7 +80,7 @@ let config = {
   sofaAction: 'off', sofaMinutes: 30,
   defaultPrismDir: 'C:\\Users\\Filipi\\AppData\\Roaming\\PrismLauncher', running: null,
   defaultHytaleExe: 'C:\\Users\\Filipi\\AppData\\Roaming\\Hytale\\install\\release\\package\\launcher\\2026.10.21-4f1c9e2\\hytale-launcher.exe',
-  appVersion: '0.19.2',
+  appVersion: '0.19.3',
   hiddenGames: [],
 };
 
