@@ -10,6 +10,7 @@ let pad = null;
 let audioEl = null;
 let paused = false;
 let gameTrack = null; // música do jogo selecionado, no lugar da música tema
+let themeOnly = false; // descanso do modo sofá: só a música tema, mesmo com um jogo selecionado
 let quietTimer = null;
 // Tempo para a música sumir antes de parar de vez (o volume cai com constante de 0,4 s).
 const FADE_MS = 2500;
@@ -110,7 +111,7 @@ function fileUrl(path) {
 function refreshMusic() {
   ensure();
   const want = settings.music && !paused;
-  const file = gameTrack || settings.musicFile;
+  const file = (!themeOnly && gameTrack) || settings.musicFile;
   if (audioEl && (!want || !file || audioEl.dataset.src !== file)) {
     audioEl.pause();
     audioEl = null;
@@ -154,6 +155,13 @@ export function configureSound(next) {
 export function setGameTrack(file) {
   if ((file || null) === gameTrack) return;
   gameTrack = file || null;
+  if (ctx) refreshMusic();
+}
+
+// Descanso com capas do modo sofá: toca a música tema do Cartucho, não a do jogo que estava selecionado.
+export function setThemeOnly(value) {
+  if (themeOnly === !!value) return;
+  themeOnly = !!value;
   if (ctx) refreshMusic();
 }
 

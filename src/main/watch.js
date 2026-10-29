@@ -159,4 +159,32 @@ async function watchJava(handlers) {
   return watch(async () => (await processNames()).filter(isJava).length > baseline, handlers);
 }
 
-module.exports = { watchSteam, watchProcesses, watchJava };
+// Nome do executável de um processo (ex.: "rdr2.exe"), ou null se ele não existe mais.
+async function processNameOf(pid) {
+  const api = process.platform === 'win32' && nativeApi();
+  if (api) {
+    try {
+      const snap = api.snapshot(TH32CS_SNAPPROCESS, 0);
+      if (snap !== -1 && snap !== 0) {
+        try {
+          const entry = { dwSize: api.size };
+          for (let ok = api.first(snap, entry); ok; ok = api.next(snap, entry)) {
+            if (entry.th32ProcessID === pid) return String(entry.szExeFile).toLowerCase();
+          }
+          return null;
+        } finally {
+          api.close(snap);
+        }
+      }
+    } catch {}
+  }
+  if (process.platform === 'win32') {
+    const out = await run('tasklist', ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH']);
+    const m = out.match(/^"([^"]+)","(\d+)"/m);
+    return m && Number(m[2]) === pid ? m[1].toLowerCase() : null;
+  }
+  const out = await run('ps', ['-p', String(pid), '-o', 'comm=']);
+  return out.trim().split('/').pop().toLowerCase() || null;
+}
+
+module.exports = { watchSteam, watchProcesses, watchJava, processNameOf };

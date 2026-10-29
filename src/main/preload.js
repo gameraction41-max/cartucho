@@ -55,6 +55,7 @@ contextBridge.exposeInMainWorld('cartucho', {
   openDownloads: invoke('steam:open-downloads'),
   overlayClose: invoke('overlay:close'),
   overlayNavigate: invoke('overlay:navigate'),
+  closeGame: invoke('game:close'),
   scanGames: invoke('custom:scan'),
   pickGameExe: invoke('custom:pick'),
   addGame: invoke('custom:add'),

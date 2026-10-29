@@ -25,7 +25,7 @@ export function minutesText(m) {
   return m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`;
 }
 
-export function createSofa({ api, root, saver, sfx, hints, setMusicPaused, games }) {
+export function createSofa({ api, root, saver, sfx, hints, setMusicPaused, setThemeOnly, games }) {
   let countdown = null; // { until, timer }
   let resting = null; // 'covers' ou 'screen'
   let slides = null; // { list, i, timer }
@@ -111,6 +111,7 @@ export function createSofa({ api, root, saver, sfx, hints, setMusicPaused, games
     if (!mode) graceUntil = Date.now() + WAKE_GRACE;
     if (mode === 'covers') showCovers();
     else hideCovers();
+    setThemeOnly(mode === 'covers');
     setMusicPaused(mode === 'screen');
   }
 

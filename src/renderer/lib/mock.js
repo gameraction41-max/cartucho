@@ -80,6 +80,7 @@ let config = {
   sofaAction: 'off', sofaMinutes: 30,
   defaultPrismDir: 'C:\\Users\\Filipi\\AppData\\Roaming\\PrismLauncher', running: null,
   defaultHytaleExe: 'C:\\Users\\Filipi\\AppData\\Roaming\\Hytale\\install\\release\\package\\launcher\\2026.10.21-4f1c9e2\\hytale-launcher.exe',
+  appVersion: '0.19.2',
   hiddenGames: [],
 };
 
@@ -335,6 +336,7 @@ export const mock = {
   },
   installUpdate: async () => {},
   overlayClose: async () => {},
+  closeGame: async () => ({ ok: true }),
   overlayNavigate: async () => {},
   pickFile: async () => null,
   pickFolder: async () => null,

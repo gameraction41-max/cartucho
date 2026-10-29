@@ -12,7 +12,7 @@ const art = require('./art');
 const artsearch = require('./artsearch');
 const mcoptions = require('./mcoptions');
 const { watchGuideButton } = require('./guide');
-const { forceForeground } = require('./foreground');
+const { forceForeground, windowPid, closeWindow } = require('./foreground');
 const overlay = require('./overlay');
 const updater = require('./updater');
 const downloads = require('./downloads');
@@ -204,6 +204,31 @@ function gameEnded(game) {
   if (config.get('returnAfterGame')) bringToFront();
 }
 
+// Fechar jogo, pelo menu por cima do jogo. Fecha a janela que estava na frente quando o menu abriu,
+// mas nunca a Steam, o Prism, o Explorador ou o próprio Cartucho, caso outra coisa estivesse na frente.
+const NEVER_CLOSE = new Set(['explorer.exe', 'steam.exe', 'steamwebhelper.exe', 'prismlauncher.exe', 'hytale-launcher.exe']);
+// Tempo para o jogo fechar sozinho (e salvar) antes de ser fechado à força.
+const CLOSE_WAIT_MS = 6000;
+
+async function closeRunningGame() {
+  if (!running) return { error: 'Nenhum jogo aberto.' };
+  const hwnd = overlay.gameWindow();
+  const pid = windowPid(hwnd);
+  const name = pid && pid !== process.pid ? await watch.processNameOf(pid) : null;
+  if (!name || NEVER_CLOSE.has(name) || name === path.basename(process.execPath).toLowerCase()) {
+    return { error: 'Não achei a janela do jogo. Feche pelo próprio jogo.' };
+  }
+  overlay.close({ backToGame: false });
+  closeWindow(hwnd);
+  bringToFront();
+  // Alguns jogos perguntam se a pessoa quer mesmo sair, ou ignoram o pedido. Esses são fechados à força.
+  setTimeout(async () => {
+    if ((await watch.processNameOf(pid)) !== name) return;
+    try { process.kill(pid); } catch {}
+  }, CLOSE_WAIT_MS);
+  return { ok: true };
+}
+
 // O que impede o modo sofá de agir. Download na fila ou pausado não conta, só o que está baixando.
 function sofaBusy() {
   if (running) return 'jogo';
@@ -330,7 +355,7 @@ function openGameFolder(game) {
 }
 
 function registerIpc() {
-  ipcMain.handle('config:get', () => ({ ...config.getPublic(), defaultPrismDir: prism.defaultPrismDir(), defaultHytaleExe: hytale.findLauncher(null), running }));
+  ipcMain.handle('config:get', () => ({ ...config.getPublic(), defaultPrismDir: prism.defaultPrismDir(), defaultHytaleExe: hytale.findLauncher(null), running, appVersion: app.getVersion() }));
   ipcMain.handle('config:set', (_e, patch) => {
     const out = config.update(patch || {});
     if (patch && 'captureBuffer' in patch) capture.setBuffer(patch.captureBuffer !== false);
@@ -553,6 +578,7 @@ function registerIpc() {
   ipcMain.handle('update:install', () => updater.installNow());
   ipcMain.handle('update:check', () => updater.checkNow());
   ipcMain.handle('overlay:close', () => overlay.close());
+  ipcMain.handle('game:close', () => closeRunningGame());
   ipcMain.handle('overlay:navigate', (_e, target) => {
     overlay.close({ backToGame: false });
     bringToFront();

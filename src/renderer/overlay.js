@@ -21,6 +21,7 @@ const ctx = {
   openProfile: () => navigate({ profile: true }),
   sync: () => navigate({ sync: true }),
   resume: () => api.overlayClose(),
+  closeGame: () => api.closeGame(),
 };
 
 const menu = createMenu({ ctx, focus, root, onClose: (how) => { if (how === 'dismiss') api.overlayClose(); } });

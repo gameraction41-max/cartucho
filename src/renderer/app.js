@@ -4,7 +4,7 @@ import { createInput } from './lib/input.js';
 import { createFocus } from './lib/focus.js';
 import { createKeyboard } from './lib/keyboard.js';
 import { createSofa } from './lib/sofa.js';
-import { sfx, configureSound, setMusicPaused, setGameTrack } from './lib/sound.js';
+import { sfx, configureSound, setMusicPaused, setGameTrack, setThemeOnly } from './lib/sound.js';
 import { h, hue, loadFirst, downloadText } from './lib/ui.js';
 import { applyTheme } from './lib/themes.js';
 import home from './views/home.js';
@@ -53,7 +53,7 @@ let renderToken = 0;
 
 const $ = (id) => document.getElementById(id);
 const focus = createFocus();
-const sofa = createSofa({ api, root: document.getElementById('sofa'), saver: document.getElementById('saver'), sfx, hints: (list) => hintEls(list), setMusicPaused, games: () => state.games });
+const sofa = createSofa({ api, root: document.getElementById('sofa'), saver: document.getElementById('saver'), sfx, hints: (list) => hintEls(list), setMusicPaused, setThemeOnly, games: () => state.games });
 const vkb = createKeyboard({ root: document.getElementById('vkb-root'), focus, sfx, hints: (list) => hintEls(list), readClipboard: () => api.readClipboard() });
 
 // ===== interface comum =====

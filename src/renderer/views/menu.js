@@ -17,6 +17,7 @@ const ICONS = {
   'cap-shot': svg('<rect x="3" y="6" width="18" height="13" rx="2"/><circle cx="12" cy="12.5" r="3.5"/>'),
   'cap-clip': svg('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'),
   'cap-rec': svg('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/>'),
+  stop: svg('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9l6 6M15 9l-6 6"/>'),
   quit: svg('<path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"/>'),
   sleep: svg('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'),
   shutdown: svg('<path d="M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0"/>'),
@@ -108,6 +109,19 @@ export function createMenu({ ctx, focus, root, onClose }) {
     ];
   }
 
+  // Fechar o jogo aberto, só no menu por cima do jogo. Pede um segundo aperto, como os botões de energia.
+  function closeGameItem(running) {
+    if (!ctx.overlay || !running || !ctx.closeGame) return null;
+    const el = item('stop', 'Fechar jogo', async () => {
+      const r = await ctx.closeGame();
+      if (r && r.error) {
+        ctx.sfx.error();
+        el.firstChild.textContent = r.error;
+      }
+    }, { small: running.title, confirm: 'Aperte de novo para fechar o jogo' });
+    return h('div', { class: 'qlist qgame' }, el);
+  }
+
   function render(focusKey) {
     armed = null;
     powerHint.textContent = '';
@@ -127,6 +141,7 @@ export function createMenu({ ctx, focus, root, onClose }) {
         h('div', { class: 'me' }, avatar, h('span', { class: 'qwho' }, name, h('small', {}, running ? 'Jogando agora' : 'No Cartucho'))),
         h('div', { class: 'qtime' }, clock, date)),
       running ? nowPlaying(ctx, running, go(() => ctx.resume())) : null,
+      closeGameItem(running),
       label('Ir para'),
       h('div', { class: 'qlist qnav' },
         item('close', 'Fechar menu', () => close()),
