@@ -196,6 +196,7 @@ const ctx = {
   openProfile,
   openMenu: () => openMenu(),
   launch,
+  markLaunching,
   install,
   uninstall,
   sync,
@@ -238,6 +239,7 @@ async function show({ keepFocus = false } = {}) {
   }
   if (!view.keepBackground) setBackground(null);
   focus.setScope(root, prevKey, { scroll: !keepFocus });
+  markLaunching();
   renderTopbar();
   renderHints();
 }
@@ -293,6 +295,7 @@ function cycleTab(delta) {
 // ===== jogos e dados =====
 
 async function launch(g) {
+  const orig = g;
   // O Minecraft da lista abre a instância jogada por último; a página dele deixa escolher outra.
   if (g.group) {
     const first = (g.instances || []).map((k) => state.games.find((x) => x.key === k)).find(Boolean);
@@ -301,10 +304,27 @@ async function launch(g) {
   }
   // Jogo da Steam que não está neste PC: Jogar vira Instalar.
   if (g.source === 'steam' && g.installed === false) return g.download ? api.openDownloads() : install(g);
+  if (launching) return;
   sfx.confirm();
+  setLaunching([orig.key, g.key]);
   toast(`Abrindo ${g.title}…`);
   const r = await api.launch(g);
-  if (r && r.error) toast(r.error, { error: true });
+  if (r && r.error) {
+    setLaunching(null);
+    toast(r.error, { error: true });
+  }
+}
+
+// Botão Jogar cinza e carregando enquanto o jogo abre. Volta ao normal quando o jogo toma a frente, fecha ou dá erro.
+let launching = null; // { keys, timer }
+const LAUNCH_TIMEOUT = 90000;
+function setLaunching(keys) {
+  if (launching) clearTimeout(launching.timer);
+  launching = keys ? { keys, timer: setTimeout(() => setLaunching(null), LAUNCH_TIMEOUT) } : null;
+  markLaunching();
+}
+function markLaunching() {
+  document.querySelectorAll('[data-play]').forEach((el) => el.classList.toggle('loading', !!launching && launching.keys.includes(el.dataset.play)));
 }
 
 async function install(g) {
@@ -393,7 +413,7 @@ function whenBack(fn) {
 function setAway(away) {
   state.away = away;
   setMusicPaused(away);
-  if (away) return;
+  if (away) return setLaunching(null);
   if (refreshWhenBack) {
     refreshWhenBack = false;
     refreshLive();
@@ -591,7 +611,7 @@ async function start() {
     if (target.sync) sync({ force: true, quiet: false });
   });
   api.on('game:started', (r) => { state.running = r; state.config.lastLaunched = r.key; });
-  api.on('game:ended', () => { state.running = null; });
+  api.on('game:ended', () => { state.running = null; setLaunching(null); });
   api.on('window:blur', () => setAway(true));
   api.on('window:focus', () => setAway(false));
   api.on('input:guide', ({ fromBackground }) => {

@@ -3,6 +3,7 @@
 export function createFocus() {
   let scope = document.body;
   let current = null;
+  let rows = false; // para os lados, fica na mesma faixa da tela quando há algo nela (menu do PS5, com cartões lado a lado)
 
   const items = () => [...scope.querySelectorAll('[data-focus]')].filter((el) => el.offsetParent !== null && !el.disabled);
 
@@ -15,9 +16,10 @@ export function createFocus() {
     el.dispatchEvent(new CustomEvent('focusin-nav', { bubbles: true }));
   }
 
-  function setScope(root, preferredKey, { scroll = true } = {}) {
+  function setScope(root, preferredKey, { scroll = true, sameRow = false } = {}) {
     if (current) current.classList.remove('focused');
     scope = root;
+    rows = sameRow;
     current = null;
     const list = items();
     const byKey = preferredKey && list.find((el) => el.dataset.key === preferredKey);
@@ -39,6 +41,7 @@ export function createFocus() {
     const gap = (a1, a2, b1, b2) => Math.max(0, b1 - a2, a1 - b2);
     let best = null;
     let bestScore = Infinity;
+    let bestInRow = false;
     for (const el of list) {
       if (el === current) continue;
       const r = el.getBoundingClientRect();
@@ -57,9 +60,12 @@ export function createFocus() {
       // Empate (dois botões lado a lado debaixo do atual): fica o que está mais perto do centro, e depois o da esquerda.
       const center = Math.abs(vertical ? dx : dy);
       const score = main + cross * 2.5 + center * 0.05;
-      if (score < bestScore) {
+      const inRow = rows && !vertical && cross === 0;
+      if (bestInRow && !inRow) continue;
+      if (score < bestScore || (inRow && !bestInRow)) {
         bestScore = score;
         best = el;
+        bestInRow = inRow;
       }
     }
     if (best) set(best);

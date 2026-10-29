@@ -192,7 +192,7 @@ export default {
     };
 
     const preset = target.source === 'prism' || target.presets ? presetButton(ctx, target) : null;
-    const play = h('button', { class: 'btn primary play', 'data-focus': true, 'data-autofocus': true, 'data-key': 'play', onclick: () => ctx.launch(target) },
+    const play = h('button', { class: 'btn primary play', 'data-focus': true, 'data-autofocus': true, 'data-key': 'play', 'data-play': target.key, onclick: () => ctx.launch(target) },
       inst ? h('span', {}, 'Jogar ', h('small', {}, inst.title)) : playLabel(g));
     const actions = h('div', { class: 'game-actions' },
       play,
