@@ -5,6 +5,7 @@
 // o vídeo nunca fica esperando pelo áudio.
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const { spawn } = require('node:child_process');
 
 const SEGMENT_S = 2;
@@ -18,7 +19,7 @@ const DESKTOP = ['-f', 'lavfi', '-i', 'ddagrab=output_idx=0:framerate=60:draw_mo
 
 // Do melhor para o pior: NVENC (NVIDIA), AMF (AMD) e, por último, o processador.
 const ENCODERS = {
-  nvenc: ['-c:v', 'h264_nvenc', '-preset', 'p4', '-rc', 'vbr', '-cq', '23', '-b:v', '0', '-maxrate', '50M', '-bufsize', '100M', '-g', '60', '-bf', '0'],
+  nvenc: ['-c:v', 'h264_nvenc', '-preset', 'p1', '-rc', 'vbr', '-cq', '23', '-b:v', '0', '-maxrate', '50M', '-bufsize', '100M', '-g', '60', '-bf', '0'],
   amf: ['-c:v', 'h264_amf', '-quality', 'balanced', '-rc', 'cqp', '-qp_i', '22', '-qp_p', '24', '-g', '60'],
   x264: ['-vf', 'hwdownload,format=bgra', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-g', '60', '-pix_fmt', 'yuv420p'],
 };
@@ -47,9 +48,16 @@ function parseSegmentList(text) {
     .filter((s) => Number.isFinite(s.start) && Number.isFinite(s.end));
 }
 
+// O ffmpeg roda abaixo do normal, para nunca disputar o processador com o jogo.
+function spawnLow(ffmpeg, args) {
+  const p = spawn(ffmpeg, args, { windowsHide: true });
+  if (p.pid) { try { os.setPriority(p.pid, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch {} }
+  return p;
+}
+
 function run(ffmpeg, args) {
   return new Promise((resolve, reject) => {
-    const p = spawn(ffmpeg, args, { windowsHide: true });
+    const p = spawnLow(ffmpeg, args);
     let err = '';
     p.stderr.on('data', (d) => { err = (err + d).slice(-2000); });
     p.on('error', reject);
@@ -184,7 +192,7 @@ function createRecorder({ ffmpeg, tmpDir, video, encoders = ['nvenc', 'amf', 'x2
     segments = [];
     listBytes = 0;
     listRest = '';
-    const p = spawn(ffmpeg, bufferArgs({ dir: tmpDir, video, encoder: encoderArgs[name] }), { windowsHide: true });
+    const p = spawnLow(ffmpeg, bufferArgs({ dir: tmpDir, video, encoder: encoderArgs[name] }));
     let err = '';
     p.stderr.on('data', (d) => { err = (err + d).slice(-2000); });
     p.stdin.on('error', () => {});

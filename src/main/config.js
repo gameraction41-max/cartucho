@@ -26,7 +26,7 @@ const DEFAULTS = {
   volume: 0.5,
   // Só a música de fundo (tema e música dos jogos), por cima do volume geral.
   musicVolume: 1,
-  captureBuffer: true,
+  captureBuffer: false,
   theme: 'cartucho',
   collections: collections.DEFAULT_COLLECTIONS,
   sofaAction: 'off',
@@ -41,8 +41,19 @@ const DEFAULTS = {
 let store;
 
 function getStore() {
-  if (!store) store = new JsonStore(path.join(app.getPath('userData'), 'config.json'), DEFAULTS);
+  if (!store) {
+    store = new JsonStore(path.join(app.getPath('userData'), 'config.json'), DEFAULTS);
+    migrate(store);
+  }
   return store;
+}
+
+// 0.20.1: os últimos 30 s passaram a vir desligados, porque gravar a tela o jogo inteiro dava travadas.
+// O config.json guarda todas as opções, então quem já tinha o Cartucho recebe o desligado uma vez só;
+// depois disso vale o que a pessoa escolher em Configurações > Capturas.
+function migrate(s) {
+  if (s.get('bufferOffByDefault')) return;
+  s.patch({ captureBuffer: false, bufferOffByDefault: true });
 }
 
 function encrypt(text) {

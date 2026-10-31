@@ -10,6 +10,9 @@ const CHECK_EVERY_MS = 6 * 3600 * 1000;
 let status = { state: 'idle', version: null, percent: 0, error: null };
 let updater = null;
 let notify = () => {};
+// Com um jogo aberto, a procura automática espera: baixar 150 MB no meio de uma partida online dá lag.
+let playing = () => false;
+let missed = false;
 
 function set(next) {
   status = { ...status, ...next };
@@ -32,8 +35,9 @@ function friendly(err) {
   return msg.split('\n')[0].slice(0, 90) || 'Erro desconhecido';
 }
 
-function watchUpdates(onStatus) {
+function watchUpdates(onStatus, { busy } = {}) {
   notify = onStatus;
+  if (busy) playing = busy;
   if (!app.isPackaged) {
     status = { ...status, state: 'dev' };
     return;
@@ -52,8 +56,23 @@ function watchUpdates(onStatus) {
     log(`falhou: ${(err && err.stack) || err}`);
     if (status.state !== 'ready') set({ state: 'error', error: friendly(err) });
   });
+  autoCheck();
+  setInterval(autoCheck, CHECK_EVERY_MS);
+}
+
+function autoCheck() {
+  if (playing()) {
+    missed = true;
+    return;
+  }
   checkNow();
-  setInterval(checkNow, CHECK_EVERY_MS);
+}
+
+// O jogo fechou: faz a procura que ficou para depois.
+function gameEnded() {
+  if (!missed) return;
+  missed = false;
+  autoCheck();
 }
 
 function checkNow() {
@@ -70,4 +89,4 @@ function installNow() {
   if (updater && status.state === 'ready') updater.quitAndInstall(true, true);
 }
 
-module.exports = { watchUpdates, checkNow, getStatus, installNow };
+module.exports = { watchUpdates, checkNow, gameEnded, getStatus, installNow };

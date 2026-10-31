@@ -69,7 +69,7 @@ setInterval(() => {
 
 let config = {
   steamId: '76561198000000000', hasSteamApiKey: true, steamApiKeyHint: 'A91F', hasSgdbApiKey: new URLSearchParams(location.search).get('sgdb') !== '0', sgdbApiKeyHint: '7C2E', prismDir: '', prismExe: '', hytaleExe: '', hytaleProcess: '',
-  openAtLogin: true, returnAfterGame: true, captureBuffer: true, showBoot: true, guideOpens: true, introAnim: new URLSearchParams(location.search).get('intro') !== '0', sounds: true, music: true, musicFile: '', volume: 0.5, musicVolume: 1,
+  openAtLogin: true, returnAfterGame: true, captureBuffer: false, showBoot: true, guideOpens: true, introAnim: new URLSearchParams(location.search).get('intro') !== '0', sounds: true, music: true, musicFile: '', volume: 0.5, musicVolume: 1,
   // Na demo dá para abrir já com um tema: index.html?tema=ps5
   theme: new URLSearchParams(location.search).get('tema') || 'cartucho',
   collections: [
