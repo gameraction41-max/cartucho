@@ -48,7 +48,7 @@ if (!app.requestSingleInstanceLock()) {
     mods.setTrash((file) => shell.trashItem(file));
     createWindow();
     capture.setup({
-      buffer: () => config.get('captureBuffer') !== false,
+      buffer: () => config.get('captureBuffer') === true,
       onStatus: (s) => { send('capture:status', s); overlay.send('capture:status', s); updatePriority(); },
       log: (line) => {
         try { fs.appendFileSync(path.join(app.getPath('userData'), 'capture.log'), `${new Date().toISOString()} ${line}\n`); } catch {}
@@ -405,7 +405,7 @@ function registerIpc() {
   ipcMain.handle('config:get', () => ({ ...config.getPublic(), defaultPrismDir: prism.defaultPrismDir(), defaultHytaleExe: hytale.findLauncher(null), running, appVersion: app.getVersion() }));
   ipcMain.handle('config:set', (_e, patch) => {
     const out = config.update(patch || {});
-    if (patch && 'captureBuffer' in patch) capture.setBuffer(patch.captureBuffer !== false);
+    if (patch && 'captureBuffer' in patch) capture.setBuffer(patch.captureBuffer === true);
     return out;
   });
   ipcMain.handle('capture:status', () => capture.status());
