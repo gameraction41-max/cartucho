@@ -9,7 +9,7 @@ const ROWS = [
   ['z', 'x', 'c', 'v', 'b', 'n', 'm', '-', '_', '.'],
 ];
 
-export function createKeyboard({ root, focus, sfx, hints, readClipboard }) {
+export function createKeyboard({ root, focus, sfx, hints, readClipboard, device = () => 'gamepad' }) {
   let state = null; // { value, caps, done, cancel, field, restore }
 
   const isOpen = () => !!state;
@@ -78,7 +78,10 @@ export function createKeyboard({ root, focus, sfx, hints, readClipboard }) {
       h('div', { class: 'vkb-title' }, state.title),
       h('div', { class: 'vkb-field' }),
       rows, actions,
-      h('div', { class: 'vkb-hints' }, hints([['confirm', 'Tecla'], ['back', 'Apagar'], ['y', 'Espaço'], ['x', 'Maiúsculas'], ['menu', 'OK']])));
+      // No teclado físico as letras digitam direto, então F, I e M não servem de atalho aqui: as dicas mostram as teclas de verdade.
+      h('div', { class: 'vkb-hints' }, hints(device() === 'gamepad'
+        ? [['confirm', 'Tecla'], ['back', 'Apagar'], ['y', 'Espaço'], ['x', 'Maiúsculas'], ['options', 'OK']]
+        : [['key:Enter', 'OK'], ['key:Esc', 'Cancelar'], ['key:⌫', 'Apagar'], ['key:Ctrl+V', 'Colar']])));
     root.replaceChildren(panel);
     paint();
     focus.setScope(root, focusKey || 'k:q', { scroll: false });
@@ -111,7 +114,7 @@ export function createKeyboard({ root, focus, sfx, hints, readClipboard }) {
       if (action === 'back') return erase();
       if (action === 'y') return type(' ');
       if (action === 'x') return toggleCaps();
-      if (action === 'menu') { sfx.confirm(); return close(true); }
+      if (action === 'menu' || action === 'options') { sfx.confirm(); return close(true); }
       if (action === 'confirm') { if (focus.current) focus.current.click(); return; }
       if (['up', 'down', 'left', 'right'].includes(action) && focus.move(action)) sfx.move();
     },

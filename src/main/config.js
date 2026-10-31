@@ -24,6 +24,8 @@ const DEFAULTS = {
   music: true,
   musicFile: '',
   volume: 0.5,
+  // Só a música de fundo (tema e música dos jogos), por cima do volume geral.
+  musicVolume: 1,
   captureBuffer: true,
   theme: 'cartucho',
   collections: collections.DEFAULT_COLLECTIONS,

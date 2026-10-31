@@ -95,9 +95,17 @@ export default {
 
     const section = (cls, label) => h('div', { class: `set-section ${cls}` }, label);
 
-    const volume = h('div', { class: 'opt', 'data-focus': true, 'data-key': 'volume', 'data-slider': true, role: 'slider', 'aria-valuenow': Math.round(cfg.volume * 100) },
-      h('span', { class: 'txt' }, 'Volume', h('small', {}, 'Use ← e → para ajustar')),
-      h('span', { class: 'slider' }, h('span', { class: 'bar' }, h('i', { style: { width: `${cfg.volume * 100}%` } })), h('span', { class: 'mono' }, `${Math.round(cfg.volume * 100)}%`)));
+    // Com o mouse, clicar na barra escolhe o volume naquele ponto (de 10 em 10%).
+    const pick = (key) => (e) => {
+      const r = e.currentTarget.getBoundingClientRect();
+      save({ [key]: Math.min(1, Math.max(0, Math.round(((e.clientX - r.left) / r.width) * 10) / 10)) });
+    };
+    const slider = (key, label, desc) => {
+      const v = cfg[key] ?? 1;
+      return h('div', { class: 'opt', 'data-focus': true, 'data-key': key, 'data-slider': key, role: 'slider', 'aria-valuenow': Math.round(v * 100) },
+        h('span', { class: 'txt' }, label, h('small', {}, desc)),
+        h('span', { class: 'slider' }, h('span', { class: 'bar', onclick: pick(key) }, h('i', { style: { width: `${v * 100}%` } })), h('span', { class: 'mono' }, `${Math.round(v * 100)}%`)));
+    };
 
     // Tema: A ou → passa para o próximo, ← volta. Muda na hora.
     const theme = themeOf(cfg);
@@ -187,10 +195,11 @@ export default {
       toggle('sounds', 'Sons de navegação'),
       toggle('music', 'Música tema'),
       path('musicFile', 'Música personalizada', 'Opcional. Sem arquivo, toca a trilha do Cartucho', { filters: [{ name: 'Áudio', extensions: ['mp3', 'ogg', 'wav', 'flac', 'm4a'] }], fallback: 'trilha do Cartucho' }),
-      volume,
+      slider('volume', 'Volume', 'Sons e música juntos. Use ← e → para ajustar'),
+      slider('musicVolume', 'Volume da música', 'Só a música de fundo, a tema e a dos jogos. Também fica no menu do Cartucho'),
 
       section('', 'Sobre'),
-      h('div', { class: 'opt' }, h('span', { class: 'txt' }, `Cartucho ${cfg.appVersion || ''}`.trim(), h('small', {}, 'Use Q/E ou LB/RB para trocar de aba e M ou Start para o menu rápido'))),
+      h('div', { class: 'opt' }, h('span', { class: 'txt' }, `Cartucho ${cfg.appVersion || ''}`.trim(), h('small', {}, 'Q/E ou LB/RB trocam de aba · M ou View abrem o menu do Cartucho · O, Start ou clique direito abrem as opções do jogo'))),
       updateRow(ctx));
 
     const el = h('div', { class: 'set-wrap' }, list);
@@ -211,10 +220,11 @@ export default {
           steps[focused.dataset.choice](act === 'right' ? 1 : -1);
           return true;
         }
-        if ('slider' in focused.dataset && (act === 'left' || act === 'right')) {
-          const v = Math.min(1, Math.max(0, Math.round((cfg.volume + (act === 'right' ? VOLUME_STEP : -VOLUME_STEP)) * 10) / 10));
+        if (focused.dataset.slider && (act === 'left' || act === 'right')) {
+          const key = focused.dataset.slider;
+          const v = Math.min(1, Math.max(0, Math.round(((cfg[key] ?? 1) + (act === 'right' ? VOLUME_STEP : -VOLUME_STEP)) * 10) / 10));
           ctx.sfx.move();
-          save({ volume: v });
+          save({ [key]: v });
           return true;
         }
         if (act === 'x' && (focused.dataset.path || focused.dataset.input)) {

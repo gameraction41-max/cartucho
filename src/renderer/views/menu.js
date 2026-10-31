@@ -1,4 +1,4 @@
-// Menu rápido: abre com Start/Guide ou M, por cima de qualquer tela. Desligar e reiniciar pedem confirmação.
+// Menu rápido: abre com o botão Xbox, View ou M, por cima de qualquer tela. Desligar e reiniciar pedem confirmação.
 // O mesmo menu aparece por cima de um jogo aberto (overlay.js), com o jogo em destaque no topo.
 import { h, loadFirst } from '../lib/ui.js';
 
@@ -22,7 +22,10 @@ const ICONS = {
   sleep: svg('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'),
   shutdown: svg('<path d="M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0"/>'),
   restart: svg('<path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6"/>'),
+  musicvol: svg('<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>'),
 };
+
+const MUSIC_STEP = 0.1;
 
 function since(ms) {
   const min = Math.max(0, Math.round((Date.now() - ms) / 60000));
@@ -122,6 +125,41 @@ export function createMenu({ ctx, focus, root, onClose }) {
     return h('div', { class: 'qlist qgame' }, el);
   }
 
+  // Volume da música de fundo (tema e música dos jogos), só na janela do Cartucho: por cima do jogo ela não toca.
+  // ← e → ajustam de 10 em 10%. Com o mouse, clicar na barra escolhe o ponto, e clicar no resto abaixa 20% (do 0 volta ao 100%).
+  function musicItem() {
+    if (ctx.overlay || !ctx.setMusicVolume) return null;
+    const fill = h('i');
+    const pct = h('b');
+    const paint = (v) => {
+      fill.style.width = `${v * 100}%`;
+      pct.textContent = v ? `${Math.round(v * 100)}%` : 'mudo';
+    };
+    // Guardado aqui: apertos seguidos não esperam a configuração voltar do disco.
+    let value = ctx.state.config.musicVolume ?? 1;
+    const set = (v) => {
+      value = Math.min(1, Math.max(0, Math.round(v * 10) / 10));
+      paint(value);
+      ctx.setMusicVolume(value);
+    };
+    const bar = h('span', { class: 'bar', onclick: (e) => {
+      e.stopPropagation();
+      const r = bar.getBoundingClientRect();
+      ctx.sfx.move();
+      set((e.clientX - r.left) / r.width);
+    } }, fill);
+    const el = item('musicvol', 'Música de fundo', () => set(value <= 0 ? 1 : value - 0.2));
+    el.append(h('span', { class: 'qvol' }, bar, pct));
+    el.step = (dir) => {
+      const next = Math.min(1, Math.max(0, value + dir * MUSIC_STEP));
+      if (next === value) return;
+      ctx.sfx.move();
+      set(next);
+    };
+    paint(value);
+    return el;
+  }
+
   function render(focusKey) {
     armed = null;
     powerHint.textContent = '';
@@ -152,12 +190,13 @@ export function createMenu({ ctx, focus, root, onClose }) {
         item('profile', 'Perfil', go(() => ctx.openProfile())),
         item('settings', 'Configurações', go(() => ctx.goTab('settings')))),
       captureItems(running),
-      label('Cartucho'),
+      label('Ferramentas'),
       h('div', { class: 'qlist qtools' },
         item('sync', 'Sincronizar com a Steam', go(() => ctx.sync({ force: true, quiet: false }))),
         ctx.state.update && ctx.state.update.state === 'ready'
           ? item('update', `Atualizar para a ${ctx.state.update.version}`, () => ctx.api.installUpdate(), { small: 'reinicia o app' })
-          : null),
+          : null,
+        musicItem()),
       h('div', { class: 'qsep' }),
       // Energia: uma fileira de botões no pé do menu. Os que desligam pedem um segundo aperto.
       h('div', { class: 'qlist qpower' },
@@ -182,8 +221,9 @@ export function createMenu({ ctx, focus, root, onClose }) {
       render();
     },
     handle(action) {
-      if (action === 'back' || action === 'menu') { ctx.sfx.back(); close(); return; }
+      if (action === 'back' || action === 'menu' || action === 'options') { ctx.sfx.back(); close(); return; }
       if (action === 'confirm') { if (focus.current) focus.current.click(); return; }
+      if ((action === 'left' || action === 'right') && focus.current && focus.current.step) { focus.current.step(action === 'right' ? 1 : -1); return; }
       if (['up', 'down', 'left', 'right'].includes(action) && focus.move(action)) ctx.sfx.move();
     },
   };
