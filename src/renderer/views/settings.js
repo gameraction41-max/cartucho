@@ -188,7 +188,7 @@ export default {
       }),
 
       section('', 'Capturas'),
-      toggle('captureBuffer', 'Guardar os últimos 30 segundos enquanto joga', 'Grava em segundo plano pela placa de vídeo. Os arquivos vão para Imagens e Vídeos › Cartucho'),
+      toggle('captureBuffer', 'Guardar os últimos 30 segundos enquanto joga', 'Grava em segundo plano pela placa de vídeo, começando uns 20 s depois de o jogo abrir. Os arquivos vão para Imagens e Vídeos › Cartucho'),
       action('captureKeys', 'Atalhos durante o jogo', 'Xbox + Y print · Xbox + X últimos 30 s · Xbox + RB gravar · no teclado, Alt+Shift+P, G e R', () => {}),
 
       section('', 'Som'),

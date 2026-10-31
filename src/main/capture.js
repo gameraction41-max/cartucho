@@ -10,11 +10,15 @@ const notify = require('./notify');
 const { safeName } = require('./screenshots');
 
 const CLIP_S = 30;
+// A gravação dos últimos 30 s começa um tempo depois de o jogo aparecer, e não no clique em Jogar: ligar a captura da
+// tela bem quando o jogo está abrindo (trocando de resolução, entrando em tela cheia) dava engasgo e às vezes derrubava o ffmpeg.
+const BUFFER_DELAY_MS = 20000;
 
 let recorder = null;
 let audioWin = null;
 let game = null; // { key, title }
 let busy = false;
+let bufferTimer = null;
 let opts = { buffer: () => true, onStatus: () => {}, log: () => {} };
 
 function ffmpegPath() {
@@ -182,13 +186,23 @@ const actions = { screenshot: safe(screenshot), clip: safe(saveClip), record: sa
 
 // ===== ciclo do jogo =====
 
-async function gameStarted(running) {
+function gameStarted(running) {
   game = { key: running.key, title: running.title };
   changed();
-  if (opts.buffer()) await startBuffer();
+}
+
+// O processo do jogo apareceu (watch.js): agenda o começo dos últimos 30 s.
+function gameRunning() {
+  if (!game || bufferTimer) return;
+  bufferTimer = setTimeout(() => {
+    bufferTimer = null;
+    if (game && opts.buffer()) startBuffer().catch(() => {});
+  }, BUFFER_DELAY_MS);
 }
 
 async function gameEnded() {
+  clearTimeout(bufferTimer);
+  bufferTimer = null;
   if (!game) return;
   try {
     if (recorder && recorder.recordingSince()) {
@@ -230,4 +244,4 @@ function shutdown() {
   if (recorder) recorder.kill();
 }
 
-module.exports = { setup, shutdown, gameStarted, gameEnded, setBuffer, status, actions, roots, safeName, stamp };
+module.exports = { setup, shutdown, gameStarted, gameRunning, gameEnded, setBuffer, status, actions, roots, safeName, stamp };

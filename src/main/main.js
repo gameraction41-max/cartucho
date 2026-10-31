@@ -1,6 +1,7 @@
 // Processo principal do Cartucho: janela em tela cheia, acesso a arquivos e abertura dos jogos.
 const path = require('node:path');
 const fs = require('node:fs');
+const os = require('node:os');
 const { spawn } = require('node:child_process');
 const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, globalShortcut, powerMonitor, Tray, Menu } = require('electron');
 const config = require('./config');
@@ -48,15 +49,17 @@ if (!app.requestSingleInstanceLock()) {
     createWindow();
     capture.setup({
       buffer: () => config.get('captureBuffer') !== false,
-      onStatus: (s) => { send('capture:status', s); overlay.send('capture:status', s); },
+      onStatus: (s) => { send('capture:status', s); overlay.send('capture:status', s); updatePriority(); },
       log: (line) => {
         try { fs.appendFileSync(path.join(app.getPath('userData'), 'capture.log'), `${new Date().toISOString()} ${line}\n`); } catch {}
       },
     });
     watchGuideButton(onGuide, onGuideCombo, () => couch && couch.activity());
-    updater.watchUpdates((status) => send('update:status', status));
+    updater.watchUpdates((status) => send('update:status', status), { busy: () => !!running });
+    overlay.onVisibility(() => updatePriority());
     downloads.start({
       names: library.steamNames,
+      playing: () => !!running && !!win && !win.isFocused(),
       onDownloads: (list) => send('steam:downloads', list),
       onInstalledChange: () => send('library:changed'),
       // A janela de instalação é da Steam. Quando o download começa, o Cartucho volta para a frente.
@@ -99,8 +102,14 @@ function createWindow() {
   });
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (e) => e.preventDefault());
-  win.on('focus', () => send('window:focus'));
-  win.on('blur', () => send('window:blur'));
+  win.on('focus', () => {
+    send('window:focus');
+    updatePriority();
+  });
+  win.on('blur', () => {
+    send('window:blur');
+    updatePriority();
+  });
   // Fechar a janela (Alt+F4) também só esconde, se o botão Xbox estiver ligado para abrir o Cartucho.
   win.on('close', (e) => {
     if (quitting || config.get('guideOpens') === false) return;
@@ -124,6 +133,34 @@ function bringToFront() {
   win.setAlwaysOnTop(true);
   win.focus();
   win.setAlwaysOnTop(false);
+}
+
+// Com um jogo na frente, todos os processos do Cartucho (janelas, placa de vídeo, som) ficam com prioridade abaixo do
+// normal, e o Windows sempre escolhe o jogo primeiro quando o processador aperta. Voltam ao normal quando o Cartucho
+// ou o menu por cima do jogo aparecem. Os jogos abertos pelo Cartucho herdam a prioridade dele, por isso ela volta
+// ao normal antes de abrir um jogo (launchGame).
+// Ligando, aplica de novo a cada chamada: processos novos (a janela de som da gravação) começam no normal.
+// Desligando, cada processo volta para a prioridade que tinha antes.
+const before = new Map(); // pid → prioridade antes de baixar
+function setLowPriority(on) {
+  if (!on) {
+    for (const [pid, prio] of before) {
+      try { os.setPriority(pid, prio); } catch {}
+    }
+    before.clear();
+    return;
+  }
+  for (const m of app.getAppMetrics()) {
+    if (before.has(m.pid)) continue;
+    try {
+      before.set(m.pid, os.getPriority(m.pid));
+      os.setPriority(m.pid, os.constants.priority.PRIORITY_BELOW_NORMAL);
+    } catch {}
+  }
+}
+
+function updatePriority() {
+  setLowPriority(!!running && !!win && !win.isDestroyed() && !win.isFocused() && !overlay.isOpen());
 }
 
 // "Sair para o Windows" esconde o Cartucho em vez de fechar: ele fica quietinho perto do relógio
@@ -201,6 +238,9 @@ function gameEnded(game) {
   overlay.close({ backToGame: false });
   send('game:ended', { key: game.key });
   send('library:changed');
+  updatePriority();
+  downloads.poke();
+  updater.gameEnded();
   if (config.get('returnAfterGame')) bringToFront();
 }
 
@@ -272,9 +312,13 @@ function instanceDir(instanceId) {
 }
 
 async function launchGame(game) {
+  setLowPriority(false);
+  // O processo do jogo apareceu: hora de agendar os últimos 30 s.
+  const onStart = () => capture.gameRunning();
   if (game.source === 'steam') {
     await shell.openExternal(`steam://rungameid/${game.appid}`);
     watch.watchSteam(game.appid, {
+      onStart,
       onEnd: async () => {
         const unlocked = await library.refreshSteamGame(game.appid);
         gameEnded(game);
@@ -285,7 +329,7 @@ async function launchGame(game) {
     const exe = prism.findExe(library.prismDir(), config.get('prismExe'));
     if (!exe) return { error: 'Não encontrei o Prism Launcher. Indique o executável em Configurações.' };
     prism.launchInstance(exe, game.instanceId);
-    watch.watchJava({ onEnd: () => gameEnded(game) });
+    watch.watchJava({ onStart, onEnd: () => gameEnded(game) });
   } else if (game.source === 'hytale') {
     const exe = library.hytaleExe();
     if (!exe) return { error: 'Não encontrei o Hytale. Indique o executável em Configurações.' };
@@ -293,6 +337,7 @@ async function launchGame(game) {
     // O executável costuma ser o launcher do Hytale, que abre o jogo em outro processo. Por isso olhamos os dois nomes.
     const names = [config.get('hytaleProcess'), path.basename(exe), hytale.CLIENT_EXE];
     watch.watchProcesses(names, {
+      onStart,
       onEnd: (ms) => {
         library.addHytaleTime(ms);
         gameEnded(game);
@@ -304,6 +349,7 @@ async function launchGame(game) {
     const args = c.args ? (c.args.match(/"[^"]*"|\S+/g) || []).map((a) => a.replace(/^"|"$/g, '')) : [];
     spawn(c.exe, args, { cwd: path.dirname(c.exe), detached: true, stdio: 'ignore' }).unref();
     watch.watchProcesses([c.process, path.basename(c.exe)], {
+      onStart,
       onEnd: (ms) => {
         library.addCustomTime(c.id, ms);
         gameEnded(game);
@@ -317,6 +363,7 @@ async function launchGame(game) {
   send('game:started', running);
   captureShortcuts(true);
   capture.gameStarted(running);
+  updatePriority();
   return { ok: true };
 }
 

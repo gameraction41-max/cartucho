@@ -6,6 +6,8 @@ const steamlocal = require('./steamlocal');
 
 const FAST_MS = 2500;
 const SLOW_MS = 20000;
+// Com um jogo na frente ninguém está olhando a barra, então a leitura dos appmanifest fica bem mais espaçada.
+const PLAYING_MS = 60000;
 // Depois de pedir uma instalação, por quanto tempo esperamos o download aparecer para trazer o Cartucho de volta.
 const PENDING_MS = 3 * 60 * 1000;
 
@@ -50,7 +52,8 @@ function expectInstall(appid) {
 
 // onDownloads(lista) quando a lista ou a porcentagem muda; onInstalledChange() quando um jogo termina de instalar ou é removido;
 // onStarted(appid) quando aparece o download que o Cartucho pediu.
-function start({ names, onDownloads, onInstalledChange, onStarted }) {
+// playing() diz se há um jogo aberto na frente do Cartucho.
+function start({ names, onDownloads, onInstalledChange, onStarted, playing = () => false }) {
   tick = () => {
     try {
       scan();
@@ -77,7 +80,9 @@ function start({ names, onDownloads, onInstalledChange, onStarted }) {
         pending = null;
       }
     }
-    timer = setTimeout(tick, downloads.length || pending ? FAST_MS : SLOW_MS);
+    // Download pausado ou na fila não anda, então não precisa da leitura rápida.
+    const moving = downloads.some((d) => d.state === 'downloading');
+    timer = setTimeout(tick, pending ? FAST_MS : playing() ? PLAYING_MS : moving ? FAST_MS : SLOW_MS);
   };
   tick();
 }

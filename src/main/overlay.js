@@ -6,6 +6,12 @@ const { forceForeground, focusHandle, currentForeground } = require('./foregroun
 
 let win = null;
 let gameHwnd = null;
+let onChange = () => {};
+
+// Avisa quando o menu aparece ou some (main.js ajusta a prioridade do Cartucho).
+function onVisibility(fn) {
+  onChange = fn;
+}
 
 function create() {
   win = new BrowserWindow({
@@ -57,6 +63,7 @@ async function open(payload) {
   win.setAlwaysOnTop(true, 'screen-saver');
   forceForeground(win);
   win.focus();
+  onChange(true);
 }
 
 // backToGame: devolve o foco para o jogo. Quando a pessoa escolheu ir para o Cartucho, quem chama traz a janela principal.
@@ -65,6 +72,7 @@ function close({ backToGame = true } = {}) {
   win.hide();
   if (backToGame) focusHandle(gameHwnd, { restore: false });
   gameHwnd = null;
+  onChange(false);
 }
 
 function send(channel, payload) {
@@ -76,4 +84,4 @@ function gameWindow() {
   return gameHwnd;
 }
 
-module.exports = { prepare, open, close, isOpen, send, gameWindow };
+module.exports = { prepare, open, close, isOpen, send, gameWindow, onVisibility };
