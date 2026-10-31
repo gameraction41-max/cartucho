@@ -5,7 +5,7 @@ let ctx = null;
 let master = null;
 let sfxGain = null;
 let musicGain = null;
-let settings = { sounds: true, music: true, volume: 0.5, musicFile: '' };
+let settings = { sounds: true, music: true, volume: 0.5, musicVolume: 1, musicFile: '' };
 let pad = null;
 let audioEl = null;
 let paused = false;
@@ -32,7 +32,13 @@ function applyVolume() {
   if (!ctx) return;
   master.gain.setTargetAtTime(settings.volume, ctx.currentTime, 0.05);
   sfxGain.gain.value = settings.sounds ? 0.5 : 0;
-  if (audioEl) audioEl.volume = settings.volume * 0.6;
+  if (audioEl) audioEl.volume = musicLevel() * 0.6;
+  if (pad) musicGain.gain.setTargetAtTime(settings.musicVolume, ctx.currentTime, 0.2);
+}
+
+// O volume da música vale em cima do volume geral: o master já leva o geral para a trilha gerada.
+function musicLevel() {
+  return settings.volume * settings.musicVolume;
 }
 
 function blip(freq, { dur = 0.07, type = 'sine', gain = 0.25, slide = 0 } = {}) {
@@ -135,12 +141,12 @@ function refreshMusic() {
       audioEl = new Audio(fileUrl(file));
       audioEl.dataset.src = file;
       audioEl.loop = true;
-      audioEl.volume = settings.volume * 0.6;
+      audioEl.volume = musicLevel() * 0.6;
       audioEl.play().catch(() => {});
     }
   } else {
     startPad();
-    musicGain.gain.setTargetAtTime(1, ctx.currentTime, 0.8);
+    musicGain.gain.setTargetAtTime(settings.musicVolume, ctx.currentTime, 0.8);
   }
 }
 

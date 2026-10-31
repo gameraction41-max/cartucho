@@ -6,7 +6,7 @@ import { homeGames } from '../lib/shelf.js';
 const ROW_SIZE = 24;
 const DL_SHOWN = 3;
 
-// Janelinha que o botão Menu abre embaixo do jogo em foco: pasta do jogo e desinstalar. Funciona sem o sistema de
+// Janelinha que o botão Opções (Start, O ou clique direito) abre embaixo do jogo em foco: pasta do jogo e desinstalar. Funciona sem o sistema de
 // foco da tela: enquanto está aberta, a tela manda cima/baixo/A/B para ela.
 function gameMenu(ctx, g, tile, onClose) {
   const items = [];
@@ -38,9 +38,13 @@ function gameMenu(ctx, g, tile, onClose) {
   requestAnimationFrame(() => el.classList.add('on'));
 
   let open = true;
+  // Com o mouse, clicar fora fecha a janelinha.
+  const outside = (e) => { if (!el.contains(e.target)) close(); };
+  setTimeout(() => document.addEventListener('mousedown', outside, true));
   function close() {
     if (!open) return;
     open = false;
+    document.removeEventListener('mousedown', outside, true);
     el.remove();
     onClose();
   }
@@ -51,7 +55,8 @@ function gameMenu(ctx, g, tile, onClose) {
         const next = Math.max(0, Math.min(items.length - 1, index + (action === 'down' ? 1 : -1)));
         if (next !== index) { index = next; paint(); ctx.sfx.move(); }
       } else if (action === 'confirm') items[index].click();
-      else if (action === 'back' || action === 'menu') { ctx.sfx.back(); close(); }
+      else if (action === 'back' || action === 'options') { ctx.sfx.back(); close(); }
+      else if (action === 'menu') { close(); ctx.openMenu(); }
       return true;
     },
   };
@@ -103,6 +108,12 @@ export default {
     }
 
     let selected = games[0];
+    let popup = null;
+    const openOptions = (g, tile) => {
+      if (popup) popup.close();
+      ctx.sfx.confirm();
+      popup = gameMenu(ctx, g, tile, () => { popup = null; });
+    };
     const src = h('span', { class: 'src' });
     const title = h('h1', { class: 'big-title' });
     const meta = h('div', { class: 'meta' });
@@ -126,6 +137,8 @@ export default {
       Object.assign(t.dataset, { focus: '', key: g.key, selectFirst: '' });
       t.setAttribute('role', 'button');
       t.addEventListener('click', () => { ctx.sfx.confirm(); ctx.go('game', { key: g.key }); });
+      // Clique direito na capa abre as opções dela, como o O no teclado.
+      t.addEventListener('contextmenu', (e) => { e.preventDefault(); openOptions(g, t); });
       t.addEventListener('focusin-nav', () => {
         showInfo(g);
         tileName.textContent = g.title;
@@ -145,11 +158,10 @@ export default {
       h('h3', { class: 'row-label' }, 'No seu PC'),
       h('div', { class: 'row' }, tiles, more));
 
-    let popup = null;
     return {
       el,
       keepBackground: true,
-      hints: [['confirm', 'Detalhes'], ['y', 'Jogar'], ['menu', 'Opções']],
+      hints: [['confirm', 'Detalhes'], ['y', 'Jogar'], ['options', 'Opções'], ['menu', 'Menu']],
       onAction(action, { focused }) {
         if (popup) return popup.handle(action);
         const g = focused && games.find((x) => x.key === focused.dataset.key);
@@ -157,10 +169,10 @@ export default {
           ctx.launch(g);
           return true;
         }
-        // Menu em cima de um jogo abre a janelinha dele; o botão Xbox continua abrindo o menu do Cartucho.
-        if (g && action === 'menu') {
-          ctx.sfx.confirm();
-          popup = gameMenu(ctx, g, focused, () => { popup = null; });
+        // Opções abrem a janelinha do jogo selecionado (em cima da capa dele). Menu fica sempre com o menu do Cartucho.
+        if (action === 'options' && (g || focused !== more)) {
+          const target = g || selected;
+          openOptions(target, tiles[games.indexOf(target)]);
           return true;
         }
         return false;

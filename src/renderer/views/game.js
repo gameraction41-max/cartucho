@@ -222,8 +222,14 @@ export default {
       el,
       keepBackground: true,
       // No Minecraft, X renomeia a instância em foco (ou a escolhida).
-      hints: [['confirm', 'Selecionar'], ['y', 'Jogar'], ...(inst ? [['x', 'Renomear']] : []), ['back', 'Voltar']],
+      hints: [['confirm', 'Selecionar'], ['y', 'Jogar'], ...(inst ? [['x', 'Renomear']] : []), ['options', 'Opções'], ['back', 'Voltar']],
       onAction(action, { focused }) {
+        // Opções aqui é o mesmo botão "⋯ Opções" da página (capa, música e mais).
+        if (action === 'options') {
+          ctx.sfx.confirm();
+          ctx.go('gameopts', { key: g.key, inst: inst && inst.key });
+          return true;
+        }
         if (action !== 'y' && !(action === 'x' && inst)) return false;
         // Y joga direto; numa instância da lista, joga aquela.
         const k = focused && focused.dataset.key;

@@ -176,7 +176,7 @@ export default {
           if (busy) return true;
           if (action === 'confirm') remove();
           else if (action === 'back') cancelRemove();
-          return action !== 'menu' && action !== 'fullscreen';
+          return action !== 'menu' && action !== 'options' && action !== 'fullscreen';
         }
         if (index >= 0) {
           if (action === 'x') askRemove();
@@ -186,7 +186,7 @@ export default {
           else if (action === 'confirm') {
             const v = viewer.querySelector('video');
             if (v) { if (v.paused) v.play(); else v.pause(); }
-          } else return action !== 'menu' && action !== 'fullscreen';
+          } else return action !== 'menu' && action !== 'options' && action !== 'fullscreen';
           return true;
         }
         if (action === 'y') {

@@ -83,6 +83,11 @@
 [data-theme="ps5"] .qnav .qitem.focused, [data-theme="ps5"] .qtools .qitem.focused, [data-theme="ps5"] .qpower .qitem.focused { background: none; color: #fff; }
 [data-theme="ps5"] .qitem.focused .qico { background: #fff; color: #070912; transform: scale(1.08); box-shadow: 0 0 1.6rem rgba(255, 255, 255, .35); }
 [data-theme="ps5"] .qitem.confirm.focused .qico { background: var(--danger); color: #fff; }
+[data-theme="ps5"] .qtools .qvol { margin: 0; flex-direction: column; gap: .4rem; }
+[data-theme="ps5"] .qtools .qvol .bar { width: 5.5rem; }
+[data-theme="ps5"] .qtools .qitem.focused .qvol .bar { background: rgba(255, 255, 255, .2); }
+[data-theme="ps5"] .qtools .qitem.focused .qvol .bar i { background: #fff; }
+[data-theme="ps5"] .qtools .qitem.focused .qvol b { color: #fff; }
 
 /* ===================== Big Picture ===================== */
 /* Azul-escuro do Steam, prateleiras de capas no topo e uma barra com os botões do controle no rodapé. */

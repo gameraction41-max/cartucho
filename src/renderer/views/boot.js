@@ -68,6 +68,6 @@ export function showBoot({ state, sfx, first = true, sound = true, onDone }) {
     onDone();
   }
   return (action) => {
-    if (action === 'confirm' || action === 'menu') finish();
+    if (action === 'confirm' || action === 'menu' || action === 'options') finish();
   };
 }

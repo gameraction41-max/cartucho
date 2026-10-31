@@ -33,8 +33,8 @@ const TABS = ['home', 'achievements', 'friends', 'library', 'collections', 'scre
 const SCROLLERS = '.shelves, .shelf-row, .lib-pills, .shots-filters, .set-list, .glist, .grid, .row, .ach-list, .inst-list, .opts-list, .add-list';
 
 const GLYPHS = {
-  gamepad: { confirm: ['A', 'a'], back: ['B', 'b'], x: ['X', 'x'], y: ['Y', 'y'], lb: ['LB', ''], rb: ['RB', ''], lt: ['LT', ''], rt: ['RT', ''], ltrt: ['LT RT', ''], menu: ['☰', ''], lr: ['◀ ▶', ''] },
-  keyboard: { confirm: ['Enter', 'key'], back: ['Esc', 'key'], x: ['F', 'key'], y: ['I', 'key'], lb: ['Q', 'key'], rb: ['E', 'key'], lt: ['PgUp', 'key'], rt: ['PgDn', 'key'], ltrt: ['PgUp PgDn', 'key'], menu: ['M', 'key'], lr: ['← →', 'key'] },
+  gamepad: { confirm: ['A', 'a'], back: ['B', 'b'], x: ['X', 'x'], y: ['Y', 'y'], lb: ['LB', ''], rb: ['RB', ''], lt: ['LT', ''], rt: ['RT', ''], ltrt: ['LT RT', ''], menu: ['☰', ''], view: ['⧉', ''], options: ['☰', ''], lr: ['◀ ▶', ''] },
+  keyboard: { confirm: ['Enter', 'key'], back: ['Esc', 'key'], x: ['F', 'key'], y: ['I', 'key'], lb: ['Q', 'key'], rb: ['E', 'key'], lt: ['PgUp', 'key'], rt: ['PgDn', 'key'], ltrt: ['PgUp PgDn', 'key'], menu: ['M', 'key'], options: ['O', 'key'], lr: ['← →', 'key'] },
 };
 const ICONS = {
   gamepad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9h4M8 7v4M15 10h.01M18 8h.01"/><path d="M7 4h10a5 5 0 0 1 5 5v4a4 4 0 0 1-7 2.6L14 14h-4l-1 1.6A4 4 0 0 1 2 13V9a5 5 0 0 1 5-5z"/></svg>',
@@ -54,7 +54,7 @@ let renderToken = 0;
 const $ = (id) => document.getElementById(id);
 const focus = createFocus();
 const sofa = createSofa({ api, root: document.getElementById('sofa'), saver: document.getElementById('saver'), sfx, hints: (list) => hintEls(list), setMusicPaused, setThemeOnly, games: () => state.games });
-const vkb = createKeyboard({ root: document.getElementById('vkb-root'), focus, sfx, hints: (list) => hintEls(list), readClipboard: () => api.readClipboard() });
+const vkb = createKeyboard({ root: document.getElementById('vkb-root'), focus, sfx, hints: (list) => hintEls(list), readClipboard: () => api.readClipboard(), device: () => state.device });
 
 // ===== interface comum =====
 
@@ -72,9 +72,9 @@ function renderTopbar() {
   const tabs = $('tabs');
   const rootId = stack[0] && stack[0].id;
   tabs.replaceChildren(
-    h('span', { class: 'shoulder' }, GLYPHS[glyphSet()].lb[0]),
+    h('span', { class: 'shoulder', onclick: () => cycleTab(-1) }, GLYPHS[glyphSet()].lb[0]),
     ...TABS.map((id) => h('button', { class: id === rootId ? 'on' : '', onclick: () => goTab(id) }, VIEWS[id].label)),
-    h('span', { class: 'shoulder' }, GLYPHS[glyphSet()].rb[0]),
+    h('span', { class: 'shoulder', onclick: () => cycleTab(1) }, GLYPHS[glyphSet()].rb[0]),
   );
   $('me-name').textContent = (state.profile && state.profile.name) || 'Jogador';
   $('me-avatar').style.backgroundImage = state.profile && state.profile.avatar ? `url("${state.profile.avatar}")` : '';
@@ -84,11 +84,21 @@ function glyphSet() {
   return state.device === 'gamepad' ? 'gamepad' : 'keyboard';
 }
 
-function hintEls(hints) {
-  const glyphs = GLYPHS[glyphSet()];
+// Ações que dá para disparar clicando na dica com o mouse. As de navegação ficam de fora.
+const CLICKABLE = new Set(['confirm', 'back', 'x', 'y', 'lb', 'rb', 'lt', 'rt', 'menu', 'options']);
+
+function hintEls(hints, { onAction = handleAction } = {}) {
+  const set = glyphSet();
+  const glyphs = GLYPHS[set];
+  // No controle, Start (☰) vira Opções onde a tela tem opções; aí o menu do Cartucho fica no View (⧉).
+  const hasOptions = hints.some(([action]) => action === 'options');
   return hints.map(([action, label]) => {
-    const [text, cls] = glyphs[action];
-    return h('span', {}, h('i', { class: `k ${cls}` }, text), label);
+    // 'key:Ctrl+V' mostra a tecla escrita, para dicas que só existem no teclado.
+    const [text, cls] = action.startsWith('key:') ? [action.slice(4), 'key']
+      : set === 'gamepad' && action === 'menu' && hasOptions ? glyphs.view : glyphs[action];
+    const click = CLICKABLE.has(action) && onAction;
+    return h('span', { class: click ? 'hint-click' : '', onclick: click ? (e) => { e.stopPropagation(); onAction(action); } : null },
+      h('i', { class: `k ${cls}` }, text), label);
   });
 }
 
@@ -212,6 +222,8 @@ const ctx = {
   refocus: (key) => { if (!menu.isOpen()) focus.setScope($('view'), key || focus.key, { scroll: false }); },
   reloadLibrary: async () => { await loadLibrary(await api.getLibrary()); show({ keepFocus: true }); },
   applyConfig,
+  // Volume só da música de fundo (tema e música dos jogos), pelo menu do Cartucho. Os sons de navegação não mudam.
+  setMusicVolume: async (v) => applyConfig(await api.setConfig({ musicVolume: v })),
   hints: (list) => hintEls(list),
   glyph: (action) => GLYPHS[glyphSet()][action],
 };
@@ -426,7 +438,7 @@ function setAway(away) {
 async function applyConfig(cfg) {
   state.config = cfg;
   applyTheme(cfg);
-  configureSound({ sounds: cfg.sounds, music: cfg.music, volume: cfg.volume, musicFile: cfg.musicFile });
+  configureSound({ sounds: cfg.sounds, music: cfg.music, volume: cfg.volume, musicVolume: cfg.musicVolume, musicFile: cfg.musicFile });
 }
 
 // ===== ações do controle =====
@@ -452,7 +464,8 @@ function handleAction(action, info = {}) {
       break;
     case 'lb': cycleTab(-1); break;
     case 'rb': cycleTab(1); break;
-    case 'menu': openMenu(); break;
+    // Tela sem opções próprias: Start/O abrem o menu do Cartucho, como antes.
+    case 'menu': case 'options': openMenu(); break;
   }
 }
 

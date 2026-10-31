@@ -1,4 +1,5 @@
-// Controle e teclado viram as mesmas ações: up, down, left, right, confirm, back, x, y, lb, rb, lt, rt, menu.
+// Controle e teclado viram as mesmas ações: up, down, left, right, confirm, back, x, y, lb, rb, lt, rt, menu, options.
+// menu é sempre o menu do Cartucho. options são as opções do que está selecionado; onde a tela não tem opções, abre o menu.
 // Também avisa qual dispositivo foi usado por último, para o indicador no topo e as dicas de botões.
 
 const KEYS = {
@@ -8,12 +9,13 @@ const KEYS = {
   f: 'x', F: 'x', i: 'y', I: 'y',
   q: 'lb', Q: 'lb', e: 'rb', E: 'rb',
   m: 'menu', M: 'menu',
+  o: 'options', O: 'options', ContextMenu: 'options',
   PageUp: 'lt', PageDown: 'rt',
 };
 
 // Mapeamento padrão do navegador para controles de Xbox, PlayStation e genéricos.
-// O botão 16 (Guide/Xbox) quase nunca chega por aqui no Windows; lá ele é lido pelo processo principal (main/guide.js).
-const BUTTONS = { 0: 'confirm', 1: 'back', 2: 'x', 3: 'y', 4: 'lb', 5: 'rb', 6: 'lt', 7: 'rt', 8: 'menu', 9: 'menu', 12: 'up', 13: 'down', 14: 'left', 15: 'right', 16: 'menu' };
+// View (8) abre o menu do Cartucho e Start (9) as opções. O botão 16 (Guide/Xbox) quase nunca chega por aqui no Windows; lá ele é lido pelo processo principal (main/guide.js).
+const BUTTONS = { 0: 'confirm', 1: 'back', 2: 'x', 3: 'y', 4: 'lb', 5: 'rb', 6: 'lt', 7: 'rt', 8: 'menu', 9: 'options', 12: 'up', 13: 'down', 14: 'left', 15: 'right', 16: 'menu' };
 const REPEATABLE = new Set(['up', 'down', 'left', 'right']);
 const REPEAT_DELAY = 380;
 const REPEAT_RATE = 110;
